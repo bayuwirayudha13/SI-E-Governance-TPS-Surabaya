@@ -1,0 +1,150 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage[utf8]{inputenc}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{Sistem Informasi Pemetaan Kapasitas Tempat Penampungan Sampah Sementara (TPS) Berbasis Web di Kota Surabaya\\
+    \large \textit{(Draft --- Bab 1 dari 4: Latar Belakang)}}
+
+\author{
+    \IEEEauthorblockN{Bayu Wirayudha
+        (3125521028) \\
+        Muhammad Hanif Wijayanto (3125521029)}
+    \IEEEauthorblockA{\textit{Program Studi Teknik Informatika} \\
+        \textit{Politeknik Elektronika Negeri Surabaya}\\
+    }
+}
+
+\maketitle
+
+\begin{abstract}
+    % CATATAN: abstrak ini masih draft kasar dan sebaiknya ditulis ulang
+    % setelah Bab 2--4 selesai, karena abstrak IEEE idealnya merangkum
+    % seluruh isi paper (masalah, metode, hasil), bukan hanya latar belakang.
+    Pengelolaan sampah di kota besar seperti Surabaya menghadapi tantangan
+    signifikan akibat volume timbulan yang tinggi dan keterbatasan
+    transparansi data kapasitas Tempat Penampungan Sampah Sementara (TPS).
+    Makalah ini mengusulkan sebuah sistem informasi berbasis web yang
+    memetakan sebaran, status, dan kapasitas TPS di Kota Surabaya untuk
+    mendukung pengambilan keputusan oleh warga, petugas kebersihan, dan
+    perencana kota. \textit{[Ringkasan metode dan hasil akan ditambahkan
+            setelah Bab 3 dan Bab 4 selesai.]}
+\end{abstract}
+
+\begin{IEEEkeywords}
+    sistem informasi geografis, pengelolaan sampah, e-governance, tempat penampungan sementara, smart city
+\end{IEEEkeywords}
+
+\section{Pendahuluan}
+
+\subsection{Konteks dan Permasalahan}
+
+Sebagai salah satu kota metropolitan terbesar di Indonesia, Surabaya
+menghasilkan volume sampah harian yang signifikan. Dinas Lingkungan
+Hidup (DLH) Kota Surabaya secara konsisten mencatat volume sampah yang
+masuk ke Tempat Pemrosesan Akhir (TPA) Benowo berada pada kisaran
+1.500--1.700 ton per hari dalam kondisi normal, dengan komposisi
+didominasi oleh sampah organik sekitar 60\% dari total volume
+\cite{antara2023,liputan62023}. Seluruh volume tersebut terlebih
+dahulu dikumpulkan di ratusan Tempat Penampungan Sampah Sementara
+(TPS) yang tersebar di lebih dari 30 kecamatan sebelum diangkut menuju
+TPA. Berdasarkan pemberitaan terbaru, TPA Benowo --- yang telah
+beroperasi sejak tahun 2001 dan menampung sampah domestik dari sekitar
+190 TPS di Surabaya \cite{kompas2026} --- mengalami insiden kebakaran
+pada Juli 2026, yang kemudian memicu sorotan DPRD Kota Surabaya
+terhadap keberlanjutan skema pengelolaan sampah kota dan mendorong
+rencana transisi menuju teknologi pengolahan yang lebih modern
+\cite{suararakyat2026}. Peristiwa ini menegaskan bahwa infrastruktur
+persampahan kota saat ini masih rentan terhadap gangguan operasional,
+sehingga memperkuat urgensi tersedianya sistem pemantauan dan
+pengelolaan data TPS yang lebih transparan dan berbasis data.
+
+Meskipun jaringan TPS memegang peranan krusial sebagai simpul awal
+rantai pasok pengelolaan sampah kota, pengelolaan informasi mengenai
+sebaran, kapasitas, dan cakupan layanan TPS terhadap wilayah kelurahan
+masih dilakukan secara manual dan tersimpan dalam berkas dokumen
+statis (spreadsheet) yang terfragmentasi. Kondisi ini menimbulkan
+beberapa persoalan operasional utama, yang dirangkum pada Tabel
+\ref{tab:masalah}.
+
+\begin{table}[h]
+    \caption{Ringkasan Permasalahan Eksisting}
+    \label{tab:masalah}
+    \centering
+    \begin{tabular}{p{1.7cm}p{2.4cm}p{3.4cm}}
+        \hline
+        \textbf{Domain}      & \textbf{Kondisi Eksisting}                                   & \textbf{Dampak Operasional}                               \\
+        \hline
+        Pengawasan kapasitas & Pemantauan manual tanpa data kubikasi presisi                & Keterlambatan deteksi TPS yang melebihi kapasitas         \\
+        \hline
+        Data spasial         & Data lokasi \& atribut TPS terfragmentasi di berkas terpisah & Sulit memetakan zona rawan akumulasi sampah secara akurat \\
+        \hline
+        Keterbukaan publik   & Warga sulit memperoleh informasi lokasi \& status TPS aktif  & Berpotensi memicu pembuangan sampah di luar lokasi resmi  \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsection{Motivasi Solusi Berbasis E-Governance}
+
+Persoalan di atas menunjukkan adanya kesenjangan antara ketersediaan
+data operasional persampahan dan aksesibilitasnya bagi pemangku
+kepentingan yang membutuhkan --- baik warga yang ingin mengetahui
+lokasi TPS terdekat, petugas yang perlu memantau kondisi lapangan,
+maupun perencana kota yang memerlukan data agregat untuk pengambilan
+keputusan. Pendekatan \textit{e-governance} berbasis Sistem Informasi
+Geografis (SIG/GIS) menawarkan solusi untuk mendigitalkan data
+persampahan yang sebelumnya statis menjadi informasi yang dapat
+divisualisasikan, dicari, dan dianalisis secara interaktif, sejalan
+dengan inisiatif portal data terbuka pemerintah seperti Sistem
+Informasi Pengelolaan Sampah Nasional (SIPSN) yang dikelola Kementerian
+Lingkungan Hidup dan Kehutanan \cite{sipsn}, maupun kajian global
+mengenai pengelolaan sampah perkotaan oleh World Bank \cite{worldbank}.
+
+\subsection{Tujuan}
+
+Berdasarkan uraian permasalahan tersebut, makalah ini bertujuan untuk:
+\begin{enumerate}
+    \item Merancang dan membangun sistem informasi berbasis web yang
+          memetakan sebaran, status, dan kapasitas TPS di Kota Surabaya.
+    \item Memodelkan relasi TPS terhadap kelurahan yang dilayani,
+          mengingat satu TPS dapat melayani lebih dari satu kelurahan
+          sekaligus berdasarkan data internal yang diperoleh.
+    \item Menyediakan mekanisme validasi data dan pengujian sistem
+          untuk memastikan keandalan informasi yang disajikan kepada publik.
+\end{enumerate}
+
+\subsection{Sistematika Penulisan}
+
+Makalah ini disusun sebagai berikut. Bagian II membahas kajian
+pustaka dan penelitian terkait mengenai sistem informasi geografis
+untuk pengelolaan sampah perkotaan. Bagian III menjelaskan perancangan
+sistem dan \textit{mockup} antarmuka pengguna. Bagian IV memaparkan
+metode validasi, eksperimen, dan hasil yang diperoleh. Bagian V
+menyajikan kesimpulan.
+
+\begin{thebibliography}{00}
+
+    \bibitem{antara2023} Antara News Jawa Timur, ``DLH Surabaya catat 1.600 ton sampah di TPA Benowo didominasi jenis organik,'' 2023. [Online]. Tersedia: https://jatim.antaranews.com/berita/713517/
+
+    \bibitem{liputan62023} Liputan6.com, ``Sampah di TPA Benowo Surabaya Capai 1.600 Ton per Hari, 60 Persen Didominasi Organik,'' 2023. [Online]. Tersedia: https://www.liputan6.com/surabaya/read/5338222/
+
+    \bibitem{kompas2026} Kompas.com, ``Mengenal TPA Benowo yang Terbakar, Pusat Pengolahan Sampah Terbesar di Surabaya Sejak Tahun 2001,'' 2026. [Online]. Tersedia: https://surabaya.kompas.com/read/2026/07/20/
+
+    \bibitem{suararakyat2026} Suara Rakyat Jatim, ``Komisi B Soroti Transisi Pengelolaan Sampah Surabaya, Pasca TPA Benowo Terbakar,'' 2026. [Online]. Tersedia: https://www.suararakyatjatim.com/2026/07/22/
+
+    \bibitem{sipsn} Kementerian Lingkungan Hidup dan Kehutanan RI, ``Sistem Informasi Pengelolaan Sampah Nasional (SIPSN).'' [Online]. Tersedia: https://sipsn.menlhk.go.id
+
+    \bibitem{worldbank} World Bank Group, ``What a Waste 2.0: A Global Snapshot of Solid Waste Management to 2050.'' [Online]. Tersedia: https://www.worldbank.org/en/publication/what-a-waste
+
+\end{thebibliography}
+
+\end{document}
