@@ -131,6 +131,99 @@ sistem dan \textit{mockup} antarmuka pengguna. Bagian IV memaparkan
 metode validasi, eksperimen, dan hasil yang diperoleh. Bagian V
 menyajikan kesimpulan.
 
+\section{Kajian Pustaka dan Penelitian Terkait}
+
+\subsection{Penerapan GIS dalam Pengelolaan Sampah}
+
+Penerapan Sistem Informasi Geografis (SIG/GIS) dalam pengelolaan
+sampah perkotaan telah banyak dikaji dalam literatur internasional.
+Asefa \textit{et al.} \cite{asefa2022} menguraikan bahwa GIS berperan
+penting dalam menyederhanakan proses perencanaan pengelolaan sampah
+yang kompleks, mulai dari optimasi rute pengumpulan hingga pemilihan
+lokasi fasilitas, dengan menyediakan informasi spasial yang membantu
+pengambil keputusan mengelola berbagai faktor yang saling bertentangan.
+Pada tataran implementasi, Akpotuzor \textit{et al.} \cite{akpotuzor2020}
+mengembangkan sistem pemantauan berbasis Web-GIS di Nigeria
+menggunakan metodologi \textit{Y-model Web GIS Development}
+(YWDM), yang memungkinkan warga melaporkan kondisi tempat sampah penuh
+secara geospasial sekaligus mengoptimalkan rute truk pengangkut.
+Pengujian fungsional (\textit{proof of concept}) pada sistem tersebut
+menunjukkan bahwa pendekatan Web-GIS mampu menyediakan informasi
+kondisi tempat sampah secara dinamis kepada pihak pengelola.
+
+\subsection{Penelitian Terkait di Konteks Indonesia}
+
+Pada konteks Indonesia, beberapa penelitian serupa telah dilakukan
+dengan skala dan fokus yang berbeda-beda. Hidayat dan Nugraha
+\cite{hidayat2023} mengembangkan sistem informasi manajemen pemetaan
+bank sampah di Kota Batam untuk mengatasi ketiadaan sistem berbasis
+peta yang membantu warga menemukan lokasi bank sampah terdekat.
+Ardianti \textit{et al.} \cite{ardianti2025} mengembangkan aplikasi
+pengelolaan sampah berbasis web terintegrasi GIS menggunakan metode
+\textit{prototyping}, dengan fitur visualisasi peta interaktif
+memakai Leaflet.js serta pelaporan transaksi --- pendekatan teknis
+yang serupa dengan yang direncanakan pada penelitian ini. Pada domain
+yang lebih spesifik, Fitriana \textit{et al.} \cite{fitriana2022}
+mengembangkan aplikasi Android untuk studi kasus bank sampah Desa
+Kalibagor, menunjukkan bahwa kebutuhan digitalisasi pengelolaan
+sampah berbasis lokasi juga relevan pada skala pedesaan.
+
+\subsection{Pendekatan Berbasis Sensor dan Partisipasi Warga}
+
+Sebagai pembanding pendekatan teknis lain, Burman \textit{et al.}
+\cite{burman2022} mengusulkan sistem manajemen sampah cerdas yang
+memadukan GIS dengan sensor IoT pada tempat sampah untuk memantau
+tingkat keterisian secara \textit{real-time} tanpa memerlukan input
+manual. Pendekatan ini menawarkan presisi data yang tinggi namun
+membutuhkan investasi perangkat keras yang signifikan pada setiap
+titik pengumpulan. Di sisi lain, aplikasi seperti TrashOut
+\cite{trashout} menunjukkan pendekatan \textit{crowdsourcing}, di
+mana warga secara sukarela melaporkan lokasi dan kondisi sampah
+melalui aplikasi mobile tanpa bergantung pada sensor maupun data
+resmi pemerintah.
+
+\subsection{Posisi Penelitian dan Kesenjangan}
+
+Tabel \ref{tab:pustaka} merangkum perbandingan pendekatan pada
+penelitian-penelitian terkait terhadap sistem yang diusulkan pada
+makalah ini. Berdasarkan penelusuran pustaka, sebagian besar sistem
+sejenis berfokus pada satu titik lokasi tempat sampah secara individual,
+tanpa memodelkan secara eksplisit relasi satu fasilitas terhadap
+banyak wilayah administratif (kelurahan) yang dilayaninya sekaligus
+--- suatu karakteristik yang justru ditemukan secara konsisten pada
+data internal TPS Kota Surabaya yang digunakan pada penelitian ini.
+Selain itu, metode validasi pada penelitian terdahulu umumnya terbatas
+pada pengujian fungsional atau iterasi \textit{prototyping}, tanpa
+kombinasi validasi kualitas data, \textit{cross-check} terhadap basis
+data eksternal resmi, pengujian usabilitas terstandardisasi (SUS), dan
+\textit{User Acceptance Testing} (UAT) secara menyeluruh sebagaimana
+dirancang pada Bagian IV makalah ini.
+
+\begin{table}[h]
+    \caption{Perbandingan dengan Penelitian Terkait}
+    \label{tab:pustaka}
+    \centering
+    \begin{tabular}{p{1.5cm}p{1.4cm}p{2.1cm}p{2.2cm}}
+        \hline
+        \textbf{Penelitian}                            & \textbf{Platform} & \textbf{Sumber Data Kapasitas}                        & \textbf{Relasi Multi-Wilayah}                    \\
+        \hline
+        Akpotuzor \textit{et al.} \cite{akpotuzor2020} & Web-GIS           & Laporan warga manual                                  & Tidak eksplisit                                  \\
+        \hline
+        Hidayat \& Nugraha \cite{hidayat2023}          & Web-GIS           & Data lokasi statis                                    & Tidak ada                                        \\
+        \hline
+        Ardianti \textit{et al.} \cite{ardianti2025}   & Web + Leaflet.js  & Input petugas manual                                  & Tidak ada                                        \\
+        \hline
+        Burman \textit{et al.} \cite{burman2022}       & GIS + IoT         & Sensor \textit{real-time}                             & Tidak ada                                        \\
+        \hline
+        TrashOut \cite{trashout}                       & Mobile            & \textit{Crowdsourcing} warga                          & Tidak ada                                        \\
+        \hline
+        \textbf{Diusulkan}                             & Web-GIS           & Data internal terstruktur (231 entri) + laporan warga & \textbf{Eksplisit (many-to-many TPS--Kelurahan)} \\
+        \hline
+    \end{tabular}
+\end{table}
+
+
+
 \begin{thebibliography}{00}
 
     \bibitem{antara2023} Antara News Jawa Timur, ``DLH Surabaya catat 1.600 ton sampah di TPA Benowo didominasi jenis organik,'' 2023. [Online]. Tersedia: https://jatim.antaranews.com/berita/713517/
@@ -144,6 +237,20 @@ menyajikan kesimpulan.
     \bibitem{sipsn} Kementerian Lingkungan Hidup dan Kehutanan RI, ``Sistem Informasi Pengelolaan Sampah Nasional (SIPSN).'' [Online]. Tersedia: https://sipsn.menlhk.go.id
 
     \bibitem{worldbank} World Bank Group, ``What a Waste 2.0: A Global Snapshot of Solid Waste Management to 2050.'' [Online]. Tersedia: https://www.worldbank.org/en/publication/what-a-waste
+
+    \bibitem{asefa2022} E. M. Asefa, K. B. Barasa, and D. A. Mengistu, ``Application of Geographic Information System in Solid Waste Management,'' in \textit{Geographic Information Systems and Applications in Coastal Studies}, IntechOpen, 2022. DOI: 10.5772/intechopen.103773.
+
+    \bibitem{akpotuzor2020} S. A. Akpotuzor, A. O. Ofem, and M. A. Agana, ``Web-Based Monitoring System for Optimal Collection and Disposal of Solid Waste Using Geographic Information System (GIS),'' 2020. DOI: 10.5281/zenodo.3660159.
+
+    \bibitem{hidayat2023} F. Hidayat and N. B. Nugraha, ``Optimizing the Waste Bank Mapping Management Information System in Batam City,'' \textit{Journal of Applied Geospatial Information}, vol. 7, no. 2, pp. 1080--1085, 2023. DOI: 10.30871/jagi.v7i2.4628.
+
+    \bibitem{ardianti2025} M. Ardianti, S. Suakanto, and R. Z. Zulkarnaen, ``Development of Waste Management Application using GIS,'' \textit{SISTEMASI: Jurnal Sistem Informasi}, vol. 14, no. 6, pp. 3020--3027, 2025. DOI: 10.32520/stmsi.v14i6.5680.
+
+    \bibitem{burman2022} A. R. Burman, A. Goswami, H. Sharma, and C. J. Mohan V, ``Smart Waste Management System using GIS Paired with IoT-based Smart Waste Collection Bins,'' in \textit{2022 Int. Conf. Smart and Sustainable Technologies in Energy and Power Sectors (SSTEPS)}, IEEE, 2022, pp. 229--232. DOI: 10.1109/SSTEPS57475.2022.00064.
+
+    \bibitem{trashout} TrashOut, ``About TrashOut.'' [Online]. Tersedia: https://www.trashout.ngo/
+
+    \bibitem{fitriana2022} G. F. Fitriana, A. Hashina, and N. A. F. Tanjung, ``Pengembangan Aplikasi Pengelolaan Sampah berbasis Android Studi Kasus Bank Sampah Desa Kalibagor,'' \textit{Journal of Dinda: Data Science, Information Technology, and Data Analytics}, vol. 2, no. 2, 2022. DOI: 10.20895/dinda.v2i2.741.
 
 \end{thebibliography}
 
