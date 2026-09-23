@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function Navbar({ onOpenTpsModal }) {
+export default function Navbar({ onOpenLoginModal, onOpenTpsModal }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -28,17 +28,19 @@ export default function Navbar({ onOpenTpsModal }) {
           </ul>
         </nav>
 
-        {/* Action Button */}
+        {/* Action Button: Sign In (As in the original mockup) */}
         <div className="nav-actions">
           <button 
             type="button" 
             className="btn-pill-dark"
-            onClick={onOpenTpsModal}
-            id="nav-tps-map-btn"
+            onClick={onOpenLoginModal}
+            id="nav-signin-btn"
           >
-            <span>Buka Peta TPS</span>
+            <span>Sign in</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
             </svg>
           </button>
 
