@@ -11,19 +11,24 @@ import ArticleModal from './components/ArticleModal';
 import RewardCalculatorModal from './components/RewardCalculatorModal';
 import TpsMapModal from './components/TpsMapModal';
 import WasteGuideModal from './components/WasteGuideModal';
+import LoginModal from './components/LoginModal';
 
 export default function App() {
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
   const [isTpsModalOpen, setIsTpsModalOpen] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   return (
     <div className="app-container">
-      {/* 1. Header / Navbar */}
-      <Navbar onOpenTpsModal={() => setIsTpsModalOpen(true)} />
+      {/* 1. Header / Navbar with Sign in button */}
+      <Navbar 
+        onOpenLoginModal={() => setIsLoginModalOpen(true)}
+        onOpenTpsModal={() => setIsTpsModalOpen(true)} 
+      />
 
-      {/* 2. Hero Section with Interactive Map Preview */}
+      {/* 2. Hero Section with Exact Satellite Map Preview */}
       <main>
         <Hero onOpenTpsModal={() => setIsTpsModalOpen(true)} />
 
@@ -53,6 +58,11 @@ export default function App() {
       />
 
       {/* Modals */}
+      <LoginModal 
+        isOpen={isLoginModalOpen} 
+        onClose={() => setIsLoginModalOpen(false)} 
+      />
+
       <ArticleModal 
         article={selectedArticle} 
         onClose={() => setSelectedArticle(null)} 

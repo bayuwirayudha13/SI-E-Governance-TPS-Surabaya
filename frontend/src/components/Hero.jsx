@@ -1,8 +1,120 @@
 import React, { useState } from 'react';
-import { tpsList } from '../data/mockData';
+import surabayaMapImg from '../assets/images/surabaya_map_satellite.jpg';
+
+// Hotspot points mapped to the exact pins on the user's satellite map
+const mapHotspots = [
+  {
+    id: 1,
+    name: "TPA Benowo",
+    x: 17,
+    y: 9,
+    kapasitas: 82,
+    status: "Merah",
+    statusText: "Kritis (Prioritas Angkut)",
+    tipe: "Tempat Pemrosesan Akhir (Waste-to-Energy)",
+    kecamatan: "Benowo",
+    jam: "24 Jam"
+  },
+  {
+    id: 2,
+    name: "PD. Benowo Indah",
+    x: 23,
+    y: 27,
+    kapasitas: 64,
+    status: "Kuning",
+    statusText: "Waspada",
+    tipe: "TPS Pemukiman",
+    kecamatan: "Pakal",
+    jam: "06:00 - 18:00 WIB"
+  },
+  {
+    id: 3,
+    name: "Old Town (Kota Lama)",
+    x: 53,
+    y: 28,
+    kapasitas: 48,
+    status: "Hijau",
+    statusText: "Aman",
+    tipe: "TPS Wisata & Cagar Budaya",
+    kecamatan: "Pabean Cantikan",
+    jam: "05:00 - 21:00 WIB"
+  },
+  {
+    id: 4,
+    name: "TPS Gebang Putih",
+    x: 80,
+    y: 45,
+    kapasitas: 55,
+    status: "Hijau",
+    statusText: "Aman",
+    tipe: "TPS Kelurahan",
+    kecamatan: "Sukolilo",
+    jam: "06:00 - 19:00 WIB"
+  },
+  {
+    id: 5,
+    name: "Pakuwon City",
+    x: 75.5,
+    y: 34,
+    kapasitas: 42,
+    status: "Hijau",
+    statusText: "Aman",
+    tipe: "TPS Mandiri Kawasan",
+    kecamatan: "Mulyorejo",
+    jam: "06:00 - 20:00 WIB"
+  },
+  {
+    id: 6,
+    name: "Bank Sampah Pesapen",
+    x: 35,
+    y: 68,
+    kapasitas: 35,
+    status: "Hijau",
+    statusText: "Unit Bank Sampah Aktif",
+    tipe: "Pusat Setor Sampah Anorganik",
+    kecamatan: "Krembangan",
+    jam: "08:00 - 16:00 WIB"
+  },
+  {
+    id: 7,
+    name: "TPST Kiriman Dalam",
+    x: 68,
+    y: 82,
+    kapasitas: 88,
+    status: "Merah",
+    statusText: "Kritis (Peringatan Dini Overcapacity)",
+    tipe: "TPST 3R (Reuse, Reduce, Recycle)",
+    kecamatan: "Rungkut",
+    jam: "05:30 - 17:30 WIB"
+  },
+  {
+    id: 8,
+    name: "TPS Wonokromo / Pusat",
+    x: 53.5,
+    y: 46,
+    kapasitas: 74,
+    status: "Kuning",
+    statusText: "Waspada (Mendekati Batas)",
+    tipe: "TPS Pasar & Pemukiman",
+    kecamatan: "Wonokromo",
+    jam: "06:00 - 18:00 WIB"
+  },
+  {
+    id: 9,
+    name: "TPS Darmo / Selatan",
+    x: 52,
+    y: 64,
+    kapasitas: 58,
+    status: "Hijau",
+    statusText: "Aman",
+    tipe: "TPS Perkotaan",
+    kecamatan: "Wonokromo",
+    jam: "06:00 - 20:00 WIB"
+  }
+];
 
 export default function Hero({ onOpenTpsModal }) {
-  const [activePin, setActivePin] = useState(null);
+  const [activeSpot, setActiveSpot] = useState(null);
 
   return (
     <section id="beranda" className="hero-section">
@@ -16,7 +128,7 @@ export default function Hero({ onOpenTpsModal }) {
               <span>selamatkan bumi!</span>
             </h1>
             <p className="hero-description">
-              Sistem Informasi Pemetaan Kapasitas TPS Kota Surabaya. Pantau ketersediaan daya tampung sampah secara real-time, pilah sampah dari rumah tangga, dan dapatkan insentif reward untuk Surabaya yang lebih bersih, tertata, dan berkelanjutan.
+              Sistem Informasi Pemetaan Kapasitas TPS Kota Surabaya. Pantau ketersediaan daya tampung sampah secara real-time, pilah sampah dari rumah tangga, dan dapatkan reward untuk Surabaya yang lebih bersih dan hijau.
             </p>
             <div className="hero-cta">
               <button 
@@ -33,11 +145,11 @@ export default function Hero({ onOpenTpsModal }) {
             </div>
           </div>
 
-          {/* Right Column: Interactive Surabaya GIS Map Preview */}
+          {/* Right Column: Exact Satellite GIS Map from User */}
           <div className="hero-map-wrapper">
             {/* Map Header Status Legend */}
             <div className="map-status-bar">
-              <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>
+              <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.95)' }}>
                 Pemetaan Web-GIS Surabaya
               </span>
               <div className="map-status-indicators">
@@ -47,132 +159,116 @@ export default function Hero({ onOpenTpsModal }) {
               </div>
             </div>
 
-            {/* Map Canvas Background (Simulated High-Tech Geodata Satellite View) */}
-            <div className="hero-map-canvas" onClick={() => setActivePin(null)}>
-              {/* SVG Stylized Surabaya Geography: Coastline, Rivers & Roads */}
-              <svg 
-                viewBox="0 0 100 100" 
-                preserveAspectRatio="none" 
-                style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, opacity: 0.95 }}
-              >
-                <defs>
-                  <linearGradient id="landGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#1e3e2b" />
-                    <stop offset="50%" stopColor="#163323" />
-                    <stop offset="100%" stopColor="#0e2418" />
-                  </linearGradient>
-                  <linearGradient id="seaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#0a1d27" />
-                    <stop offset="100%" stopColor="#07151c" />
-                  </linearGradient>
-                </defs>
+            {/* Map Satellite Image View with Interactive Pulse Markers */}
+            <div 
+              style={{ 
+                position: 'relative', 
+                width: '100%', 
+                overflow: 'hidden', 
+                cursor: 'pointer',
+                backgroundColor: '#0c2417'
+              }}
+              onClick={() => setActiveSpot(null)}
+            >
+              <img 
+                src={surabayaMapImg} 
+                alt="Peta Satelit Sebaran TPS Kota Surabaya"
+                style={{ 
+                  width: '100%', 
+                  height: 'auto', 
+                  display: 'block',
+                  filter: 'contrast(1.05) brightness(1.02)'
+                }}
+              />
 
-                {/* Base Land */}
-                <rect width="100" height="100" fill="url(#landGrad)" />
-
-                {/* Sea / Madura Strait (North & East coastline) */}
-                <path 
-                  d="M0,0 L100,0 L100,20 C85,25 75,18 60,15 C45,12 30,18 20,12 C10,6 0,10 0,0 Z" 
-                  fill="url(#seaGrad)" 
-                  opacity="0.85"
-                />
-                <path 
-                  d="M88,0 L100,0 L100,100 L92,100 C90,80 94,60 88,40 C85,28 92,15 88,0 Z" 
-                  fill="url(#seaGrad)" 
-                  opacity="0.75"
-                />
-
-                {/* Major Arterial Roads of Surabaya */}
-                <g stroke="rgba(255, 255, 255, 0.15)" strokeWidth="0.8" fill="none">
-                  {/* Tol Surabaya-Gresik & Tol Satelit */}
-                  <path d="M0,35 Q30,40 50,55 T70,85 T75,100" strokeWidth="1.2" stroke="rgba(250, 204, 21, 0.4)" />
-                  {/* Jl. Ahmad Yani to Wonokromo */}
-                  <path d="M52,100 L52,50 L50,30 L45,15" strokeWidth="1" stroke="rgba(255, 255, 255, 0.3)" />
-                  {/* Jl. Merr (Middle East Ring Road) */}
-                  <path d="M78,18 L75,40 L72,70 L70,100" strokeWidth="0.9" />
-                  {/* Cross town connections */}
-                  <path d="M15,35 L45,35 L75,35" strokeDasharray="1,1" />
-                  <path d="M20,60 L52,60 L85,60" strokeDasharray="1,1" />
-                  <path d="M45,25 L65,45 L80,50" />
-                </g>
-
-                {/* Kali Mas & Kali Jagir waterways */}
-                <path 
-                  d="M52,100 Q50,75 55,60 T48,30 T45,15" 
-                  fill="none" 
-                  stroke="#0284c7" 
-                  strokeWidth="1.2" 
-                  opacity="0.6" 
-                />
-                <path 
-                  d="M52,70 Q65,72 88,75" 
-                  fill="none" 
-                  stroke="#0284c7" 
-                  strokeWidth="0.9" 
-                  opacity="0.6" 
-                />
-
-                {/* Subtle District Boundaries / Grid */}
-                <g stroke="rgba(74, 222, 128, 0.12)" strokeWidth="0.4" fill="none">
-                  <circle cx="50" cy="50" r="18" />
-                  <circle cx="50" cy="50" r="32" strokeDasharray="2,2" />
-                </g>
-              </svg>
-
-              {/* Marker Pins Placed According to Coordinates */}
-              {tpsList.map((tps) => {
-                const isSelected = activePin?.id === tps.id;
-                const pinColor = tps.status === 'Merah' ? 'red' : tps.status === 'Kuning' ? 'yellow' : 'green';
+              {/* Interactive Hotspot Buttons for Pins on the Map */}
+              {mapHotspots.map((spot) => {
+                const isSelected = activeSpot?.id === spot.id;
+                const badgeClass = spot.status === 'Merah' ? 'red' : spot.status === 'Kuning' ? 'yellow' : 'green';
 
                 return (
                   <div
-                    key={tps.id}
-                    className={`map-pin ${isSelected ? 'active' : ''}`}
-                    style={{ left: `${tps.koordinat.x}%`, top: `${tps.koordinat.y}%` }}
+                    key={spot.id}
+                    style={{
+                      position: 'absolute',
+                      left: `${spot.x}%`,
+                      top: `${spot.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                      zIndex: isSelected ? 30 : 10
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setActivePin(isSelected ? null : tps);
+                      setActiveSpot(isSelected ? null : spot);
                     }}
-                    title={`${tps.nama} (${tps.kapasitasPersen}%)`}
                   >
-                    <div className="pin-icon-wrap">
-                      <div className={`pin-marker ${pinColor}`}>
-                        <div className="pin-center"></div>
-                      </div>
-                      <div className="pin-pulse"></div>
+                    {/* Glowing Circular Target Ring */}
+                    <div 
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                      title={`${spot.name} - ${spot.kapasitas}%`}
+                    >
+                      {/* Pulse Wave Animation */}
+                      <span 
+                        style={{
+                          position: 'absolute',
+                          width: '100%',
+                          height: '100%',
+                          borderRadius: '50%',
+                          border: `2px solid ${spot.status === 'Merah' ? '#ef4444' : spot.status === 'Kuning' ? '#f59e0b' : '#22c55e'}`,
+                          animation: 'mapPulse 2s infinite ease-out'
+                        }}
+                      />
+                      {/* Small Center Target Dot */}
+                      <span 
+                        style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          background: spot.status === 'Merah' ? '#ef4444' : spot.status === 'Kuning' ? '#f59e0b' : '#22c55e',
+                          boxShadow: '0 0 8px rgba(255,255,255,0.9)'
+                        }}
+                      />
                     </div>
-                    <span className="pin-label">{tps.nama}</span>
 
-                    {/* Interactive Tooltip Card on Click */}
+                    {/* Popup Tooltip upon Clicking Marker */}
                     {isSelected && (
-                      <div className="map-tooltip" onClick={(e) => e.stopPropagation()}>
-                        <div className="map-tooltip-title">{tps.nama}</div>
-                        <span className={`map-tooltip-badge ${pinColor}`}>
-                          {tps.statusText}
+                      <div 
+                        className="map-tooltip" 
+                        style={{ bottom: 'calc(100% + 8px)', width: '230px' }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="map-tooltip-title">{spot.name}</div>
+                        <span className={`map-tooltip-badge ${badgeClass}`}>
+                          Kapasitas: {spot.kapasitas}% &bull; {spot.statusText}
                         </span>
-                        <div style={{ margin: '6px 0', fontSize: '0.76rem', color: '#475569' }}>
-                          <div>Kec. {tps.kecamatan} &bull; Kel. {tps.kelurahan}</div>
-                          <div>Daya Tampung: <strong>{tps.kapasitasPersen}%</strong> ({tps.kapasitasM3} m³)</div>
-                          <div>Jam: {tps.jamOperasional}</div>
-                          <div style={{ color: '#059669', fontSize: '0.72rem', marginTop: '4px' }}>
-                            Diupdate {tps.terakhirUpdate}
-                          </div>
+                        <div style={{ fontSize: '0.78rem', color: '#475569', margin: '6px 0' }}>
+                          <div>Tipe: <strong>{spot.tipe}</strong></div>
+                          <div>Kecamatan: {spot.kecamatan}</div>
+                          <div>Jam: {spot.jam}</div>
                         </div>
                         <button
                           type="button"
+                          onClick={onOpenTpsModal}
                           style={{
                             background: '#042416',
                             color: '#ffffff',
                             borderRadius: '6px',
-                            padding: '4px 10px',
-                            fontSize: '0.72rem',
+                            padding: '5px 10px',
+                            fontSize: '0.74rem',
                             fontWeight: '600',
                             width: '100%',
                             marginTop: '4px'
                           }}
-                          onClick={onOpenTpsModal}
                         >
-                          Lihat Detail TPS Lengkap &rarr;
+                          Lihat Detail TPS &rarr;
                         </button>
                       </div>
                     )}
@@ -181,33 +277,33 @@ export default function Hero({ onOpenTpsModal }) {
               })}
             </div>
 
-            {/* Bottom Bar: Quick Trigger for Full Map */}
+            {/* Bottom Bar: Full Map CTA */}
             <div 
               style={{ 
-                padding: '10px 16px', 
+                padding: '12px 18px', 
                 background: 'rgba(7, 24, 16, 0.95)', 
                 display: 'flex', 
                 justifyContent: 'space-between', 
                 alignItems: 'center',
-                fontSize: '0.8rem',
+                fontSize: '0.82rem',
                 borderTop: '1px solid rgba(255,255,255,0.1)'
               }}
             >
-              <span style={{ color: 'rgba(255,255,255,0.7)' }}>
-                Menampilkan 8 dari 231 titik TPS Kota Surabaya
+              <span style={{ color: 'rgba(255,255,255,0.75)' }}>
+                Peta Sebaran TPS &bull; Surabaya Terintegrasi
               </span>
               <button 
                 type="button"
                 onClick={onOpenTpsModal}
                 style={{ 
                   color: '#4ade80', 
-                  fontWeight: 600, 
+                  fontWeight: 700, 
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '4px' 
                 }}
               >
-                Lihat 231 TPS &rarr;
+                Buka Direktori Lengkap &rarr;
               </button>
             </div>
           </div>
