@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "start": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build"
+  },
   "dependencies": {
     "react": "^19.3.0"
   }
