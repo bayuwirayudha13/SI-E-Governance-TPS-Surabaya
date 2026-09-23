@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from sqlalchemy import text
 
+# pyrefly: ignore [missing-import]
 from app.core.database import engine
 
 app = FastAPI()
