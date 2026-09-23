@@ -12,9 +12,10 @@ import RewardCalculatorModal from './components/RewardCalculatorModal';
 import TpsMapModal from './components/TpsMapModal';
 import WasteGuideModal from './components/WasteGuideModal';
 import AuthPage from './components/AuthPage';
+import AdminPanel from './components/AdminPanel';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('landing'); // 'landing' | 'auth'
+  const [currentPage, setCurrentPage] = useState('landing'); // 'landing' | 'auth' | 'admin'
   const [authTab, setAuthTab] = useState('masuk'); // 'masuk' | 'daftar'
 
   // Modals state
@@ -23,16 +24,22 @@ export default function App() {
   const [isTpsModalOpen, setIsTpsModalOpen] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState(null);
 
-  // Sync hash routing (support #auth, #masuk, #daftar)
+  // Sync hash routing (support #auth, #masuk, #daftar, #admin)
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.toLowerCase();
-      if (hash === '#auth' || hash === '#masuk' || hash === '#signin') {
+      if (hash === '#admin') {
+        setCurrentPage('admin');
+      } else if (hash === '#auth' || hash === '#masuk' || hash === '#signin') {
         setCurrentPage('auth');
         setAuthTab('masuk');
       } else if (hash === '#daftar' || hash === '#register') {
         setCurrentPage('auth');
         setAuthTab('daftar');
+      } else if (hash === '#beranda' || hash === '') {
+        if (currentPage !== 'admin') {
+          setCurrentPage('landing');
+        }
       }
     };
 
@@ -55,12 +62,36 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleLoginSuccess = (user) => {
+    if (user.role === 'admin') {
+      setCurrentPage('admin');
+      window.location.hash = 'admin';
+    } else {
+      setCurrentPage('landing');
+      window.location.hash = 'beranda';
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setCurrentPage('landing');
+    window.location.hash = 'beranda';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // If user is inside Admin Panel
+  if (currentPage === 'admin') {
+    return (
+      <AdminPanel onLogout={handleAdminLogout} />
+    );
+  }
+
   // If user navigates to Auth Page (SampahPintar Login / Daftar)
   if (currentPage === 'auth') {
     return (
       <AuthPage 
         initialTab={authTab} 
-        onBackToHome={handleBackToHome} 
+        onBackToHome={handleBackToHome}
+        onLoginSuccess={handleLoginSuccess}
       />
     );
   }
