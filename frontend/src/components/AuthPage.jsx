@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function AuthPage({ initialTab = 'masuk', onBackToHome }) {
+export default function AuthPage({ initialTab = 'masuk', onBackToHome, onLoginSuccess }) {
   const [activeTab, setActiveTab] = useState(initialTab); // 'daftar' or 'masuk'
   const [showPassword, setShowPassword] = useState(false);
 
@@ -9,18 +9,43 @@ export default function AuthPage({ initialTab = 'masuk', onBackToHome }) {
   const [noKK, setNoKK] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setIsSuccess(true);
-    setTimeout(() => {
-      alert(activeTab === 'daftar' 
-        ? `Akun atas nama ${fullName || 'Warga'} berhasil didaftarkan! Selamat datang di SampahPintar.` 
-        : `Berhasil masuk ke akun ${email}!`);
-      setIsSuccess(false);
-      onBackToHome();
-    }, 800);
+    setErrorMessage('');
+
+    if (activeTab === 'masuk') {
+      // Check admin credentials specified by user:
+      // email: admin123@gmail.com, password: admin123
+      if (email.trim().toLowerCase() === 'admin123@gmail.com' && password === 'admin123') {
+        setIsSuccess(true);
+        setTimeout(() => {
+          setIsSuccess(false);
+          if (onLoginSuccess) {
+            onLoginSuccess({ role: 'admin', email: 'admin123@gmail.com' });
+          }
+        }, 500);
+        return;
+      }
+
+      // If other credentials, login simulation
+      setIsSuccess(true);
+      setTimeout(() => {
+        setIsSuccess(false);
+        alert(`Berhasil masuk ke akun ${email}!`);
+        onBackToHome();
+      }, 700);
+    } else {
+      // Register
+      setIsSuccess(true);
+      setTimeout(() => {
+        setIsSuccess(false);
+        alert(`Akun atas nama ${fullName || 'Warga'} berhasil didaftarkan! Silakan masuk.`);
+        setActiveTab('masuk');
+      }, 700);
+    }
   };
 
   return (
