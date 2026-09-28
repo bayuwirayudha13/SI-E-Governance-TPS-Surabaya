@@ -1,0 +1,216 @@
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import create_engine, Column, String, DateTime, Integer, func, text
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from pydantic import BaseModel, ConfigDict
+from passlib.context import CryptContext
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Config
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+DATABASE_URL = os.getenv("DATABASE_URL", "mysql+pymysql://root:@localhost:3306/sipk_tps_baru")
+
+# Setup
+app = FastAPI(title="SampahPintar API")
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Database
+try:
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base = declarative_base()
+    # Test connection
+    with engine.connect() as conn:
+        conn.execute(text("SELECT 1"))
+    print("Database connected successfully")
+except Exception as e:
+    print(f"Database connection error: {e}")
+
+# Security
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Model - menggunakan tabel 'warga' yang sudah ada di database
+class Warga(Base):
+    __tablename__ = "warga"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    nama = Column(String(100), nullable=False)
+    email = Column(String(150), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    no_hp = Column(String(20), nullable=True)
+    total_poin = Column(Integer, default=0)
+    created_at = Column(DateTime, default=func.now())
+
+Base.metadata.create_all(bind=engine)
+
+# Schemas
+class RegisterRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    email: str
+    password: str
+    full_name: str
+
+class LoginRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    email: str
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: dict
+
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    email: str
+    nama: str
+    total_poin: int
+    created_at: datetime | None = None
+
+# Utilities
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def get_current_user(token: str = None, db: Session = Depends(get_db)):
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    user = db.query(Warga).filter(Warga.email == email).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+# Routes
+@app.get("/")
+def root():
+    return {"message": "SampahPintar API - Connected to MySQL"}
+
+@app.post("/api/auth/register")
+def register(request: RegisterRequest, db: Session = Depends(get_db)):
+    try:
+        # Check if user exists
+        existing_user = db.query(Warga).filter(Warga.email == request.email).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email sudah terdaftar")
+        
+        # Create user
+        hashed_password = get_password_hash(request.password)
+        user = Warga(
+            email=request.email,
+            password_hash=hashed_password,
+            nama=request.full_name
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        
+        # Create token
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.email},
+            expires_delta=access_token_expires
+        )
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.nama,
+                "total_poin": user.total_poin
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error register: {str(e)}")
+
+@app.post("/api/auth/login")
+def login(request: LoginRequest, db: Session = Depends(get_db)):
+    try:
+        # Find user
+        user = db.query(Warga).filter(Warga.email == request.email).first()
+        if not user or not verify_password(request.password, user.password_hash):
+            raise HTTPException(status_code=401, detail="Email atau password salah")
+        
+        # Create token
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.email},
+            expires_delta=access_token_expires
+        )
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.nama,
+                "total_poin": user.total_poin
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error login: {str(e)}")
+
+@app.get("/api/auth/me")
+def get_me(token: str = None, db: Session = Depends(get_db)):
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    user = get_current_user(token, db)
+    return user
+
+@app.post("/api/auth/logout")
+def logout():
+    return {"message": "Logged out successfully"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

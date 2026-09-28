@@ -17,6 +17,7 @@ import AdminPanel from './components/AdminPanel';
 export default function App() {
   const [currentPage, setCurrentPage] = useState('landing'); // 'landing' | 'auth' | 'admin'
   const [authTab, setAuthTab] = useState('masuk'); // 'masuk' | 'daftar'
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Modals state
   const [selectedArticle, setSelectedArticle] = useState(null);

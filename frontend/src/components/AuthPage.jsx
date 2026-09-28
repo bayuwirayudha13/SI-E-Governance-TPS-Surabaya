@@ -12,39 +12,60 @@ export default function AuthPage({ initialTab = 'masuk', onBackToHome, onLoginSu
   const [errorMessage, setErrorMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleSubmit = (e) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+    setIsLoading(true);
 
-    if (activeTab === 'masuk') {
-      // Check admin credentials specified by user:
-      // email: admin123@gmail.com, password: admin123
-      if (email.trim().toLowerCase() === 'admin123@gmail.com' && password === 'admin123') {
-        setIsSuccess(true);
-        setTimeout(() => {
-          setIsSuccess(false);
-          if (onLoginSuccess) {
-            onLoginSuccess({ role: 'admin', email: 'admin123@gmail.com' });
-          }
-        }, 500);
-        return;
+    try {
+      const url = activeTab === 'masuk' 
+        ? 'http://localhost:8000/api/auth/login'
+        : 'http://localhost:8000/api/auth/register';
+
+      const payload = activeTab === 'masuk'
+        ? { email, password }
+        : { email, password, full_name: fullName };
+
+      console.log('Sending request to:', url, payload);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      console.log('Response status:', response.status);
+
+      const data = await response.json();
+      console.log('Response data:', data);
+
+      if (!response.ok) {
+        throw new Error(data.detail || `Error ${response.status}: ${JSON.stringify(data)}`);
       }
 
-      // If other credentials, login simulation
+      // Save token to localStorage
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
       setIsSuccess(true);
       setTimeout(() => {
         setIsSuccess(false);
-        alert(`Berhasil masuk ke akun ${email}!`);
-        onBackToHome();
-      }, 700);
-    } else {
-      // Register
-      setIsSuccess(true);
-      setTimeout(() => {
-        setIsSuccess(false);
-        alert(`Akun atas nama ${fullName || 'Warga'} berhasil didaftarkan! Silakan masuk.`);
-        setActiveTab('masuk');
-      }, 700);
+        if (activeTab === 'masuk') {
+          if (onLoginSuccess) {
+            onLoginSuccess(data.user);
+          }
+        } else {
+          alert(`Akun berhasil dibuat! Silakan masuk.`);
+          setActiveTab('masuk');
+        }
+        setIsLoading(false);
+      }, 500);
+    } catch (err) {
+      console.error('Auth error:', err);
+      setErrorMessage(err.message || 'Koneksi gagal ke server');
+      setIsLoading(false);
     }
   };
 
@@ -160,6 +181,11 @@ export default function AuthPage({ initialTab = 'masuk', onBackToHome, onLoginSu
 
           {/* Form Content */}
           <form onSubmit={handleSubmit} className="auth-form">
+            {errorMessage && (
+              <div style={{ padding: '10px 14px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '16px' }}>
+                {errorMessage}
+              </div>
+            )}
             {activeTab === 'daftar' && (
               <>
                 {/* Nama Lengkap */}
@@ -250,10 +276,14 @@ export default function AuthPage({ initialTab = 'masuk', onBackToHome, onLoginSu
             <button
               type="submit"
               className="btn-auth-submit"
-              disabled={isSuccess}
+              disabled={isSuccess || isLoading}
               id="auth-submit-btn"
             >
-              <span>{activeTab === 'daftar' ? 'Buat Akun & Masuk' : 'Masuk ke Dashboard'}</span>
+              <span>
+                {isLoading 
+                  ? 'Memproses...' 
+                  : (activeTab === 'daftar' ? 'Buat Akun & Masuk' : 'Masuk ke Dashboard')}
+              </span>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12"></line>
                 <polyline points="12 5 19 12 12 19"></polyline>
