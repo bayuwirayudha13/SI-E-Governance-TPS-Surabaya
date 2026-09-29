@@ -1,0 +1,1067 @@
+/* ==========================================================================
+   WARGA PORTAL STYLING (SI-PETASAN KELURAHAN SUKAMAJU)
+   ========================================================================== */
+.warga-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+/* Sidebar */
+.warga-sidebar {
+  width: 260px;
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  padding: 24px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  box-sizing: border-box;
+  z-index: 20;
+}
+
+.warga-logo-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.warga-logo-icon {
+  width: 38px;
+  height: 38px;
+  background: #166534;
+  color: #ffffff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+}
+
+.warga-brand-name {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #166534;
+  letter-spacing: -0.01em;
+}
+
+.warga-brand-sub {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.warga-menu-section {
+  margin-top: 6px;
+}
+
+.warga-menu-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.06em;
+  margin-bottom: 12px;
+}
+
+.warga-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.warga-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: left;
+}
+
+.warga-nav-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.warga-nav-btn.active {
+  background: #1e7e48;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(30, 126, 72, 0.28);
+}
+
+.warga-sidebar-footer {
+  margin-top: auto;
+  padding-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.warga-profile-pill {
+  width: 100%;
+  background: #eaf7ed;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.warga-avatar-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #166534;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.warga-profile-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.warga-profile-sub {
+  font-size: 0.74rem;
+  color: #166534;
+  font-weight: 500;
+}
+
+.warga-logout-link {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.18s;
+  padding: 4px 8px;
+}
+
+.warga-logout-link:hover {
+  color: #ef4444;
+}
+
+/* Main Content Area */
+.warga-main-content {
+  flex: 1;
+  padding: 30px 42px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  background: #f8fafc;
+}
+
+/* Top Header */
+.warga-top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.warga-page-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.warga-page-date {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.warga-header-points {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.warga-points-meta {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+}
+
+.warga-points-label {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.warga-points-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #15803d;
+  letter-spacing: -0.02em;
+}
+
+.warga-avatar-lg {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #166534;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.warga-toast-success {
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  color: #15803d;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+/* Banners */
+.warga-alert-banner {
+  border-radius: 12px;
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.warga-alert-banner.green {
+  background: #eef9f2;
+  border: 1px solid #bbf7d0;
+}
+
+.warga-alert-banner.soft {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  font-size: 0.88rem;
+  color: #166534;
+  font-weight: 500;
+}
+
+.warga-alert-icon {
+  font-size: 1.3rem;
+}
+
+.warga-alert-title {
+  display: block;
+  font-size: 0.95rem;
+  color: #14532d;
+  font-weight: 700;
+}
+
+.warga-alert-desc {
+  font-size: 0.82rem;
+  color: #166534;
+  margin: 2px 0 0 0;
+}
+
+/* Common Panel Card */
+.warga-panel-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.warga-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 14px 0;
+}
+
+/* Stats 3 Cards */
+.warga-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.warga-stat-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.warga-stat-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.warga-stat-icon {
+  font-size: 1.25rem;
+}
+
+.warga-stat-badge {
+  background: #eaf7ed;
+  color: #166534;
+  font-weight: 700;
+  font-size: 0.68rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+
+.warga-stat-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.warga-stat-number {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.warga-stat-unit {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.warga-stat-label {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Two Column Layout in Dashboard */
+.warga-two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.warga-tps-progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.warga-tps-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.warga-tps-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.warga-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.warga-dot.green { background: #16a34a; }
+.warga-dot.yellow { background: #f59e0b; }
+.warga-dot.red { background: #ef4444; }
+
+.warga-tps-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.warga-tps-pct {
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.warga-tps-pct.green { color: #16a34a; }
+.warga-tps-pct.yellow { color: #d97706; }
+.warga-tps-pct.red { color: #dc2626; }
+
+.warga-bar-track {
+  width: 100%;
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.warga-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.warga-bar-fill.green { background: #16a34a; }
+.warga-bar-fill.yellow { background: #f59e0b; }
+.warga-bar-fill.red { background: #ef4444; }
+
+.warga-inline-link-btn {
+  background: none;
+  border: none;
+  color: #166534;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.warga-inline-link-btn:hover {
+  text-decoration: underline;
+}
+
+/* Schedule Brief List */
+.warga-schedule-brief-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.warga-brief-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.warga-brief-day {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.warga-brief-sub {
+  font-size: 0.76rem;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.warga-tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.warga-tag.green { background: #dcfce7; color: #15803d; }
+.warga-tag.blue { background: #dbeafe; color: #1d4ed8; }
+.warga-tag.gray { background: #f1f5f9; color: #64748b; }
+
+/* Big Action Button */
+.warga-big-action-btn {
+  width: 100%;
+  background: #1e7e48;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(30, 126, 72, 0.25);
+}
+
+.warga-big-action-btn:hover {
+  background: #166534;
+  transform: translateY(-1px);
+}
+
+/* Jadwal Table */
+.warga-table-container {
+  overflow-x: auto;
+}
+
+.warga-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.warga-data-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.warga-data-table td {
+  padding: 14px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.warga-data-table tr.row-highlight-today {
+  background: #f0fdf4;
+}
+
+.col-day {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.warga-pill-today {
+  background: #166534;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+
+/* Setor & Reward Plastic Cards */
+.warga-plastic-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.warga-plastic-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.warga-plastic-card:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.warga-plastic-card.selected {
+  border-color: #16a34a;
+  background: #f0fdf4;
+  box-shadow: 0 0 0 1px #16a34a;
+}
+
+.warga-plastic-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.warga-resin-badge {
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+  display: inline-block;
+}
+
+.warga-plastic-name {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.warga-plastic-sub {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 2px 0 6px 0;
+}
+
+.warga-plastic-rate {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.warga-radio-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.warga-radio-circle.checked {
+  border-color: #16a34a;
+}
+
+.warga-radio-inner {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #16a34a;
+}
+
+/* Setor Weight Form */
+.warga-deposit-form {
+  margin-top: 18px;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+}
+
+.warga-form-inner {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.warga-weight-input {
+  width: 140px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.warga-calc-summary {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.warga-submit-deposit-btn {
+  background: #166534;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: auto;
+  transition: background 0.18s;
+}
+
+.warga-submit-deposit-btn:hover {
+  background: #14532d;
+}
+
+/* Panduan 3 Top Cards */
+.warga-guide-top-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.warga-category-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.warga-cat-header {
+  padding: 14px 18px;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.warga-category-card.organik .warga-cat-header {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.warga-category-card.anorganik .warga-cat-header {
+  background: #f0f9ff;
+  color: #0284c7;
+}
+
+.warga-category-card.residu .warga-cat-header {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.warga-cat-bullet-list {
+  list-style: none;
+  padding: 14px 18px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #334155;
+  flex: 1;
+}
+
+.warga-cat-bullet-list li {
+  position: relative;
+  padding-left: 14px;
+}
+
+.warga-category-card.organik .warga-cat-bullet-list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #16a34a;
+  font-weight: 800;
+}
+
+.warga-category-card.anorganik .warga-cat-bullet-list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #0284c7;
+  font-weight: 800;
+}
+
+.warga-category-card.residu .warga-cat-bullet-list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #ea580c;
+  font-weight: 800;
+}
+
+.warga-cat-footer-pill {
+  margin: 12px 16px 16px 16px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.warga-cat-footer-pill.green {
+  background: #eef9f2;
+  color: #15803d;
+}
+
+.warga-cat-footer-pill.blue {
+  background: #f0f9ff;
+  color: #0284c7;
+}
+
+.warga-cat-footer-pill.orange {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+/* Resin Code Guide Grid */
+.warga-resin-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.warga-resin-guide-card {
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+}
+
+.warga-resin-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 8px 0 2px 0;
+}
+
+.warga-resin-sub {
+  font-size: 0.76rem;
+  color: #64748b;
+  margin: 0 0 10px 0;
+  flex: 1;
+}
+
+.warga-resin-bonus {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+/* Tracking TPS Screen */
+.warga-tps-chip-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.warga-tps-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.warga-tps-chip:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.warga-tps-chip.active {
+  background: #eaf7ed;
+  border-color: #86efac;
+  color: #166534;
+  box-shadow: 0 1px 4px rgba(22, 101, 52, 0.15);
+}
+
+.warga-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.warga-tracking-grid {
+  display: flex;
+  gap: 18px;
+}
+
+.warga-tracking-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.warga-status-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.warga-status-tag.green { background: #dcfce7; color: #15803d; }
+.warga-status-tag.yellow { background: #fef3c7; color: #b45309; }
+.warga-status-tag.red { background: #fee2e2; color: #b91c1c; }
+
+.warga-recommendation-card {
+  border-radius: 14px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border: 1px solid transparent;
+}
+
+.warga-recommendation-card.green {
+  background: #eef9f2;
+  border-color: #bbf7d0;
+}
+
+.warga-recommendation-card.yellow {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.warga-recommendation-card.red {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.warga-rec-icon-box {
+  font-size: 2.2rem;
+  margin-bottom: 8px;
+}
+
+.warga-rec-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.warga-rec-desc {
+  font-size: 0.82rem;
+  color: #475569;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Map Viewport */
+.warga-map-viewport {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.warga-svg-map {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.warga-map-live-tag {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #14532d;
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  z-index: 5;
+}
+
+.warga-live-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: pulse 1.5s infinite;
+}
+
+.warga-map-legend-box {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.74rem;
+  color: #334155;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.warga-legend-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.warga-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+  font-size: 0.74rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1100px) {
+  .warga-two-col-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .warga-plastic-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .warga-guide-top-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .warga-resin-guide-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .warga-tracking-grid {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 768px) {
+  .warga-container {
+    flex-direction: column;
+  }
+
+  .warga-sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .warga-main-content {
+    padding: 20px 16px;
+  }
+
+  .warga-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

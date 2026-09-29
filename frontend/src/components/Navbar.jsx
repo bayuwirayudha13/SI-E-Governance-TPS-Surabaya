@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function Navbar({ onOpenLoginModal, onOpenTpsModal }) {
+export default function Navbar({ onOpenLoginModal, onOpenTpsModal: _onOpenTpsModal }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -28,7 +28,7 @@ export default function Navbar({ onOpenLoginModal, onOpenTpsModal }) {
           </ul>
         </nav>
 
-        {/* Action Button: Sign In (As in the original mockup) */}
+        {/* Action Button: Sign In */}
         <div className="nav-actions">
           <button 
             type="button" 

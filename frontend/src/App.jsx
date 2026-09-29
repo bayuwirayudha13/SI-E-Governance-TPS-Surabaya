@@ -13,9 +13,10 @@ import TpsMapModal from './components/TpsMapModal';
 import WasteGuideModal from './components/WasteGuideModal';
 import AuthPage from './components/AuthPage';
 import AdminPanel from './components/AdminPanel';
+import WargaPanel from './components/WargaPanel';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('landing'); // 'landing' | 'auth' | 'admin'
+  const [currentPage, setCurrentPage] = useState('landing'); // 'landing' | 'auth' | 'admin' | 'warga'
   const [authTab, setAuthTab] = useState('masuk'); // 'masuk' | 'daftar'
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -25,12 +26,14 @@ export default function App() {
   const [isTpsModalOpen, setIsTpsModalOpen] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState(null);
 
-  // Sync hash routing (support #auth, #masuk, #daftar, #admin)
+  // Sync hash routing (support #auth, #masuk, #daftar, #admin, #warga)
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.toLowerCase();
       if (hash === '#admin') {
         setCurrentPage('admin');
+      } else if (hash === '#warga' || hash === '#portal-warga' || hash === '#warga-dashboard') {
+        setCurrentPage('warga');
       } else if (hash === '#auth' || hash === '#masuk' || hash === '#signin') {
         setCurrentPage('auth');
         setAuthTab('masuk');
@@ -38,7 +41,7 @@ export default function App() {
         setCurrentPage('auth');
         setAuthTab('daftar');
       } else if (hash === '#beranda' || hash === '') {
-        if (currentPage !== 'admin') {
+        if (currentPage !== 'admin' && currentPage !== 'warga') {
           setCurrentPage('landing');
         }
       }
@@ -48,7 +51,7 @@ export default function App() {
     handleHashChange(); // check initial hash
 
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+  }, [currentPage]);
 
   const handleOpenAuth = (tab = 'masuk') => {
     setAuthTab(tab);
@@ -68,8 +71,8 @@ export default function App() {
       setCurrentPage('admin');
       window.location.hash = 'admin';
     } else {
-      setCurrentPage('landing');
-      window.location.hash = 'beranda';
+      setCurrentPage('warga');
+      window.location.hash = 'warga';
     }
   };
 
@@ -79,10 +82,23 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleWargaLogout = () => {
+    setCurrentPage('landing');
+    window.location.hash = 'beranda';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // If user is inside Admin Panel
   if (currentPage === 'admin') {
     return (
       <AdminPanel onLogout={handleAdminLogout} />
+    );
+  }
+
+  // If user is inside Warga Portal
+  if (currentPage === 'warga') {
+    return (
+      <WargaPanel onLogout={handleWargaLogout} />
     );
   }
 
