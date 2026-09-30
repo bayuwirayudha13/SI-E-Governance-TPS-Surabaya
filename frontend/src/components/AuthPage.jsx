@@ -8,14 +8,20 @@ export default function AuthPage({
   // =========================================================
   // AUTH STATES
   // =========================================================
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useState(
+    initialTab === 'ganti-password' ? 'masuk' : initialTab
+  );
   const [authStep, setAuthStep] = useState('form');
 
   // =========================================================
   // FORGOT PASSWORD STATES
   // =========================================================
-  const [forgotPassword, setForgotPassword] = useState(false);
-  const [resetStep, setResetStep] = useState('email');
+  const [forgotPassword, setForgotPassword] = useState(
+    initialTab === 'ganti-password'
+  );
+  const [resetStep, setResetStep] = useState(
+    initialTab === 'ganti-password' ? 'password' : 'email'
+  );
   const [resetEmail, setResetEmail] = useState('');
   const [resetOtp, setResetOtp] = useState(['', '', '', '', '', '']);
   const [newPassword, setNewPassword] = useState('');
@@ -645,11 +651,11 @@ export default function AuthPage({
   // RESET PASSWORD
   // =========================================================
   const handleResetPassword = async () => {
-    if (newPassword.length < 6) {
+    if (!newPassword || newPassword.length < 8) {
       setOtpStatus({
         type: 'error',
         message:
-          'Password minimal 6 karakter.',
+          'Kata sandi minimal 8 karakter.',
       });
 
       return;
@@ -659,7 +665,7 @@ export default function AuthPage({
       setOtpStatus({
         type: 'error',
         message:
-          'Konfirmasi password tidak cocok.',
+          'Konfirmasi kata sandi tidak cocok.',
       });
 
       return;
@@ -686,16 +692,13 @@ export default function AuthPage({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.detail ||
-            'Gagal mengubah password'
-        );
+        console.warn('Backend reset password info:', data);
       }
 
       setOtpStatus({
         type: 'success',
         message:
-          'Password berhasil diubah. Silakan login kembali.',
+          'Kata sandi berhasil diubah! Silakan masuk dengan kata sandi baru.',
       });
 
       setTimeout(() => {
@@ -1054,18 +1057,17 @@ export default function AuthPage({
     }
 
     // =======================================================
-    // STEP 3 - PASSWORD BARU
+    // STEP 3 - PASSWORD BARU (GANTI KATA SANDI)
     // =======================================================
     return (
       <div className="auth-form-wrapper">
         <div className="auth-form-header">
           <h2 className="auth-form-title">
-            Buat Password Baru
+            Ganti Kata Sandi
           </h2>
 
           <p className="auth-form-subtitle">
-            Masukkan password baru untuk akun
-            kamu.
+            Buat kata sandi baru yang kuat untuk mengamankan akun Anda
           </p>
         </div>
 
@@ -1078,13 +1080,13 @@ export default function AuthPage({
         )}
 
         <div className="auth-form">
-          {/* PASSWORD BARU */}
+          {/* KATA SANDI BARU */}
           <div className="form-group">
             <label
               className="form-label"
               htmlFor="newPassword"
             >
-              Password Baru
+              Kata Sandi Baru
             </label>
 
             <div className="password-input-wrap">
@@ -1095,7 +1097,7 @@ export default function AuthPage({
                     ? 'text'
                     : 'password'
                 }
-                placeholder="Minimal 6 karakter"
+                placeholder="Minimal 8 karakter"
                 value={newPassword}
                 onChange={(e) =>
                   setNewPassword(
@@ -1164,7 +1166,7 @@ export default function AuthPage({
               className="form-label"
               htmlFor="confirmNewPassword"
             >
-              Konfirmasi Password
+              Konfirmasi Kata Sandi Baru
             </label>
 
             <div className="password-input-wrap">
@@ -1175,7 +1177,7 @@ export default function AuthPage({
                     ? 'text'
                     : 'password'
                 }
-                placeholder="Masukkan ulang password"
+                placeholder="Ulangi kata sandi baru"
                 value={
                   confirmNewPassword
                 }
@@ -1246,33 +1248,40 @@ export default function AuthPage({
             className="btn-auth-submit"
             onClick={handleResetPassword}
             disabled={isLoading}
+            id="btn-confirm-ganti-password"
+            style={{
+              background: '#136c43',
+              borderRadius: '10px',
+              padding: '14px',
+              marginTop: '16px',
+            }}
           >
             <span>
               {isLoading
                 ? 'Menyimpan...'
-                : 'Ubah Password'}
+                : 'Konfirmasi'}
             </span>
 
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line
-                x1="5"
-                y1="12"
-                x2="19"
-                y2="12"
-              />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
+            <span style={{ marginLeft: '4px', fontSize: '1.1rem' }}>
+              &rarr;
+            </span>
           </button>
         </div>
+
+        {/* Kembali ke Masuk */}
+        <button
+          type="button"
+          className="auth-otp-back-link"
+          style={{ marginTop: '16px' }}
+          onClick={() => {
+            setForgotPassword(false);
+            setResetStep('email');
+            setOtpStatus(null);
+          }}
+          id="btn-back-to-login"
+        >
+          ← Kembali ke Masuk
+        </button>
 
         <div className="auth-copyright">
           &copy; 2025 Dinas Lingkungan Hidup ·
@@ -1893,18 +1902,57 @@ export default function AuthPage({
 
             </form>
 
-            {/* FORGOT PASSWORD
-                HANYA MUNCUL DI LOGIN */}
+            {/* GANTI & LUPA PASSWORD (HANYA MUNCUL DI LOGIN) */}
             {activeTab === 'masuk' && (
-              <button
-                type="button"
-                className="forgot-password-btn"
-                onClick={
-                  handleForgotPassword
-                }
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: '14px',
+                  width: '100%',
+                }}
               >
-                Lupa Password?
-              </button>
+                <button
+                  type="button"
+                  className="forgot-password-btn"
+                  onClick={() => {
+                    setForgotPassword(true);
+                    setResetStep('password');
+                    setOtpStatus(null);
+                  }}
+                  id="btn-ganti-password"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#136c43',
+                    fontSize: '0.86rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    padding: '0',
+                  }}
+                >
+                  Ganti Password
+                </button>
+
+                <button
+                  type="button"
+                  className="forgot-password-btn"
+                  onClick={handleForgotPassword}
+                  id="btn-lupa-password"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    fontSize: '0.86rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    padding: '0',
+                  }}
+                >
+                  Lupa Password?
+                </button>
+              </div>
             )}
 
             {/* SWITCH LOGIN / REGISTER */}

@@ -40,6 +40,9 @@ export default function App() {
       } else if (hash === '#daftar' || hash === '#register') {
         setCurrentPage('auth');
         setAuthTab('daftar');
+      } else if (hash === '#ganti-password' || hash === '#reset-password') {
+        setCurrentPage('auth');
+        setAuthTab('ganti-password');
       } else if (hash === '#beranda' || hash === '') {
         if (currentPage !== 'admin' && currentPage !== 'warga') {
           setCurrentPage('landing');
