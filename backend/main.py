@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 import os
 from dotenv import load_dotenv
+from auth.routes import router as auth_router
+from core.database import engine, SessionLocal, Base, get_db
 
 load_dotenv()
 
@@ -15,7 +17,6 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-DATABASE_URL = os.getenv("DATABASE_URL", "mysql+pymysql://root:@localhost:3306/sipk_tps_baru")
 
 # Setup
 app = FastAPI(title="SampahPintar API")
@@ -30,16 +31,7 @@ app.add_middleware(
 )
 
 # Database
-try:
-    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    Base = declarative_base()
-    # Test connection
-    with engine.connect() as conn:
-        conn.execute(text("SELECT 1"))
-    print("Database connected successfully")
-except Exception as e:
-    print(f"Database connection error: {e}")
+
 
 # Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -99,13 +91,6 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 def get_current_user(token: str = None, db: Session = Depends(get_db)):
     if not token:
@@ -210,6 +195,8 @@ def get_me(token: str = None, db: Session = Depends(get_db)):
 @app.post("/api/auth/logout")
 def logout():
     return {"message": "Logged out successfully"}
+
+app.include_router(auth_router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn
