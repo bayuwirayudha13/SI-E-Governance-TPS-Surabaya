@@ -548,12 +548,27 @@ img {
 }
 
 /* OpenStreetMap Hero Interactive Styles */
+.leaflet-container img,
+.hero-osm-map-canvas img {
+  max-width: none !important;
+  max-height: none !important;
+  display: inline !important;
+}
+
 .hero-osm-map-canvas {
   width: 100%;
   height: 480px;
   position: relative;
   background: #0c2417;
   outline: none;
+  overflow: hidden;
+}
+
+.hero-osm-map-canvas .leaflet-pane,
+.hero-osm-map-canvas .leaflet-tile-pane,
+.hero-osm-map-canvas .leaflet-layer {
+  width: 100%;
+  height: 100%;
 }
 
 .osm-live-indicator {

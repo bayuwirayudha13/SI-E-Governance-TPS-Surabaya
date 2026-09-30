@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { tpsList } from '../data/mockData';
 
 // Stable module-level constants
@@ -30,6 +31,9 @@ export default function HeroMap({ onOpenTpsModal }) {
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
+    let resizeObserver = null;
+    const timers = [];
+
     // Prevent re-initialization if map already exists
     if (!mapInstanceRef.current) {
       const map = L.map(mapContainerRef.current, {
@@ -56,20 +60,50 @@ export default function HeroMap({ onOpenTpsModal }) {
 
       mapInstanceRef.current = map;
 
-      // Invalidate size after layout settles
-      setTimeout(() => {
-        map.invalidateSize();
-      }, 250);
-    }
+      // Invalidate size in stages to ensure full canvas coverage
+      const intervals = [50, 150, 300, 600, 1000];
+      intervals.forEach((delay) => {
+        const t = setTimeout(() => {
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.invalidateSize();
+          }
+        }, delay);
+        timers.push(t);
+      });
 
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-        tileLayerRef.current = null;
-        markersLayerRef.current = null;
+      // ResizeObserver to automatically resize map when container size changes
+      if (window.ResizeObserver && mapContainerRef.current) {
+        resizeObserver = new ResizeObserver(() => {
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.invalidateSize();
+          }
+        });
+        resizeObserver.observe(mapContainerRef.current);
       }
-    };
+
+      // Also listen to window resize
+      const handleWindowResize = () => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize();
+        }
+      };
+      window.addEventListener('resize', handleWindowResize);
+
+      // Return cleanup inside effect
+      return () => {
+        window.removeEventListener('resize', handleWindowResize);
+        if (resizeObserver) {
+          resizeObserver.disconnect();
+        }
+        timers.forEach((t) => clearTimeout(t));
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.remove();
+          mapInstanceRef.current = null;
+          tileLayerRef.current = null;
+          markersLayerRef.current = null;
+        }
+      };
+    }
   }, []);
 
   // Update Tile Layer when mapType changes
