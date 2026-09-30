@@ -10,6 +10,8 @@ import os
 from dotenv import load_dotenv
 from auth.routes import router as auth_router
 from core.database import engine, SessionLocal, Base, get_db
+from auth.otp import generate_otp, save_otp
+from services.email_service import send_otp_email
 
 load_dotenv()
 
@@ -44,6 +46,7 @@ class Warga(Base):
     nama = Column(String(100), nullable=False)
     email = Column(String(150), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
+    email_verified = Column(Integer, default=0, nullable=False)
     no_hp = Column(String(20), nullable=True)
     total_poin = Column(Integer, default=0)
     created_at = Column(DateTime, default=func.now())
@@ -113,47 +116,76 @@ def get_current_user(token: str = None, db: Session = Depends(get_db)):
 def root():
     return {"message": "SampahPintar API - Connected to MySQL"}
 
+
 @app.post("/api/auth/register")
 def register(request: RegisterRequest, db: Session = Depends(get_db)):
     try:
         # Check if user exists
-        existing_user = db.query(Warga).filter(Warga.email == request.email).first()
+        existing_user = db.query(Warga).filter(
+            Warga.email == request.email
+        ).first()
+
         if existing_user:
-            raise HTTPException(status_code=400, detail="Email sudah terdaftar")
-        
-        # Create user
+            raise HTTPException(
+                status_code=400,
+                detail="Email sudah terdaftar"
+            )
+
+        # Hash password
         hashed_password = get_password_hash(request.password)
+
+        # Create user
         user = Warga(
             email=request.email,
             password_hash=hashed_password,
-            nama=request.full_name
+            nama=request.full_name,
+            email_verified=0
         )
+
         db.add(user)
         db.commit()
         db.refresh(user)
-        
-        # Create token
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": user.email},
-            expires_delta=access_token_expires
+
+        # Generate OTP
+        otp = generate_otp()
+
+        # Save OTP
+        save_otp(
+            user.email,
+            otp
         )
-        
+
+        # Send OTP
+        try:
+            send_otp_email(
+                user.email,
+                otp
+            )
+
+        except Exception as e:
+            db.delete(user)
+            db.commit()
+
+            raise HTTPException(
+                status_code=500,
+                detail=f"Gagal mengirim OTP: {str(e)}"
+            )
+
         return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user": {
-                "id": user.id,
-                "email": user.email,
-                "full_name": user.nama,
-                "total_poin": user.total_poin
-            }
+            "message": "Registrasi berhasil. OTP telah dikirim ke email.",
+            "email": user.email
         }
+
     except HTTPException:
         raise
+
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error register: {str(e)}")
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error register: {str(e)}"
+        )
 
 @app.post("/api/auth/login")
 def login(request: LoginRequest, db: Session = Depends(get_db)):
