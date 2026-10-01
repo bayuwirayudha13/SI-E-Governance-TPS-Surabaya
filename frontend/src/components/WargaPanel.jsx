@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './WargaPanel.css';
+
+const API_BASE = 'http://localhost:8000';
 
 // Data types for plastic in Setor & Panduan
 const PLASTIC_TYPES = [
@@ -33,14 +35,16 @@ const TPS_LIST = [
   { id: 'dahlia', name: 'TPS Dahlia', capacity: 31, status: 'AMAN', color: 'green', dotColor: '#16a34a', x: 228, y: 260 }
 ];
 
-export default function WargaPanel({ onLogout }) {
+export default function WargaPanel({ onLogout, wargaId = 12 }) {
   // Navigation: 'dashboard' | 'jadwal' | 'setor' | 'panduan' | 'tracking'
   const [activeMenu, setActiveMenu] = useState('dashboard');
 
   // Warga stats state
-  const [points, setPoints] = useState(1250);
-  const [totalSetoran, setTotalSetoran] = useState(12);
-  const [totalKg, setTotalKg] = useState(34.5);
+  const [points, setPoints] = useState(0);
+  const [totalSetoran, setTotalSetoran] = useState(0);
+  const [totalKg, setTotalKg] = useState(0);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Setor & Reward interactive state
   const [selectedPlastic, setSelectedPlastic] = useState(null);
@@ -49,28 +53,99 @@ export default function WargaPanel({ onLogout }) {
 
   // Tracking TPS state
   const [selectedTpsId, setSelectedTpsId] = useState('mawar');
+  const [tpsList, setTpsList] = useState(TPS_LIST);
 
-  const selectedTps = TPS_LIST.find((t) => t.id === selectedTpsId) || TPS_LIST[0];
+  const selectedTps = tpsList.find((t) => t.id === selectedTpsId) || tpsList[0];
+
+  // Load data on mount
+  useEffect(() => {
+    loadWargaData();
+    loadSetoranData();
+  }, [wargaId]);
+
+  const loadWargaData = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+      
+      const response = await fetch(`${API_BASE}/api/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPoints(data.total_poin || 0);
+      }
+    } catch (err) {
+      console.error('Load warga data error:', err);
+    }
+  };
+
+  const loadSetoranData = async () => {
+    try {
+      const storedUserId = localStorage.getItem('user_id');
+      const actualWargaId = storedUserId || wargaId;
+      
+      const response = await fetch(`${API_BASE}/api/setoran/?warga_id=${actualWargaId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTotalSetoran(data.length);
+        const totalBerat = data.reduce((sum, s) => sum + (parseFloat(s.perkiraan_berat_kg) || 0), 0);
+        setTotalKg(parseFloat(totalBerat.toFixed(1)));
+      }
+    } catch (err) {
+      console.error('Load setoran data error:', err);
+    }
+  };
 
   // Handle deposit submission
-  const handleDepositSubmit = (e) => {
+  const handleDepositSubmit = async (e) => {
     e.preventDefault();
     if (!selectedPlastic || !weightInput || parseFloat(weightInput) <= 0) return;
 
-    const kg = parseFloat(weightInput);
-    const addedPoints = Math.round(kg * selectedPlastic.rate);
+    setIsLoading(true);
+    setErrorMsg('');
 
-    setPoints((prev) => prev + addedPoints);
-    setTotalSetoran((prev) => prev + 1);
-    setTotalKg((prev) => parseFloat((prev + kg).toFixed(1)));
+    try {
+      const storedUserId = localStorage.getItem('user_id');
+      const actualWargaId = storedUserId || wargaId;
 
-    setDepositSuccessMsg(`Berhasil setor ${kg} kg ${selectedPlastic.name}! Mendapatkan +${addedPoints} pts.`);
-    setWeightInput('');
-    setSelectedPlastic(null);
+      const response = await fetch(`${API_BASE}/api/setoran/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          warga_id: parseInt(actualWargaId),
+          jenis_sampah: selectedPlastic.code,
+          perkiraan_berat_kg: parseFloat(weightInput),
+          metode_setor: 'Diantar Langsung',
+          tps_id: tpsList.length > 0 ? tpsList[0].id : null
+        })
+      });
 
-    setTimeout(() => {
-      setDepositSuccessMsg('');
-    }, 4000);
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.detail || 'Gagal setor sampah');
+      }
+
+      const kg = parseFloat(weightInput);
+      const addedPoints = Math.round(kg * selectedPlastic.rate);
+
+      setPoints((prev) => prev + addedPoints);
+      setTotalSetoran((prev) => prev + 1);
+      setTotalKg((prev) => parseFloat((prev + kg).toFixed(1)));
+
+      setDepositSuccessMsg(`Berhasil setor ${kg} kg ${selectedPlastic.name}! Mendapatkan +${addedPoints} pts.`);
+      setWeightInput('');
+      setSelectedPlastic(null);
+
+      setTimeout(() => {
+        setDepositSuccessMsg('');
+      }, 4000);
+    } catch (err) {
+      console.error('Deposit error:', err);
+      setErrorMsg(err.message || 'Gagal setor sampah');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -203,6 +278,12 @@ export default function WargaPanel({ onLogout }) {
         {depositSuccessMsg && (
           <div className="warga-toast-success">
             <span>🎉 {depositSuccessMsg}</span>
+          </div>
+        )}
+
+        {errorMsg && (
+          <div style={{ padding: '12px 16px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '16px' }}>
+            {errorMsg}
           </div>
         )}
 

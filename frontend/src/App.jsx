@@ -70,6 +70,7 @@ export default function App() {
   };
 
   const handleLoginSuccess = (user) => {
+    setCurrentUser(user);
     if (user.role === 'admin') {
       setCurrentPage('admin');
       window.location.hash = 'admin';
@@ -101,7 +102,10 @@ export default function App() {
   // If user is inside Warga Portal
   if (currentPage === 'warga') {
     return (
-      <WargaPanel onLogout={handleWargaLogout} />
+      <WargaPanel 
+        onLogout={handleWargaLogout}
+        wargaId={currentUser?.id}
+      />
     );
   }
 
