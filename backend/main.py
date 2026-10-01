@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, String, DateTime, Integer, func, text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
@@ -12,6 +12,17 @@ from auth.routes import router as auth_router
 from core.database import engine, SessionLocal, Base, get_db
 from auth.otp import generate_otp, save_otp
 from services.email_service import send_otp_email
+from routes.tps_routes import router as tps_router
+from routes.wilayah_routes import router as wilayah_router
+from routes.laporan_routes import router as laporan_router
+from routes.setoran_routes import router as setoran_router
+# Import models untuk registrasi
+from models.warga import Warga
+from models.tps import TPS
+from models.wilayah import Kecamatan, Kelurahan
+from models.users import Admin, PetugasPengangkut
+from models.laporan import LaporanWarga
+from models.setoran import SetoranSampah
 
 load_dotenv()
 
@@ -33,25 +44,10 @@ app.add_middleware(
 )
 
 # Database
-
+Base.metadata.create_all(bind=engine)
 
 # Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# Model - menggunakan tabel 'warga' yang sudah ada di database
-class Warga(Base):
-    __tablename__ = "warga"
-    
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    nama = Column(String(100), nullable=False)
-    email = Column(String(150), unique=True, index=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
-    email_verified = Column(Integer, default=0, nullable=False)
-    no_hp = Column(String(20), nullable=True)
-    total_poin = Column(Integer, default=0)
-    created_at = Column(DateTime, default=func.now())
-
-Base.metadata.create_all(bind=engine)
 
 # Schemas
 class RegisterRequest(BaseModel):
@@ -217,10 +213,16 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error login: {str(e)}")
 
+from fastapi import Header
+
 @app.get("/api/auth/me")
-def get_me(token: str = None, db: Session = Depends(get_db)):
-    if not token:
+def get_me(
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    if not authorization:
         raise HTTPException(status_code=401, detail="Not authenticated")
+    token = authorization.replace("Bearer ", "")
     user = get_current_user(token, db)
     return user
 
@@ -229,6 +231,10 @@ def logout():
     return {"message": "Logged out successfully"}
 
 app.include_router(auth_router, prefix="/api")
+app.include_router(tps_router, prefix="/api")
+app.include_router(wilayah_router, prefix="/api")
+app.include_router(laporan_router, prefix="/api")
+app.include_router(setoran_router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn
