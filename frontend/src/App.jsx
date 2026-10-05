@@ -12,7 +12,8 @@ import RewardCalculatorModal from './components/RewardCalculatorModal';
 import TpsMapModal from './components/TpsMapModal';
 import WasteGuideModal from './components/WasteGuideModal';
 import AuthPage from './components/AuthPage';
-import AdminPanel from './components/AdminPanel';
+import AdminPanel from './components/AdminPanelNew';
+import SuperadminPanel from './components/SuperadminPanel';
 import WargaPanel from './components/WargaPanel';
 
 export default function App() {
@@ -94,6 +95,12 @@ export default function App() {
 
   // If user is inside Admin Panel
   if (currentPage === 'admin') {
+    // Check role to show correct panel
+    if (currentUser?.role === 'superadmin') {
+      return (
+        <SuperadminPanel onLogout={handleAdminLogout} />
+      );
+    }
     return (
       <AdminPanel onLogout={handleAdminLogout} />
     );
