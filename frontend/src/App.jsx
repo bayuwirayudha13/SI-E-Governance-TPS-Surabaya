@@ -71,7 +71,7 @@ export default function App() {
 
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
-    if (user.role === 'admin') {
+    if (user.role === 'superadmin' || user.role === 'admin' || user.role === 'petugas' || user.role === 'driver') {
       setCurrentPage('admin');
       window.location.hash = 'admin';
     } else {

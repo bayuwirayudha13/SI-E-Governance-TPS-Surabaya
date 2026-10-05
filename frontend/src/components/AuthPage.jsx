@@ -194,32 +194,7 @@ export default function AuthPage({
     setIsLoading(true);
 
     // =======================================================
-    // ADMIN LOGIN
-    // =======================================================
-    if (
-      activeTab === 'masuk' &&
-      email.trim().toLowerCase() === 'admin123@gmail.com' &&
-      password === 'admin123'
-    ) {
-      setIsSuccess(true);
-
-      setTimeout(() => {
-        setIsSuccess(false);
-        setIsLoading(false);
-
-        if (onLoginSuccess) {
-          onLoginSuccess({
-            role: 'admin',
-            email: 'admin123@gmail.com',
-          });
-        }
-      }, 500);
-
-      return;
-    }
-
-    // =======================================================
-    // LOGIN WARGA
+    // LOGIN (WARGA, ADMIN, PETUGAS) - semua via backend
     // =======================================================
     if (activeTab === 'masuk') {
       try {
@@ -250,6 +225,14 @@ export default function AuthPage({
             'access_token',
             data.access_token
           );
+          localStorage.setItem(
+            'user_id',
+            data.user?.id?.toString() || ''
+          );
+          localStorage.setItem(
+            'user_role',
+            data.user?.role?.toString() || 'warga'
+          );
         }
 
         setIsSuccess(true);
@@ -259,7 +242,7 @@ export default function AuthPage({
 
           if (onLoginSuccess) {
             onLoginSuccess({
-              role: 'warga',
+              role: data.user?.role || 'warga',
               ...(data.user || {}),
             });
           } else {
