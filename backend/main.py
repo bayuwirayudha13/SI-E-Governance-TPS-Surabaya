@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, String, DateTime, Integer, func, text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from pydantic import BaseModel, ConfigDict
+from typing import Optional
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
@@ -16,13 +17,16 @@ from routes.tps_routes import router as tps_router
 from routes.wilayah_routes import router as wilayah_router
 from routes.laporan_routes import router as laporan_router
 from routes.setoran_routes import router as setoran_router
+from routes.jadwal_routes import router as jadwal_router
+from routes.admin_routes import router as admin_router
 # Import models untuk registrasi
 from models.warga import Warga
 from models.tps import TPS
 from models.wilayah import Kecamatan, Kelurahan
-from models.users import Admin, PetugasPengangkut
+from models.users import User
 from models.laporan import LaporanWarga
 from models.setoran import SetoranSampah
+from models.jadwal import JadwalPengambilan
 
 load_dotenv()
 
@@ -60,6 +64,7 @@ class LoginRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     email: str
     password: str
+    username: Optional[str] = None
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -186,28 +191,53 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
 @app.post("/api/auth/login")
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     try:
-        # Find user
-        user = db.query(Warga).filter(Warga.email == request.email).first()
-        if not user or not verify_password(request.password, user.password_hash):
-            raise HTTPException(status_code=401, detail="Email atau password salah")
+        login_id = request.email or request.username
+        if not login_id:
+            raise HTTPException(status_code=400, detail="Email atau username wajib diisi")
+
+        # Cek di tabel users (admin, petugas, driver, superadmin)
+        user = db.query(User).filter(
+            (User.email == login_id) | (User.username == login_id)
+        ).first()
         
-        # Create token
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": user.email},
-            expires_delta=access_token_expires
-        )
-        
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user": {
-                "id": user.id,
-                "email": user.email,
-                "full_name": user.nama,
-                "total_poin": user.total_poin
+        if user and verify_password(request.password, user.hashed_password):
+            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            access_token = create_access_token(
+                data={"sub": user.email, "role": user.role},
+                expires_delta=access_token_expires
+            )
+            return {
+                "access_token": access_token,
+                "token_type": "bearer",
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "full_name": user.nama_lengkap,
+                    "role": user.role
+                }
             }
-        }
+
+        # Fallback: cek Warga (Email)
+        warga = db.query(Warga).filter(Warga.email == login_id).first()
+        if warga and verify_password(request.password, warga.password_hash):
+            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            access_token = create_access_token(
+                data={"sub": warga.email, "role": "warga"},
+                expires_delta=access_token_expires
+            )
+            return {
+                "access_token": access_token,
+                "token_type": "bearer",
+                "user": {
+                    "id": warga.id,
+                    "email": warga.email,
+                    "full_name": warga.nama,
+                    "role": "warga",
+                    "total_poin": warga.total_poin
+                }
+            }
+
+        raise HTTPException(status_code=401, detail="Email/Username atau password salah")
     except HTTPException:
         raise
     except Exception as e:
@@ -235,6 +265,8 @@ app.include_router(tps_router, prefix="/api")
 app.include_router(wilayah_router, prefix="/api")
 app.include_router(laporan_router, prefix="/api")
 app.include_router(setoran_router, prefix="/api")
+app.include_router(jadwal_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn

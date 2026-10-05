@@ -14,7 +14,7 @@ class SetoranSampah(Base):
     foto_bukti_url = Column(String(255), nullable=True)
     metode_setor = Column(String(50), default='Antar ke TPS')
     alamat_penjemputan = Column(String(255), nullable=True)
-    petugas_id = Column(Integer, ForeignKey("petugas_pengangkut.id"), nullable=True)
+    petugas_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     qr_code = Column(String(64), unique=True, nullable=True)
     status = Column(Enum('Menunggu Penjemputan', 'Sudah Divalidasi', 'Dibatalkan'), default='Menunggu Penjemputan')
     waktu_setor = Column(DateTime, nullable=True)
@@ -22,4 +22,4 @@ class SetoranSampah(Base):
 
     warga = relationship("Warga", foreign_keys=[warga_id])
     tps = relationship("TPS", foreign_keys=[tps_id])
-    petugas = relationship("PetugasPengangkut", foreign_keys=[petugas_id])
+    petugas = relationship("User", foreign_keys=[petugas_id])
