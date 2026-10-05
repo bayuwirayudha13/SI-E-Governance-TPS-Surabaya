@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, DECIMAL, Date, Text, Enum
+from sqlalchemy import Column, Integer, String, DECIMAL, Date, Text, Enum, DateTime, func
+from sqlalchemy.orm import relationship
 from core.database import Base
 
 class TPS(Base):
@@ -19,3 +20,8 @@ class TPS(Base):
     sumber_data = Column(String(100), default='Data internal DLH')
     tanggal_update = Column(Date, nullable=True)
     catatan = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    # Relationships
+    kelurahans = relationship("TPSKelurahan", back_populates="tps", cascade="all, delete-orphan")

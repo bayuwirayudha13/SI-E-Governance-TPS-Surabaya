@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Header
 from sqlalchemy.orm import Session
 from typing import List
 from core.database import get_db
+from datetime import datetime
 from models.users import User
 from schemas.user_schema import (
     AdminCreate, AdminUpdate, AdminResponse,
@@ -111,3 +112,67 @@ def delete_user_account(
     db.delete(user)
     db.commit()
     return {"message": "User berhasil dihapus"}
+
+# Chat routes
+@router.get("/chat/messages")
+def get_chat_messages(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    from models.chat import ChatMessage
+    messages = db.query(ChatMessage).order_by(ChatMessage.timestamp.asc()).limit(100).all()
+    return [
+        {
+            "id": m.id,
+            "sender_id": m.sender_id,
+            "sender_name": m.sender_name,
+            "receiver_id": m.receiver_id,
+            "message": m.message,
+            "timestamp": m.timestamp.isoformat()
+        }
+        for m in messages
+    ]
+
+@router.post("/chat/send")
+def send_chat_message(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    from models.chat import ChatMessage
+    receiver_id = data.get("receiver_id")
+    message = data.get("message")
+    if not receiver_id or not message:
+        raise HTTPException(status_code=400, detail="receiver_id dan message wajib diisi")
+    
+    new_msg = ChatMessage(
+        sender_id=current_user.id,
+        sender_name=current_user.nama_lengkap,
+        receiver_id=receiver_id,
+        message=message,
+        timestamp=datetime.utcnow()
+    )
+    db.add(new_msg)
+    db.commit()
+    db.refresh(new_msg)
+    return {"message": "Chat berhasil dikirim", "id": new_msg.id}
+
+# List warga (admin read-only)
+@router.get("/warga")
+def list_warga(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    from models.warga import Warga
+    wargas = db.query(Warga).order_by(Warga.created_at.desc()).all()
+    return [
+        {
+            "id": w.id,
+            "nama": w.nama,
+            "email": w.email,
+            "no_hp": w.no_hp,
+            "total_poin": w.total_poin,
+            "created_at": w.created_at.isoformat() if w.created_at else None
+        }
+        for w in wargas
+    ]

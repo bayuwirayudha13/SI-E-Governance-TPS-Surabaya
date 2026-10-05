@@ -22,8 +22,10 @@ from routes.admin_routes import router as admin_router
 # Import models untuk registrasi
 from models.warga import Warga
 from models.tps import TPS
+from models.tps_kelurahan import TPSKelurahan
 from models.wilayah import Kecamatan, Kelurahan
 from models.users import User
+from models.chat import ChatMessage
 from models.laporan import LaporanWarga
 from models.setoran import SetoranSampah
 from models.jadwal import JadwalPengambilan
