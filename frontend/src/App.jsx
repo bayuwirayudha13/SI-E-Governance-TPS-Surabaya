@@ -12,7 +12,8 @@ import RewardCalculatorModal from './components/RewardCalculatorModal';
 import TpsMapModal from './components/TpsMapModal';
 import WasteGuideModal from './components/WasteGuideModal';
 import AuthPage from './components/AuthPage';
-import AdminPanel from './components/AdminPanel';
+import AdminPanel from './components/AdminPanelNew';
+import SuperadminPanel from './components/SuperadminPanel';
 import WargaPanel from './components/WargaPanel';
 import PetugasPanel from './components/PetugasPanel';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -100,10 +101,10 @@ export default function App() {
 
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
-    if (user.role === 'admin') {
+    if (user.role === 'superadmin' || user.role === 'admin') {
       setCurrentPage('admin');
       window.location.hash = 'admin';
-    } else if (user.role === 'petugas') {
+    } else if (user.role === 'petugas' || user.role === 'driver') {
       setCurrentPage('petugas');
       window.location.hash = 'petugas';
     } else {
@@ -120,10 +121,18 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // If user is inside Admin Panel (Protected by RBAC: admin)
+  // If user is inside Admin Panel (Protected by RBAC: admin & superadmin)
   if (currentPage === 'admin') {
+    // Check role to show correct panel
+    if (currentUser?.role === 'superadmin') {
+      return (
+        <ProtectedRoute allowedRoles={['superadmin', 'admin']}>
+          <SuperadminPanel onLogout={handleLogout} />
+        </ProtectedRoute>
+      );
+    }
     return (
-      <ProtectedRoute allowedRoles={['admin']}>
+      <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
         <AdminPanel onLogout={handleLogout} />
       </ProtectedRoute>
     );

@@ -13,16 +13,8 @@ const PLASTIC_TYPES = [
   { id: 'other', code: 'OTHER', name: 'Lainnya (ABS, PC, dll)', sub: 'Casing elektronik, helm, galon PC', rate: 20, color: '#334155' }
 ];
 
-// Schedule data for Jadwal Pengambilan
-const SCHEDULE_ITEMS = [
-  { day: 'Senin', isToday: true, area: 'RT 01–03 Jl. Mawar', time: '06:00–08:00', officer: 'Hendra', type: 'Rutin' },
-  { day: 'Selasa', isToday: false, area: 'RT 04–06 Jl. Melati', time: '07:00–09:00', officer: 'Wahyu', type: 'Rutin' },
-  { day: 'Rabu', isToday: false, area: 'RT 07–09 Jl. Kenanga', time: '06:30–08:30', officer: 'Rizki', type: 'Rutin' },
-  { day: 'Kamis', isToday: false, area: 'RT 10–12 Jl. Flamboyan', time: '07:00–09:30', officer: 'Agus', type: 'Rutin' },
-  { day: 'Jumat', isToday: false, area: 'RT 01–06 Semua Zona', time: '06:00–10:00', officer: 'Tim Gabungan', type: 'Besar' },
-  { day: 'Sabtu', isToday: false, area: 'RT 07–12 Semua Zona', time: '07:00–11:00', officer: 'Tim Gabungan', type: 'Besar' },
-  { day: 'Minggu', isToday: false, area: 'Libur — tidak ada pengambilan', time: '—', officer: '—', type: 'Libur' }
-];
+// Placeholder for schedule data — will be loaded from API
+const DEFAULT_SCHEDULE = [];
 
 // TPS Tracking data
 const TPS_LIST = [
@@ -44,6 +36,7 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
   const [totalKg, setTotalKg] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [scheduleItems, setScheduleItems] = useState([]);
 
   // Setor & Reward interactive state
   const [selectedPlastic, setSelectedPlastic] = useState(null);
@@ -60,6 +53,7 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
   useEffect(() => {
     loadWargaData();
     loadSetoranData();
+    loadJadwalData();
   }, [wargaId]);
 
   const loadWargaData = async () => {
@@ -86,6 +80,31 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
       }
     } catch (err) {
       console.error('Load setoran data error:', err);
+    }
+  };
+
+  const loadJadwalData = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/jadwal/`);
+      if (response.ok) {
+        const data = await response.json();
+        const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const todayName = days[new Date().getDay()];
+        const formatted = data.map(j => {
+          const t = (j.tipe || '').toLowerCase();
+          return {
+            day: j.hari,
+            isToday: j.hari === todayName,
+            area: j.area,
+            time: j.tipe === 'Libur' ? '—' : `${j.waktu_mulai}–${j.waktu_selesai}`,
+            officer: j.petugas,
+            type: t.includes('besar') ? 'Besar' : t.includes('libur') ? 'Libur' : 'Rutin'
+          };
+        });
+        setScheduleItems(formatted);
+      }
+    } catch (err) {
+      console.error('Load jadwal data error:', err);
     }
   };
 
@@ -481,7 +500,7 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {SCHEDULE_ITEMS.map((item, idx) => (
+                    {scheduleItems.map((item, idx) => (
                       <tr key={idx} className={item.isToday ? 'row-highlight-today' : ''}>
                         <td className="col-day">
                           <strong>{item.day}</strong>

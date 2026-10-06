@@ -195,11 +195,19 @@ export default function AuthPage({
     setIsLoading(true);
 
     // =======================================================
-    // LOGIN (Admin, Petugas, & Warga via authService)
+    // LOGIN (WARGA, ADMIN, SUPERADMIN, PETUGAS)
     // =======================================================
     if (activeTab === 'masuk') {
       try {
         const data = await authService.login(email.trim(), password);
+        const userData = data.user || { role: 'warga', email: email.trim() };
+
+        if (data.access_token) {
+          localStorage.setItem('access_token', data.access_token);
+          localStorage.setItem('user_id', userData.id?.toString() || '');
+          localStorage.setItem('user_role', userData.role?.toString() || 'warga');
+        }
+
         setIsSuccess(true);
 
         setTimeout(() => {
@@ -207,7 +215,10 @@ export default function AuthPage({
           setIsLoading(false);
 
           if (onLoginSuccess) {
-            onLoginSuccess(data.user || { role: 'warga', email: email.trim() });
+            onLoginSuccess({
+              role: userData.role || 'warga',
+              ...userData,
+            });
           } else {
             onBackToHome();
           }
