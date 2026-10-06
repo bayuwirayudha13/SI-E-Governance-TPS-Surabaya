@@ -20,6 +20,7 @@ export default function SuperadminPanel({ onLogout }) {
   const [newUser, setNewUser] = useState({ nama_lengkap: '', email: '', password: '', role: 'warga' });
   const [newJadwal, setNewJadwal] = useState({ hari: '', waktu_mulai: '', waktu_selesai: '', area: '', petugas: '', tipe: 'Rutin' });
   const [newTps, setNewTps] = useState({ nama: '', kecamatan: '', status: 'AMAN' });
+  const [settings, setSettings] = useState({ website_name: 'SI-PETASAN', website_email: 'admin@sipetasan.com', current_password: '', new_password: '' });
 
   // Load current user
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function SuperadminPanel({ onLogout }) {
     loadUsers();
     loadJadwals();
     loadTps();
+    loadSettings();
   }, []);
 
   // Get current date
@@ -220,6 +222,63 @@ export default function SuperadminPanel({ onLogout }) {
     }
   };
 
+  const loadSettings = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/settings`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSettings({ 
+          website_name: data.website_name, 
+          website_email: data.website_email,
+          current_password: '',
+          new_password: ''
+        });
+      }
+    } catch (err) {
+      console.error('Load settings error:', err);
+    }
+  };
+
+  const handleUpdateSettings = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    try {
+      const updateData = {
+        website_name: settings.website_name,
+        website_email: settings.website_email
+      };
+      if (settings.new_password) {
+        if (!settings.current_password) {
+          throw new Error('Password saat ini wajib diisi untuk mengganti password');
+        }
+        updateData.current_password = settings.current_password;
+        updateData.new_password = settings.new_password;
+      }
+      const response = await fetch(`${API_BASE}/api/admin/settings`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updateData)
+      });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.detail || 'Gagal mengupdate pengaturan');
+      }
+      setSuccess('Pengaturan berhasil diperbarui');
+      setSettings({ ...settings, current_password: '', new_password: '' });
+      loadSettings();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="admin-container">
       {/* SIDEBAR */}
@@ -274,6 +333,14 @@ export default function SuperadminPanel({ onLogout }) {
             >
               <span>Jadwal Pengambilan</span>
             </button>
+
+            <button
+              type="button"
+              className={`admin-nav-item ${activeMenu === 'pengaturan' ? 'active' : ''}`}
+              onClick={() => setActiveMenu('pengaturan')}
+            >
+              <span>Pengaturan</span>
+            </button>
           </nav>
         </div>
 
@@ -302,6 +369,7 @@ export default function SuperadminPanel({ onLogout }) {
               {activeMenu === 'petugas' && 'Kelola Petugas & Admin'}
               {activeMenu === 'tps' && 'Kelola TPS'}
               {activeMenu === 'jadwal' && 'Jadwal Pengambilan Sampah'}
+              {activeMenu === 'pengaturan' && 'Pengaturan Website'}
             </h1>
             <div className="admin-page-date">{getCurrentDate()}</div>
           </div>
@@ -535,6 +603,72 @@ export default function SuperadminPanel({ onLogout }) {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* PENGATURAN */}
+        {activeMenu === 'pengaturan' && (
+          <div className="admin-content-view">
+            <div className="admin-card">
+              <h3 className="admin-card-title">Pengaturan Website</h3>
+              <form onSubmit={handleUpdateSettings} style={{ marginTop: '24px' }}>
+                <div className="form-group">
+                  <label className="form-label">Nama Website</label>
+                  <input
+                    type="text"
+                    className="settings-input"
+                    value={settings.website_name}
+                    onChange={(e) => setSettings({ ...settings, website_name: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Email Website</label>
+                  <input
+                    type="email"
+                    className="settings-input"
+                    value={settings.website_email}
+                    onChange={(e) => setSettings({ ...settings, website_email: e.target.value })}
+                  />
+                </div>
+
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px', marginTop: '20px' }}>
+                  <h4 style={{ marginBottom: '16px', fontSize: '0.95rem', fontWeight: '600', color: '#1e293b' }}>Ganti Password Superadmin</h4>
+
+                  <div className="form-group">
+                    <label className="form-label">Password Saat Ini</label>
+                    <input
+                      type="password"
+                      className="settings-input"
+                      placeholder="Masukkan password saat ini"
+                      value={settings.current_password}
+                      onChange={(e) => setSettings({ ...settings, current_password: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Password Baru</label>
+                    <input
+                      type="password"
+                      className="settings-input"
+                      placeholder="Masukkan password baru (kosongkan jika tidak ingin mengubah)"
+                      value={settings.new_password}
+                      onChange={(e) => setSettings({ ...settings, new_password: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                  <button
+                    type="submit"
+                    className="btn-add-primary"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Menyimpan...' : 'Simpan Pengaturan'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

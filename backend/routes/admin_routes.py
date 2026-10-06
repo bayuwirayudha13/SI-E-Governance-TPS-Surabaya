@@ -4,10 +4,12 @@ from typing import List
 from core.database import get_db
 from datetime import datetime
 from models.users import User
+from models.settings import SystemSettings
 from schemas.user_schema import (
     AdminCreate, AdminUpdate, AdminResponse,
     PetugasCreate, PetugasUpdate, PetugasResponse
 )
+from schemas.settings_schema import SystemSettingsResponse, SystemSettingsUpdate
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 import os
@@ -176,3 +178,50 @@ def list_warga(
         }
         for w in wargas
     ]
+
+# Settings routes for Superadmin
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+@router.get("/settings", response_model=SystemSettingsResponse)
+def get_system_settings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_superadmin)
+):
+    settings = db.query(SystemSettings).first()
+    if not settings:
+        settings = SystemSettings()
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+    return settings
+
+@router.put("/settings", response_model=SystemSettingsResponse)
+def update_system_settings(
+    data: SystemSettingsUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_superadmin)
+):
+    settings = db.query(SystemSettings).first()
+    if not settings:
+        settings = SystemSettings()
+        db.add(settings)
+    
+    if data.website_name:
+        settings.website_name = data.website_name
+    if data.website_email:
+        settings.website_email = data.website_email
+    
+    if data.new_password:
+        if not data.current_password:
+            raise HTTPException(status_code=400, detail="Password saat ini wajib diisi untuk mengganti password")
+        if not verify_password(data.current_password, current_user.hashed_password):
+            raise HTTPException(status_code=400, detail="Password saat ini tidak sesuai")
+        settings.admin_password_hash = pwd_context.hash(data.new_password)
+        current_user.hashed_password = pwd_context.hash(data.new_password)
+    
+    db.commit()
+    db.refresh(settings)
+    return settings
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)

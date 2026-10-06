@@ -44,11 +44,30 @@ export default function App() {
   const [isTpsModalOpen, setIsTpsModalOpen] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState(null);
 
+
   // Sync hash routing (support #auth, #masuk, #daftar, #admin, #warga, #petugas)
+  // Restore session on mount
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    const role = localStorage.getItem('user_role');
+    const email = localStorage.getItem('user_email');
+    
+    if (token && role) {
+      setCurrentUser({ role, email });
+      setCurrentPage('admin');
+      if (role === 'superadmin') {
+        window.location.hash = 'superadmin';
+      } else {
+        window.location.hash = 'admin';
+      }
+    }
+  }, []);
+
+  // Sync hash routing (support #auth, #masuk, #daftar, #admin, #superadmin, #warga)
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.toLowerCase();
-      if (hash === '#admin') {
+      if (hash === '#admin' || hash === '#superadmin') {
         setCurrentPage('admin');
       } else if (hash === '#warga' || hash === '#portal-warga' || hash === '#warga-dashboard') {
         setCurrentPage('warga');
@@ -100,8 +119,13 @@ export default function App() {
   };
 
   const handleLoginSuccess = (user) => {
-    setCurrentUser(user);
-    if (user.role === 'superadmin' || user.role === 'admin') {
+    setCurrentUser(user); 
+    localStorage.setItem('user_role', user.role || 'warga');
+    localStorage.setItem('user_email', user.email || '');
+    if (user.role === 'superadmin') {
+      setCurrentPage('admin');
+      window.location.hash = 'superadmin';
+    } else if (user.role === 'admin' || user.role === 'petugas' || user.role === 'driver') {
       setCurrentPage('admin');
       window.location.hash = 'admin';
     } else if (user.role === 'petugas' || user.role === 'driver') {
