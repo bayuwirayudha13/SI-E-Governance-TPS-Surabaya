@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Python Virtual Environment
+venv/
+backend/venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Production Build
+dist/
+frontend/dist/
+
+# Environment Variables
+.env
+backend/.env
+
+# Temporary / Scratch
+scratch/
+.system_generated/
+*.log

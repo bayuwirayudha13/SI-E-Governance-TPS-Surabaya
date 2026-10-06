@@ -363,28 +363,44 @@ img {
   background: linear-gradient(145deg, #1b3528, #0e241b);
 }
 
+/* Unified Top Header Controls Container */
+.hero-map-header-controls {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
 /* Map Header Bar */
 .map-status-bar {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  right: 14px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: rgba(10, 25, 18, 0.82);
+  align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  background: rgba(10, 25, 18, 0.88);
   backdrop-filter: blur(8px);
   padding: 8px 14px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  z-index: 10;
   font-size: 0.8rem;
+  pointer-events: auto;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  flex-wrap: wrap;
+  gap: 8px 16px;
 }
 
 .map-status-indicators {
   display: flex;
+  align-items: center;
   gap: 12px;
   color: #ffffff;
+  flex-wrap: wrap;
 }
 
 .status-dot {
@@ -564,13 +580,6 @@ img {
   overflow: hidden;
 }
 
-.hero-osm-map-canvas .leaflet-pane,
-.hero-osm-map-canvas .leaflet-tile-pane,
-.hero-osm-map-canvas .leaflet-layer {
-  width: 100%;
-  height: 100%;
-}
-
 .osm-live-indicator {
   background: #ef4444;
   color: #ffffff;
@@ -583,11 +592,6 @@ img {
 }
 
 .osm-map-controls-overlay {
-  position: absolute;
-  top: 56px;
-  left: 14px;
-  right: 14px;
-  z-index: 10;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -701,6 +705,7 @@ img {
   background: var(--marker-color, #10b981);
   opacity: 0.55;
   animation: osmMarkerPulse 2.2s infinite ease-out;
+  pointer-events: none;
 }
 
 .osm-marker-dot {
@@ -720,6 +725,7 @@ img {
   font-weight: 800;
   letter-spacing: -0.02em;
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
 }
 
 .osm-marker-pin:hover .osm-marker-dot {
@@ -828,6 +834,112 @@ img {
 
 .osm-popup-action-btn:hover {
   background: #059669;
+}
+
+/* Hero Map Bottom Keterangan Bar */
+.hero-map-bottom-bar-wrap {
+  padding: 10px 18px;
+  background: rgba(7, 24, 16, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  position: relative;
+  z-index: 5;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+}
+
+.hero-map-default-bar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.hero-map-bottom-keterangan {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  animation: fadeIn 0.2s ease;
+}
+
+.hero-map-keterangan-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.hero-map-keterangan-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hero-map-keterangan-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  font-size: 0.86rem;
+}
+
+.hero-map-keterangan-sub {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.hero-map-keterangan-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.hero-map-detail-btn {
+  background: #059669;
+  color: #ffffff;
+  border: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.hero-map-detail-btn:hover {
+  background: #10b981;
+}
+
+.hero-map-close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.hero-map-close-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #ffffff;
+  border-color: #ef4444;
 }
 
 /* Leaflet Controls Customization in Hero */

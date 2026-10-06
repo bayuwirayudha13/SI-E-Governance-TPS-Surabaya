@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function Navbar({ onOpenLoginModal, onOpenTpsModal: _onOpenTpsModal }) {
+export default function Navbar({ onOpenLoginModal, onOpenTpsModal: _onOpenTpsModal, currentUser }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -28,21 +28,48 @@ export default function Navbar({ onOpenLoginModal, onOpenTpsModal: _onOpenTpsMod
           </ul>
         </nav>
 
-        {/* Action Button: Sign In */}
+        {/* Action Button: Sign In or Dashboard Link */}
         <div className="nav-actions">
-          <button 
-            type="button" 
-            className="btn-pill-dark"
-            onClick={onOpenLoginModal}
-            id="nav-signin-btn"
-          >
-            <span>Sign in</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-              <polyline points="10 17 15 12 10 7"/>
-              <line x1="15" y1="12" x2="3" y2="12"/>
-            </svg>
-          </button>
+          {currentUser ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                className="btn-pill-dark"
+                onClick={() => {
+                  if (currentUser.role === 'admin') window.location.hash = '#admin';
+                  else if (currentUser.role === 'petugas') window.location.hash = '#petugas';
+                  else window.location.hash = '#warga';
+                }}
+                id="nav-dashboard-btn"
+                style={{ padding: '8px 18px', background: '#0a5c36' }}
+              >
+                <span>
+                  {currentUser.role === 'admin'
+                    ? 'Admin Panel'
+                    : currentUser.role === 'petugas'
+                    ? 'Portal Petugas'
+                    : 'Portal Warga'}
+                </span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <button 
+              type="button" 
+              className="btn-pill-dark"
+              onClick={onOpenLoginModal}
+              id="nav-signin-btn"
+            >
+              <span>Sign in</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                <polyline points="10 17 15 12 10 7"/>
+                <line x1="15" y1="12" x2="3" y2="12"/>
+              </svg>
+            </button>
+          )}
 
           {/* Mobile Menu Toggle Button */}
           <button 

@@ -84,7 +84,16 @@ export default function LoginModal({ isOpen, onClose }) {
                 <button
                   type="button"
                   className="btn-pill-dark"
-                  onClick={onClose}
+                  onClick={() => {
+                    onClose();
+                    if (role === 'admin') {
+                      window.location.hash = 'admin';
+                    } else if (role === 'driver' || role === 'tps' || role === 'kelurahan') {
+                      window.location.hash = 'petugas';
+                    } else {
+                      window.location.hash = 'warga';
+                    }
+                  }}
                   style={{ padding: '9px 24px' }}
                 >
                   Lanjut ke Portal

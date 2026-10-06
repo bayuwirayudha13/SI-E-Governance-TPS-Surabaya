@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './WargaPanel.css';
-
-const API_BASE = 'http://localhost:8000';
+import { api } from '../api/client';
 
 // Data types for plastic in Setor & Panduan
 const PLASTIC_TYPES = [
@@ -65,15 +64,9 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
 
   const loadWargaData = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) return;
-      
-      const response = await fetch(`${API_BASE}/api/auth/me`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setPoints(data.total_poin || 0);
+      const response = await api.get('/api/auth/me');
+      if (response.data) {
+        setPoints(response.data.total_poin || 0);
       }
     } catch (err) {
       console.error('Load warga data error:', err);
@@ -85,11 +78,10 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
       const storedUserId = localStorage.getItem('user_id');
       const actualWargaId = storedUserId || wargaId;
       
-      const response = await fetch(`${API_BASE}/api/setoran/?warga_id=${actualWargaId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setTotalSetoran(data.length);
-        const totalBerat = data.reduce((sum, s) => sum + (parseFloat(s.perkiraan_berat_kg) || 0), 0);
+      const response = await api.get(`/api/setoran/?warga_id=${actualWargaId}`);
+      if (response.data) {
+        setTotalSetoran(response.data.length);
+        const totalBerat = response.data.reduce((sum, s) => sum + (parseFloat(s.perkiraan_berat_kg) || 0), 0);
         setTotalKg(parseFloat(totalBerat.toFixed(1)));
       }
     } catch (err) {
@@ -109,22 +101,12 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
       const storedUserId = localStorage.getItem('user_id');
       const actualWargaId = storedUserId || wargaId;
 
-      const response = await fetch(`${API_BASE}/api/setoran/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          warga_id: parseInt(actualWargaId),
-          jenis_sampah: selectedPlastic.code,
-          perkiraan_berat_kg: parseFloat(weightInput),
-          metode_setor: 'Diantar Langsung',
-          tps_id: tpsList.length > 0 ? tpsList[0].id : null
-        })
+      await api.post('/api/setoran/', {
+        warga_id: parseInt(actualWargaId),
+        jenis_sampah: selectedPlastic.code,
+        perkiraan_berat_kg: parseFloat(weightInput),
+        metode_setor: 'Diantar Langsung',
       });
-
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.detail || 'Gagal setor sampah');
-      }
 
       const kg = parseFloat(weightInput);
       const addedPoints = Math.round(kg * selectedPlastic.rate);

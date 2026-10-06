@@ -14,11 +14,28 @@ import WasteGuideModal from './components/WasteGuideModal';
 import AuthPage from './components/AuthPage';
 import AdminPanel from './components/AdminPanel';
 import WargaPanel from './components/WargaPanel';
+import PetugasPanel from './components/PetugasPanel';
+import ProtectedRoute from './components/ProtectedRoute';
+import MainLayout from './components/MainLayout';
+import { authService } from './api/client';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('landing'); // 'landing' | 'auth' | 'admin' | 'warga'
+  const [currentPage, setCurrentPage] = useState('landing'); // 'landing' | 'auth' | 'admin' | 'warga' | 'petugas'
   const [authTab, setAuthTab] = useState('masuk'); // 'masuk' | 'daftar'
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
+
+  // Listen to global auth state changes
+  useEffect(() => {
+    const handleAuthChange = () => {
+      setCurrentUser(authService.getCurrentUser());
+    };
+    window.addEventListener('auth:change', handleAuthChange);
+    window.addEventListener('auth:unauthorized', handleAuthChange);
+    return () => {
+      window.removeEventListener('auth:change', handleAuthChange);
+      window.removeEventListener('auth:unauthorized', handleAuthChange);
+    };
+  }, []);
 
   // Modals state
   const [selectedArticle, setSelectedArticle] = useState(null);
@@ -26,7 +43,7 @@ export default function App() {
   const [isTpsModalOpen, setIsTpsModalOpen] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState(null);
 
-  // Sync hash routing (support #auth, #masuk, #daftar, #admin, #warga)
+  // Sync hash routing (support #auth, #masuk, #daftar, #admin, #warga, #petugas)
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.toLowerCase();
@@ -34,6 +51,18 @@ export default function App() {
         setCurrentPage('admin');
       } else if (hash === '#warga' || hash === '#portal-warga' || hash === '#warga-dashboard') {
         setCurrentPage('warga');
+      } else if (
+        hash === '#petugas' ||
+        hash === '#petugas-pengangkut' ||
+        hash === '#petugas-lapangan' ||
+        hash === '#tugas' ||
+        hash === '#tugas-hari-ini' ||
+        hash === '#scan' ||
+        hash === '#scan-qr' ||
+        hash === '#riwayat' ||
+        hash === '#riwayat-pengambilan'
+      ) {
+        setCurrentPage('petugas');
       } else if (hash === '#auth' || hash === '#masuk' || hash === '#signin') {
         setCurrentPage('auth');
         setAuthTab('masuk');
@@ -44,7 +73,7 @@ export default function App() {
         setCurrentPage('auth');
         setAuthTab('ganti-password');
       } else if (hash === '#beranda' || hash === '') {
-        if (currentPage !== 'admin' && currentPage !== 'warga') {
+        if (currentPage !== 'admin' && currentPage !== 'warga' && currentPage !== 'petugas') {
           setCurrentPage('landing');
         }
       }
@@ -74,38 +103,54 @@ export default function App() {
     if (user.role === 'admin') {
       setCurrentPage('admin');
       window.location.hash = 'admin';
+    } else if (user.role === 'petugas') {
+      setCurrentPage('petugas');
+      window.location.hash = 'petugas';
     } else {
       setCurrentPage('warga');
       window.location.hash = 'warga';
     }
   };
 
-  const handleAdminLogout = () => {
+  const handleLogout = () => {
+    authService.clearSession();
+    setCurrentUser(null);
     setCurrentPage('landing');
     window.location.hash = 'beranda';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleWargaLogout = () => {
-    setCurrentPage('landing');
-    window.location.hash = 'beranda';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // If user is inside Admin Panel
+  // If user is inside Admin Panel (Protected by RBAC: admin)
   if (currentPage === 'admin') {
     return (
-      <AdminPanel onLogout={handleAdminLogout} />
+      <ProtectedRoute allowedRoles={['admin']}>
+        <AdminPanel onLogout={handleLogout} />
+      </ProtectedRoute>
     );
   }
 
-  // If user is inside Warga Portal
+  // If user is inside Petugas Pengangkut Panel (Protected by RBAC: petugas)
+  if (currentPage === 'petugas') {
+    return (
+      <ProtectedRoute allowedRoles={['petugas']}>
+        <PetugasPanel
+          onLogout={handleLogout}
+          officerName={currentUser?.name || 'Hendra'}
+          officerRole="Petugas Pengangkut"
+        />
+      </ProtectedRoute>
+    );
+  }
+
+  // If user is inside Warga Portal (Protected by RBAC: warga)
   if (currentPage === 'warga') {
     return (
-      <WargaPanel 
-        onLogout={handleWargaLogout}
-        wargaId={currentUser?.id}
-      />
+      <ProtectedRoute allowedRoles={['warga']}>
+        <WargaPanel 
+          onLogout={handleLogout}
+          wargaId={currentUser?.id}
+        />
+      </ProtectedRoute>
     );
   }
 
@@ -120,43 +165,33 @@ export default function App() {
     );
   }
 
-  // Otherwise, render full Landing Page
+  // Otherwise, render full Landing Page with MainLayout
   return (
-    <div className="app-container">
-      {/* 1. Header / Navbar with Sign In button opening AuthPage */}
-      <Navbar 
-        onOpenLoginModal={() => handleOpenAuth('masuk')}
-        onOpenTpsModal={() => setIsTpsModalOpen(true)} 
+    <MainLayout
+      currentUser={currentUser}
+      onOpenLoginModal={() => handleOpenAuth('masuk')}
+      onOpenTpsModal={() => setIsTpsModalOpen(true)}
+      onOpenRewardModal={() => setIsRewardModalOpen(true)}
+    >
+      {/* Hero Section with Exact Satellite Map Preview */}
+      <Hero onOpenTpsModal={() => setIsTpsModalOpen(true)} />
+
+      {/* 3. Tentang Kami Section */}
+      <About />
+
+      {/* 4. Fitur Utama Kami Section */}
+      <Features 
+        onOpenRewardModal={() => setIsRewardModalOpen(true)}
+        onOpenTpsModal={() => setIsTpsModalOpen(true)}
       />
 
-      {/* 2. Main Content */}
-      <main>
-        {/* Hero Section with Exact Satellite Map Preview */}
-        <Hero onOpenTpsModal={() => setIsTpsModalOpen(true)} />
+      {/* 5. Berita & Artikel Section */}
+      <NewsSection onSelectArticle={(article) => setSelectedArticle(article)} />
 
-        {/* 3. Tentang Kami Section */}
-        <About />
-
-        {/* 4. Fitur Utama Kami Section */}
-        <Features 
-          onOpenRewardModal={() => setIsRewardModalOpen(true)}
-          onOpenTpsModal={() => setIsTpsModalOpen(true)}
-        />
-
-        {/* 5. Berita & Artikel Section */}
-        <NewsSection onSelectArticle={(article) => setSelectedArticle(article)} />
-
-        {/* 6. Jenis Sampah Section */}
-        <WasteTypes 
-          onOpenRewardModal={() => setIsRewardModalOpen(true)}
-          onSelectGuide={(guide) => setSelectedGuide(guide)}
-        />
-      </main>
-
-      {/* 7. Footer */}
-      <Footer 
-        onOpenTpsModal={() => setIsTpsModalOpen(true)} 
-        onOpenRewardModal={() => setIsRewardModalOpen(true)} 
+      {/* 6. Jenis Sampah Section */}
+      <WasteTypes 
+        onOpenRewardModal={() => setIsRewardModalOpen(true)}
+        onSelectGuide={(guide) => setSelectedGuide(guide)}
       />
 
       {/* Modals */}
@@ -179,6 +214,6 @@ export default function App() {
         wasteGuide={selectedGuide} 
         onClose={() => setSelectedGuide(null)} 
       />
-    </div>
+    </MainLayout>
   );
 }

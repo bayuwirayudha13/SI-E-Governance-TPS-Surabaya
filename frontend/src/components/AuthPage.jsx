@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { api, authService } from '../api/client';
 
 export default function AuthPage({
   initialTab = 'masuk',
@@ -194,86 +195,28 @@ export default function AuthPage({
     setIsLoading(true);
 
     // =======================================================
-    // ADMIN LOGIN
-    // =======================================================
-    if (
-      activeTab === 'masuk' &&
-      email.trim().toLowerCase() === 'admin123@gmail.com' &&
-      password === 'admin123'
-    ) {
-      setIsSuccess(true);
-
-      setTimeout(() => {
-        setIsSuccess(false);
-        setIsLoading(false);
-
-        if (onLoginSuccess) {
-          onLoginSuccess({
-            role: 'admin',
-            email: 'admin123@gmail.com',
-          });
-        }
-      }, 500);
-
-      return;
-    }
-
-    // =======================================================
-    // LOGIN WARGA
+    // LOGIN (Admin, Petugas, & Warga via authService)
     // =======================================================
     if (activeTab === 'masuk') {
       try {
-        const response = await fetch(
-          'http://localhost:8000/api/auth/login',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email: email.trim(),
-              password,
-            }),
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data.detail || 'Email atau password salah'
-          );
-        }
-
-        if (data.access_token) {
-          localStorage.setItem(
-            'access_token',
-            data.access_token
-          );
-        }
-
+        const data = await authService.login(email.trim(), password);
         setIsSuccess(true);
 
         setTimeout(() => {
           setIsSuccess(false);
+          setIsLoading(false);
 
           if (onLoginSuccess) {
-            onLoginSuccess({
-              role: 'warga',
-              ...(data.user || {}),
-            });
+            onLoginSuccess(data.user || { role: 'warga', email: email.trim() });
           } else {
             onBackToHome();
           }
         }, 500);
       } catch (err) {
         console.error('Login error:', err);
-
         setErrorMessage(
-          err.message ||
-            'Gagal login. Pastikan email dan password benar.'
+          err.response?.data?.detail || err.message || 'Gagal login. Pastikan email dan password benar.'
         );
-      } finally {
         setIsLoading(false);
       }
 
@@ -1997,6 +1940,48 @@ export default function AuthPage({
               )}
 
             </div>
+
+            {/* QUICK DEMO ACCOUNTS */}
+            {activeTab === 'masuk' && (
+              <div style={{ marginTop: '20px', padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+                  Akses Cepat Demo Akun:
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('petugas@kelurahan.go.id');
+                      setPassword('petugas123');
+                    }}
+                    style={{ fontSize: '0.75rem', padding: '5px 10px', background: '#0a5c36', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+                  >
+                    🚛 Petugas Pengangkut
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('admin123@gmail.com');
+                      setPassword('admin123');
+                    }}
+                    style={{ fontSize: '0.75rem', padding: '5px 10px', background: '#1e293b', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+                  >
+                    ⚙️ Admin
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onLoginSuccess) {
+                        onLoginSuccess({ role: 'warga', name: 'Pak Jaka Susanto', id: 1 });
+                      }
+                    }}
+                    style={{ fontSize: '0.75rem', padding: '5px 10px', background: '#e2e8f0', color: '#334155', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+                  >
+                    👤 Warga
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* COPYRIGHT */}
             <div className="auth-copyright">
