@@ -1952,48 +1952,6 @@ export default function AuthPage({
 
             </div>
 
-            {/* QUICK DEMO ACCOUNTS */}
-            {activeTab === 'masuk' && (
-              <div style={{ marginTop: '20px', padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
-                  Akses Cepat Demo Akun:
-                </div>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail('petugas@kelurahan.go.id');
-                      setPassword('petugas123');
-                    }}
-                    style={{ fontSize: '0.75rem', padding: '5px 10px', background: '#0a5c36', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
-                  >
-                    🚛 Petugas Pengangkut
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail('admin123@gmail.com');
-                      setPassword('admin123');
-                    }}
-                    style={{ fontSize: '0.75rem', padding: '5px 10px', background: '#1e293b', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
-                  >
-                    ⚙️ Admin
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onLoginSuccess) {
-                        onLoginSuccess({ role: 'warga', name: 'Pak Jaka Susanto', id: 1 });
-                      }
-                    }}
-                    style={{ fontSize: '0.75rem', padding: '5px 10px', background: '#e2e8f0', color: '#334155', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
-                  >
-                    👤 Warga
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* COPYRIGHT */}
             <div className="auth-copyright">
               &copy; 2025 Dinas Lingkungan Hidup ·
