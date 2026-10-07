@@ -14,17 +14,21 @@ from services.wilayah_service import (
 router = APIRouter(prefix="/wilayah", tags=["Wilayah"])
 
 @router.get("/kecamatan", response_model=List[KecamatanResponse])
-def list_kecamatan(db: Session = Depends(get_db)):
-    """List semua kecamatan untuk filter dropdown"""
-    return get_all_kecamatan(db)
+def list_kecamatan(
+    search: Optional[str] = Query(None, description="Search kecamatan"),
+    db: Session = Depends(get_db),
+):
+    """List semua kecamatan untuk filter dropdown, support search"""
+    return get_all_kecamatan(db, search=search)
 
 @router.get("/kelurahan", response_model=List[KelurahanResponse])
 def list_kelurahan(
     kecamatan: Optional[str] = Query(None, description="Filter by nama kecamatan"),
+    search: Optional[str] = Query(None, description="Search kelurahan"),
     db: Session = Depends(get_db),
 ):
-    """List kelurahan, bisa filter by kecamatan"""
-    return get_all_kelurahan(db, kecamatan)
+    """List kelurahan, bisa filter by kecamatan dan search"""
+    return get_all_kelurahan(db, kecamatan=kecamatan, search=search)
 
 @router.get("/kelurahan/{kelurahan_id}", response_model=KelurahanResponse)
 def detail_kelurahan(kelurahan_id: int, db: Session = Depends(get_db)):

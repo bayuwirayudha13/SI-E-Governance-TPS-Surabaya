@@ -2,9 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import './PetugasPanel.css';
 import { api } from '../api/client';
 
-export default function PetugasPanel({ onLogout, officerName = 'Hendra', officerRole = 'Petugas Pengangkut' }) {
+export default function PetugasPanel({ onLogout, officerName = 'Hendra', officerRole = 'Petugas Pengangkut', currentUser }) {
+  const displayOfficerName = currentUser?.nama_lengkap || officerName;
+  const displayOfficerRole = currentUser?.role === 'petugas' ? 'Petugas Pengangkut' : officerRole;
+
   // Navigation: 'tugas' | 'scan' | 'riwayat'
-  const [activeMenu, setActiveMenu] = useState('scan'); // Default or according to hash
+  const [activeMenu, setActiveMenu] = useState('scan');
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [loading, setLoading] = useState(false);
 
   // Listen to hash changes if needed
   useEffect(() => {
@@ -23,79 +28,102 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
+  // Timer untuk jam & tanggal
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatDate = (date) => {
+    return date.toLocaleDateString('id-ID', { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+  };
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString('id-ID', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit' 
+    });
+  };
+
   // Stats in "Tugas Hari Ini" (matching Image 2)
   const [stats, setStats] = useState({
-    targetPengambilan: 18,
-    sudahDiambil: 7,
-    persentaseSelesai: 39,
-    totalMuatanKg: 128.5,
-    kapasitasTruk: 32
+    targetPengambilan: 0,
+    sudahDiambil: 0,
+    persentaseSelesai: 0,
+    totalMuatanKg: 0,
+    kapasitasTruk: 50
   });
 
   // Next pickups queue in "Tugas Hari Ini" (matching Image 2)
-  const [queueList, setQueueList] = useState([
-    {
-      id: 8,
-      number: '08',
-      name: 'Warga Sukamaju',
-      address: 'RT 03 · Jl. Mawar',
-      status: 'ready',
-      statusText: 'Siap diambil',
-      isActive: true,
-      category: 'Botol Plastik (PET) & Kertas',
-      estimatedKg: 2.5
-    },
-    {
-      id: 9,
-      number: '09',
-      name: 'Ibu Sari Rahayu',
-      address: 'RT 03 · Jl. Mawar No. 18',
-      status: 'next',
-      statusText: 'Berikutnya',
-      isActive: false,
-      category: 'Kardus & Plastik Campur',
-      estimatedKg: 2.0
-    },
-    {
-      id: 10,
-      number: '10',
-      name: 'Pak Jaka Susanto',
-      address: 'RT 03 · Jl. Mawar No. 24',
-      status: 'next',
-      statusText: 'Berikutnya',
-      isActive: false,
-      category: 'Botol Plastik & Galon',
-      estimatedKg: 3.0
-    }
-  ]);
+  const [queueList, setQueueList] = useState([]);
 
   // Pickup History Table (matching Image 3)
-  const [historyList, setHistoryList] = useState([
-    {
-      id: 1,
-      waktu: '07.12',
-      warga: 'Pak Jaka Susanto',
-      berat: '3,0 kg',
-      kondisi: 'Bersih',
-      status: 'Selesai'
-    },
-    {
-      id: 2,
-      waktu: '07.28',
-      warga: 'Ibu Sari Rahayu',
-      berat: '2,0 kg',
-      kondisi: 'Bersih',
-      status: 'Selesai'
-    },
-    {
-      id: 3,
-      waktu: '08.15',
-      warga: 'Warga Sukamaju',
-      berat: '—',
-      kondisi: 'Menunggu',
-      status: 'Menunggu pengambilan'
-    }
-  ]);
+  const [historyList, setHistoryList] = useState([]);
+
+  // Fetch data dari backend
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get('/setoran/');
+        const data = res.data || [];
+        
+        const waiting = data.filter(s => s.status === 'Menunggu Penjemputan');
+        const done = data.filter(s => s.status === 'Sudah Divalidasi');
+        
+        // Format queue list
+        setQueueList(waiting.map((s, idx) => ({
+          id: s.id,
+          number: (idx + 1).toString().padStart(2, '0'),
+          name: `Warga ID: ${s.warga_id}`,
+          address: s.alamat_penjemputan || 'TPS Terdekat',
+          status: idx === 0 ? 'ready' : 'next',
+          statusText: idx === 0 ? 'Siap diambil' : 'Berikutnya',
+          isActive: idx === 0,
+          category: s.jenis_sampah || 'Sampah',
+          estimatedKg: parseFloat(s.perkiraan_berat_kg) || 0,
+          setoran_id: s.id
+        })));
+
+        // Format history list
+        setHistoryList(done.map(s => {
+          const waktuValidasi = s.waktu_validasi || s.waktu_setor;
+          const date = new Date(waktuValidasi);
+          const waktuStr = `${String(date.getHours()).padStart(2, '0')}.${String(date.getMinutes()).padStart(2, '0')}`;
+          
+          return {
+            id: s.id,
+            waktu: waktuStr,
+            warga: `Warga ID: ${s.warga_id}`,
+            berat: `${parseFloat(s.perkiraan_berat_kg || 0).toFixed(1).replace('.', ',')} kg`,
+            kondisi: s.jenis_sampah || 'Sampah',
+            status: 'Selesai'
+          };
+        }));
+
+        // Update stats
+        const totalKg = done.reduce((acc, curr) => acc + (parseFloat(curr.perkiraan_berat_kg) || 0), 0);
+        setStats({
+          targetPengambilan: data.length,
+          sudahDiambil: done.length,
+          persentaseSelesai: data.length > 0 ? Math.round((done.length / data.length) * 100) : 0,
+          totalMuatanKg: totalKg,
+          kapasitasTruk: Math.min(100, Math.round((totalKg / 50) * 100))
+        });
+      } catch (err) {
+        console.error('Gagal ambil data petugas:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   // Scan & Camera State (matching Image 1)
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -168,12 +196,24 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
   };
 
   // Confirm Pickup action
-  const handleConfirmPickup = () => {
+  const handleConfirmPickup = async () => {
     if (!scannedWarga) return;
 
     const beratVal = parseFloat(weightInput) || 2.5;
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}.${String(now.getMinutes()).padStart(2, '0')}`;
+
+    try {
+      // Kirim update ke backend jika setoran_id tersedia
+      if (scannedWarga.setoran_id) {
+        await api.patch(`/setoran/${scannedWarga.setoran_id}/status`, {
+          status: 'Sudah Divalidasi',
+          perkiraan_berat_kg: beratVal
+        });
+      }
+    } catch (err) {
+      console.error('Gagal update setoran di backend:', err);
+    }
 
     // 1. Update stats
     setStats((prev) => {
@@ -185,28 +225,15 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
         sudahDiambil: newTaken,
         totalMuatanKg: newMuatan,
         persentaseSelesai: newPercent,
-        kapasitasTruk: Math.min(100, Math.round((newMuatan / 400) * 100))
+        kapasitasTruk: Math.min(100, Math.round((newMuatan / 50) * 100))
       };
     });
 
     // 2. Update history table
     setHistoryList((prev) => {
-      // Check if this warga was already in history with status 'Menunggu pengambilan'
-      const existingIdx = prev.findIndex((h) => h.warga.toLowerCase() === scannedWarga.name.toLowerCase());
-      if (existingIdx !== -1) {
-        const updated = [...prev];
-        updated[existingIdx] = {
-          ...updated[existingIdx],
-          waktu: timeStr,
-          berat: `${beratVal.toFixed(1).replace('.', ',')} kg`,
-          kondisi: selectedCondition,
-          status: 'Selesai'
-        };
-        return updated;
-      }
       return [
         {
-          id: Date.now(),
+          id: scannedWarga.id || Date.now(),
           waktu: timeStr,
           warga: scannedWarga.name,
           berat: `${beratVal.toFixed(1).replace('.', ',')} kg`,
@@ -225,17 +252,6 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
       }
       return remaining;
     });
-
-    // Try sending to backend if available (fire-and-forget)
-    try {
-      api.patch('/setoran/1/status', {
-        status: 'Sudah Divalidasi',
-        berat_aktual_kg: beratVal,
-        catatan_petugas: officerNote
-      }).catch(() => {});
-    } catch {
-      // ignore
-    }
 
     showToast(`Pengambilan dari ${scannedWarga.name} berhasil disimpan!`);
     setScannedWarga(null);
@@ -382,11 +398,11 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
         <div className="petugas-profile-container">
           <div className="petugas-profile-card">
             <div className="petugas-avatar-circle">
-              {officerName ? officerName.charAt(0).toUpperCase() : 'H'}
+              {displayOfficerName ? displayOfficerName.charAt(0).toUpperCase() : 'H'}
             </div>
             <div className="petugas-profile-info">
-              <span className="petugas-profile-name">{officerName}</span>
-              <span className="petugas-profile-role">{officerRole}</span>
+              <span className="petugas-profile-name">{displayOfficerName}</span>
+              <span className="petugas-profile-role">{displayOfficerRole}</span>
             </div>
           </div>
           <button
@@ -412,9 +428,15 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
             <h1 className="petugas-header-title">{headerInfo.title}</h1>
             <p className="petugas-header-sub">{headerInfo.sub}</p>
           </div>
-          <div className="petugas-status-pill">
-            <span className="petugas-pulse-dot" />
-            <span>Sedang Bertugas</span>
+          <div className="petugas-header-right">
+            <div className="petugas-datetime">
+              <span className="petugas-date">{formatDate(currentTime)}</span>
+              <span className="petugas-time">{formatTime(currentTime)}</span>
+            </div>
+            <div className="petugas-status-pill">
+              <span className="petugas-pulse-dot" />
+              <span>Sedang Bertugas</span>
+            </div>
           </div>
         </header>
 
@@ -423,6 +445,12 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
             ========================================================= */}
         {activeMenu === 'tugas' && (
           <div>
+            {/* Date Time Header */}
+            <div className="petugas-datetime-header">
+              <p>{formatDate(currentTime)}</p>
+              <h3>{formatTime(currentTime)} WIB</h3>
+            </div>
+
             {/* 3 Metric Cards */}
             <div className="petugas-stats-grid">
               {/* Card 1: Target pengambilan */}
@@ -609,7 +637,14 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
             TAB 2: SCAN QR WARGA (MATCHING IMAGE 1)
             ========================================================= */}
         {activeMenu === 'scan' && (
-          <div className="petugas-scan-layout">
+          <div>
+            {/* Date Time Header */}
+            <div className="petugas-datetime-header">
+              <p>{formatDate(currentTime)}</p>
+              <h3>{formatTime(currentTime)} WIB</h3>
+            </div>
+
+            <div className="petugas-scan-layout">
             {/* Left Card: Scan QR Saat Pengambilan */}
             <div className="petugas-card">
               <div className="petugas-card-header">
@@ -749,6 +784,18 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                       </span>
                     </div>
 
+                    {/* Officer Note */}
+                    <div className="petugas-form-group">
+                      <label className="petugas-form-label">Catatan Tambahan (Opsional)</label>
+                      <textarea
+                        className="petugas-confirm-textarea"
+                        placeholder="Contoh: Lokasi agak sulit dijangkau, warga sangat kooperatif..."
+                        value={officerNote}
+                        onChange={(e) => setOfficerNote(e.target.value)}
+                        rows="3"
+                      />
+                    </div>
+
                     {/* Action buttons */}
                     <button
                       type="button"
@@ -772,6 +819,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                 )}
               </div>
             </div>
+            </div>
           </div>
         )}
 
@@ -779,7 +827,14 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
             TAB 3: RIWAYAT PENGAMBILAN (MATCHING IMAGE 3)
             ========================================================= */}
         {activeMenu === 'riwayat' && (
-          <div className="petugas-table-card">
+          <div>
+            {/* Date Time Header */}
+            <div className="petugas-datetime-header">
+              <p>{formatDate(currentTime)}</p>
+              <h3>{formatTime(currentTime)} WIB</h3>
+            </div>
+
+            <div className="petugas-table-card">
             <h2 className="petugas-table-header-title">Riwayat Pengambilan Hari Ini</h2>
             <div className="petugas-table-container">
               <table className="petugas-table">
@@ -812,6 +867,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                   ))}
                 </tbody>
               </table>
+            </div>
             </div>
           </div>
         )}

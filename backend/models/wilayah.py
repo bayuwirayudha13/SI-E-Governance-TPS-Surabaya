@@ -1,5 +1,4 @@
 from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.orm import relationship
 from core.database import Base
 
 class Kecamatan(Base):
@@ -18,6 +17,3 @@ class Kelurahan(Base):
     nama = Column(String(100), nullable=False)
     kecamatan = Column(String(100), nullable=False)
     wilayah_kota = Column(String(50), nullable=False)
-
-    # Relationships
-    tps_list = relationship("TPSKelurahan", back_populates="kelurahan", cascade="all, delete-orphan")

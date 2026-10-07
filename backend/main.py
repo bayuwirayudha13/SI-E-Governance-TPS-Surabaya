@@ -61,6 +61,9 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     full_name: str
+    alamat_rumah: Optional[str] = None
+    kecamatan: Optional[str] = None
+    kelurahan: Optional[str] = None
 
 class LoginRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -142,6 +145,9 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
             email=request.email,
             password_hash=hashed_password,
             nama=request.full_name,
+            alamat_rumah=request.alamat_rumah,
+            kecamatan=request.kecamatan,
+            kelurahan=request.kelurahan,
             email_verified=0
         )
 

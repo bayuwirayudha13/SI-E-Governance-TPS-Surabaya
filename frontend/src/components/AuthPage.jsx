@@ -38,6 +38,15 @@ export default function AuthPage({
 
   const [fullName, setFullName] = useState('');
   const [noKK, setNoKK] = useState('');
+  const [alamatRumah, setAlamatRumah] = useState('');
+  const [kecamatan, setKecamatan] = useState('');
+  const [kelurahan, setKelurahan] = useState('');
+  const [kecamatanList, setKecamatanList] = useState([]);
+  const [kelurahanList, setKelurahanList] = useState([]);
+  const [kecamatanSearch, setKecamatanSearch] = useState('');
+  const [kelurahanSearch, setKelurahanSearch] = useState('');
+  const [showKecamatanDropdown, setShowKecamatanDropdown] = useState(false);
+  const [showKelurahanDropdown, setShowKelurahanDropdown] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -106,6 +115,84 @@ export default function AuthPage({
     const secs = seconds % 60;
 
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  // =========================================================
+  // WILAYAH - KECAMATAN & KELURAHAN (MySQL via API)
+  // =========================================================
+  const kecamatanRef = useRef(null);
+  const kelurahanRef = useRef(null);
+
+  // Fetch kecamatan dari MySQL — load sekali, filter instant di client
+  useEffect(() => {
+    if (activeTab !== 'daftar') return;
+    const fetchKecamatan = async () => {
+      try {
+        const res = await api.get('/api/wilayah/kecamatan');
+        setKecamatanList(res.data || []);
+      } catch (err) {
+        console.warn('Gagal load kecamatan:', err);
+        setKecamatanList([]);
+      }
+    };
+    fetchKecamatan();
+  }, [activeTab]);
+
+  // Fetch kelurahan dari MySQL — load per kecamatan, filter instant di client
+  useEffect(() => {
+    if (activeTab !== 'daftar') return;
+    if (!kecamatan) {
+      setKelurahanList([]);
+      return;
+    }
+    const fetchKelurahan = async () => {
+      try {
+        const res = await api.get('/api/wilayah/kelurahan', { params: { kecamatan } });
+        setKelurahanList(res.data || []);
+      } catch (err) {
+        console.warn('Gagal load kelurahan:', err);
+        setKelurahanList([]);
+      }
+    };
+    fetchKelurahan();
+  }, [activeTab, kecamatan]);
+
+  // Filter instant di client — startsWith huruf depan
+  const filteredKecamatan = kecamatanSearch
+    ? kecamatanList.filter((k) => k.nama.toLowerCase().startsWith(kecamatanSearch.toLowerCase().trim()))
+    : kecamatanList;
+  const filteredKelurahan = kelurahanSearch
+    ? kelurahanList.filter((l) => l.nama.toLowerCase().startsWith(kelurahanSearch.toLowerCase().trim()))
+    : kelurahanList;
+
+  // Close dropdown saat klik di luar
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (kecamatanRef.current && !kecamatanRef.current.contains(e.target)) {
+        setShowKecamatanDropdown(false);
+      }
+      if (kelurahanRef.current && !kelurahanRef.current.contains(e.target)) {
+        setShowKelurahanDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Ketika kecamatan berubah, reset kelurahan jika tidak sesuai
+  const handleSelectKecamatan = (nama) => {
+    setKecamatan(nama);
+    setKecamatanSearch(''); // Reset search agar dropdown bersih saat dibuka lagi
+    setShowKecamatanDropdown(false);
+    // reset kelurahan karena ganti kecamatan
+    setKelurahan('');
+    setKelurahanSearch('');
+  };
+
+  const handleSelectKelurahan = (nama) => {
+    setKelurahan(nama);
+    setKelurahanSearch(''); // Reset search
+    setShowKelurahanDropdown(false);
   };
 
   // =========================================================
@@ -263,21 +350,44 @@ export default function AuthPage({
       return;
     }
 
+    if (!alamatRumah.trim()) {
+      setErrorMessage('Alamat rumah wajib diisi');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!kecamatan.trim()) {
+      setErrorMessage('Kecamatan wajib dipilih');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!kelurahan.trim()) {
+      setErrorMessage('Kelurahan wajib dipilih');
+      setIsLoading(false);
+      return;
+    }
+
     // =======================================================
     // REGISTER
     // =======================================================
     try {
+      const token = localStorage.getItem('access_token');
       const response = await fetch(
         'http://localhost:8000/api/auth/register',
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
             email: email.trim(),
             password,
             full_name: fullName.trim(),
+            alamat_rumah: alamatRumah.trim(),
+            kecamatan: kecamatan.trim(),
+            kelurahan: kelurahan.trim(),
           }),
         }
       );
@@ -1700,6 +1810,120 @@ export default function AuthPage({
                       kelurahan.
                     </div>
 
+                  </div>
+
+                  {/* ALAMAT RUMAH */}
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="alamatRumah">
+                      Alamat Rumah <span className="required-star">*</span>
+                    </label>
+                    <input
+                      id="alamatRumah"
+                      type="text"
+                      required
+                      placeholder="contoh: Jl. Melati No. 12 RT 01/RW 02"
+                      value={alamatRumah}
+                      onChange={(e) => setAlamatRumah(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+
+                  {/* KECAMATAN (Searchable Dropdown) */}
+                  <div className="form-group" style={{ position: 'relative' }} ref={kecamatanRef}>
+                    <label className="form-label">
+                      Kecamatan <span className="required-star">*</span>
+                    </label>
+                    <div 
+                      className="form-input" 
+                      onClick={() => setShowKecamatanDropdown(!showKecamatanDropdown)}
+                      style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff' }}
+                    >
+                      <span style={{ color: kecamatan ? '#0f172a' : '#94a3b8' }}>
+                        {kecamatan || '-- Pilih atau Cari Kecamatan --'}
+                      </span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+
+                    {showKecamatanDropdown && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #cbd5e1', borderRadius: '10px', marginTop: '4px', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', maxHeight: '220px', overflowY: 'auto', padding: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="Cari kecamatan..."
+                          value={kecamatanSearch}
+                          onChange={(e) => setKecamatanSearch(e.target.value)}
+                          className="form-input"
+                          style={{ marginBottom: '6px', padding: '8px 12px', fontSize: '0.88rem' }}
+                          onClick={(e) => e.stopPropagation()}
+                          autoFocus
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          {filteredKecamatan.length === 0 ? (
+                            <div style={{ padding: '10px', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>Tidak ada data — ketik huruf depan (mis. B)</div>
+                          ) : (
+                            filteredKecamatan.map((k) => (
+                              <div
+                                key={k.id}
+                                onClick={() => handleSelectKecamatan(k.nama)}
+                                style={{ padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', background: kecamatan === k.nama ? '#f0fdf4' : 'transparent', color: kecamatan === k.nama ? '#15803d' : '#1e293b', fontWeight: kecamatan === k.nama ? '600' : '400' }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = kecamatan === k.nama ? '#f0fdf4' : 'transparent'}
+                              >
+                                {k.nama}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* KELURAHAN (Searchable Dropdown) */}
+                  <div className="form-group" style={{ position: 'relative' }} ref={kelurahanRef}>
+                    <label className="form-label">
+                      Kelurahan <span className="required-star">*</span>
+                    </label>
+                    <div 
+                      className="form-input" 
+                      onClick={() => kecamatan && setShowKelurahanDropdown(!showKelurahanDropdown)}
+                      style={{ cursor: kecamatan ? 'pointer' : 'not-allowed', background: kecamatan ? '#fff' : '#f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    >
+                      <span style={{ color: kelurahan ? '#0f172a' : '#94a3b8' }}>
+                        {kelurahan || (kecamatan ? '-- Pilih atau Cari Kelurahan --' : '-- Pilih Kecamatan Terlebih Dahulu --')}
+                      </span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+
+                    {showKelurahanDropdown && kecamatan && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #cbd5e1', borderRadius: '10px', marginTop: '4px', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', maxHeight: '220px', overflowY: 'auto', padding: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="Cari kelurahan..."
+                          value={kelurahanSearch}
+                          onChange={(e) => setKelurahanSearch(e.target.value)}
+                          className="form-input"
+                          style={{ marginBottom: '6px', padding: '8px 12px', fontSize: '0.88rem' }}
+                          onClick={(e) => e.stopPropagation()}
+                          autoFocus
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          {filteredKelurahan.length === 0 ? (
+                            <div style={{ padding: '10px', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>Tidak ada data — ketik huruf depan (mis. B)</div>
+                          ) : (
+                            filteredKelurahan.map((l) => (
+                              <div
+                                key={l.id}
+                                onClick={() => handleSelectKelurahan(l.nama)}
+                                style={{ padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', background: kelurahan === l.nama ? '#f0fdf4' : 'transparent', color: kelurahan === l.nama ? '#15803d' : '#1e293b', fontWeight: kelurahan === l.nama ? '600' : '400' }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = kelurahan === l.nama ? '#f0fdf4' : 'transparent'}
+                              >
+                                {l.nama}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               )}

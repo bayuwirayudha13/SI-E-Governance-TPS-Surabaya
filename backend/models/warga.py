@@ -10,5 +10,8 @@ class Warga(Base):
     password_hash = Column(String(255), nullable=False)
     email_verified = Column(Integer, default=0, nullable=False)
     no_hp = Column(String(20), nullable=True)
+    alamat_rumah = Column(String(255), nullable=True)
+    kecamatan = Column(String(100), nullable=True)
+    kelurahan = Column(String(100), nullable=True)
     total_poin = Column(Integer, default=0)
     created_at = Column(DateTime, default=func.now())

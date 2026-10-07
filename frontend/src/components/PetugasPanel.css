@@ -23,6 +23,64 @@
   --petugas-profile-bg: #e6f4f1;
 }
 
+.petugas-header-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.petugas-datetime {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: 'Inter', sans-serif;
+}
+
+.petugas-date {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--petugas-text-muted);
+  text-transform: capitalize;
+}
+
+.petugas-time {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--petugas-primary);
+  letter-spacing: -0.02em;
+}
+
+/* ==========================================================================
+   DATE & TIME HEADER (Alternative style for menus)
+   ========================================================================== */
+.petugas-datetime-header {
+  background: white;
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--petugas-border);
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.petugas-datetime-header p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--petugas-text-muted);
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.petugas-datetime-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--petugas-primary);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Base Container */
 .petugas-container {
   display: flex;
@@ -880,6 +938,22 @@
 .petugas-points-value {
   font-weight: 800;
   color: var(--petugas-primary);
+}
+
+.petugas-confirm-textarea {
+  padding: 10px 14px;
+  border: 1.5px solid var(--petugas-border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: 'Inter', sans-serif;
+  color: var(--petugas-text-dark);
+  resize: vertical;
+  outline: none;
+}
+
+.petugas-confirm-textarea:focus {
+  border-color: var(--petugas-primary);
+  box-shadow: 0 0 0 2px rgba(10, 92, 54, 0.1);
 }
 
 .petugas-btn-cancel {

@@ -49,16 +49,19 @@ export default function App() {
   // Restore session on mount
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    const role = localStorage.getItem('user_role');
-    const email = localStorage.getItem('user_email');
+    const user = authService.getCurrentUser();
     
-    if (token && role) {
-      setCurrentUser({ role, email });
-      setCurrentPage('admin');
-      if (role === 'superadmin') {
-        window.location.hash = 'superadmin';
+    if (token && user) {
+      setCurrentUser(user);
+      if (user.role === 'superadmin' || user.role === 'admin') {
+        setCurrentPage('admin');
+        window.location.hash = user.role === 'superadmin' ? 'superadmin' : 'admin';
+      } else if (user.role === 'petugas' || user.role === 'driver') {
+        setCurrentPage('petugas');
+        window.location.hash = 'petugas';
       } else {
-        window.location.hash = 'admin';
+        setCurrentPage('warga');
+        window.location.hash = 'warga';
       }
     }
   }, []);
@@ -125,7 +128,7 @@ export default function App() {
     if (user.role === 'superadmin') {
       setCurrentPage('admin');
       window.location.hash = 'superadmin';
-    } else if (user.role === 'admin' || user.role === 'petugas' || user.role === 'driver') {
+    } else if (user.role === 'admin') {
       setCurrentPage('admin');
       window.location.hash = 'admin';
     } else if (user.role === 'petugas' || user.role === 'driver') {
@@ -162,14 +165,13 @@ export default function App() {
     );
   }
 
-  // If user is inside Petugas Pengangkut Panel (Protected by RBAC: petugas)
+  // If user is inside Petugas Pengangkut Panel (Protected by RBAC: petugas & driver)
   if (currentPage === 'petugas') {
     return (
-      <ProtectedRoute allowedRoles={['petugas']}>
+      <ProtectedRoute allowedRoles={['petugas', 'driver']}>
         <PetugasPanel
           onLogout={handleLogout}
-          officerName={currentUser?.name || 'Hendra'}
-          officerRole="Petugas Pengangkut"
+          currentUser={currentUser}
         />
       </ProtectedRoute>
     );
