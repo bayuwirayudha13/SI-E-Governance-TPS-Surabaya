@@ -1,13 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+const NAV_ITEMS = [
+  { id: 'beranda', label: 'Beranda' },
+  { id: 'tentang', label: 'Tentang kami' },
+  { id: 'fitur', label: 'Fitur' },
+  { id: 'berita', label: 'Berita & Artikel' },
+  { id: 'jenis-sampah', label: 'Jenis Sampah' },
+];
 
 export default function Navbar({ onOpenLoginModal, onOpenTpsModal: _onOpenTpsModal, currentUser }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('beranda');
+
+  // ScrollSpy: auto-detect which section is currently on screen
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 100;
+      const sectionIds = ['beranda', 'tentang', 'fitur', 'berita', 'jenis-sampah'];
+
+      for (let i = sectionIds.length - 1; i >= 0; i--) {
+        const el = document.getElementById(sectionIds[i]);
+        if (el) {
+          const top = el.offsetTop;
+          if (scrollPosition >= top - 20) {
+            setActiveSection(sectionIds[i]);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleNavClick = (e, sectionId) => {
+    e.preventDefault();
+    setActiveSection(sectionId);
+    setMobileMenuOpen(false);
+
+    const el = document.getElementById(sectionId);
+    if (el) {
+      const navOffset = 72;
+      const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+      const offsetPosition = elementPosition - navOffset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth',
+      });
+      window.history.pushState(null, '', `#${sectionId}`);
+    } else {
+      window.location.hash = `#${sectionId}`;
+    }
+  };
 
   return (
     <header className={`site-header ${mobileMenuOpen ? 'mobile-menu-active' : ''}`}>
       <div className="nav-container">
-        {/* Brand Logo */}
-        <a href="#beranda" className="brand-logo" id="brand-logo">
+        {/* Brand Logo - Aligned to far left */}
+        <a 
+          href="#beranda" 
+          className="brand-logo" 
+          id="brand-logo"
+          onClick={(e) => handleNavClick(e, 'beranda')}
+        >
           <div className="logo-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2a10 10 0 0 0-7.07 17.07A10 10 0 0 0 12 22a10 10 0 0 0 7.07-2.93A10 10 0 0 0 12 2z"/>
@@ -20,11 +78,17 @@ export default function Navbar({ onOpenLoginModal, onOpenTpsModal: _onOpenTpsMod
         {/* Desktop Navigation Links */}
         <nav>
           <ul className="nav-links">
-            <li><a href="#beranda" className="nav-link active">Beranda</a></li>
-            <li><a href="#tentang" className="nav-link">Tentang kami</a></li>
-            <li><a href="#fitur" className="nav-link">Fitur</a></li>
-            <li><a href="#berita" className="nav-link">Berita &amp; Artikel</a></li>
-            <li><a href="#jenis-sampah" className="nav-link">Jenis Sampah</a></li>
+            {NAV_ITEMS.map((item) => (
+              <li key={item.id}>
+                <a
+                  href={`#${item.id}`}
+                  className={`nav-link ${activeSection === item.id ? 'active' : ''}`}
+                  onClick={(e) => handleNavClick(e, item.id)}
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))}
           </ul>
         </nav>
 
