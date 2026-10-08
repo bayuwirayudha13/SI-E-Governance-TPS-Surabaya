@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api, authService } from '../api/client';
 
+const DEFAULT_KECAMATAN = [
+  'Asemrowo', 'Benowo', 'Bubutan', 'Bulak', 'Dukuh Pakis', 'Gayungan', 'Genteng',
+  'Gubeng', 'Gunung Anyar', 'Jambangan', 'Karang Pilang', 'Kenjeran', 'Krembangan',
+  'Lakarsantri', 'Mulyorejo', 'Pabean Cantian', 'Pakal', 'Rungkut', 'Sambikerep',
+  'Sawahan', 'Semampir', 'Simokerto', 'Sukolilo', 'Sukomanunggal', 'Tambaksari',
+  'Tandes', 'Tegalsari', 'Tenggilis Mejoyo', 'Wiyung', 'Wonocolo', 'Wonokromo'
+].map((nama, idx) => ({ id: idx + 1, nama }));
+
 export default function AuthPage({
   initialTab = 'masuk',
   onBackToHome,
@@ -41,7 +49,7 @@ export default function AuthPage({
   const [alamatRumah, setAlamatRumah] = useState('');
   const [kecamatan, setKecamatan] = useState('');
   const [kelurahan, setKelurahan] = useState('');
-  const [kecamatanList, setKecamatanList] = useState([]);
+  const [kecamatanList, setKecamatanList] = useState(DEFAULT_KECAMATAN);
   const [kelurahanList, setKelurahanList] = useState([]);
   const [kecamatanSearch, setKecamatanSearch] = useState('');
   const [kelurahanSearch, setKelurahanSearch] = useState('');
@@ -124,23 +132,23 @@ export default function AuthPage({
   const kelurahanRef = useRef(null);
 
   // Fetch kecamatan dari MySQL — load sekali, filter instant di client
-  useEffect(() => {
-    if (activeTab !== 'daftar') return;
-    const fetchKecamatan = async () => {
-      try {
-        const res = await api.get('/api/wilayah/kecamatan');
-        setKecamatanList(res.data || []);
-      } catch (err) {
-        console.warn('Gagal load kecamatan:', err);
-        setKecamatanList([]);
+  const fetchKecamatan = async () => {
+    try {
+      const res = await api.get('/api/wilayah/kecamatan');
+      if (res.data && res.data.length > 0) {
+        setKecamatanList(res.data);
       }
-    };
+    } catch (err) {
+      console.warn('Gagal load kecamatan dari server, tetap gunakan fallback:', err);
+    }
+  };
+
+  useEffect(() => {
     fetchKecamatan();
   }, [activeTab]);
 
   // Fetch kelurahan dari MySQL — load per kecamatan, filter instant di client
   useEffect(() => {
-    if (activeTab !== 'daftar') return;
     if (!kecamatan) {
       setKelurahanList([]);
       return;
@@ -155,14 +163,14 @@ export default function AuthPage({
       }
     };
     fetchKelurahan();
-  }, [activeTab, kecamatan]);
+  }, [kecamatan]);
 
-  // Filter instant di client — startsWith huruf depan
+  // Filter instant di client — pencarian fleksibel dengan includes
   const filteredKecamatan = kecamatanSearch
-    ? kecamatanList.filter((k) => k.nama.toLowerCase().startsWith(kecamatanSearch.toLowerCase().trim()))
+    ? kecamatanList.filter((k) => k.nama.toLowerCase().includes(kecamatanSearch.toLowerCase().trim()))
     : kecamatanList;
   const filteredKelurahan = kelurahanSearch
-    ? kelurahanList.filter((l) => l.nama.toLowerCase().startsWith(kelurahanSearch.toLowerCase().trim()))
+    ? kelurahanList.filter((l) => l.nama.toLowerCase().includes(kelurahanSearch.toLowerCase().trim()))
     : kelurahanList;
 
   // Close dropdown saat klik di luar
@@ -1835,7 +1843,10 @@ export default function AuthPage({
                     </label>
                     <div 
                       className="form-input" 
-                      onClick={() => setShowKecamatanDropdown(!showKecamatanDropdown)}
+                      onClick={() => {
+                        setShowKecamatanDropdown(!showKecamatanDropdown);
+                        if (kecamatanList.length === 0) fetchKecamatan();
+                      }}
                       style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff' }}
                     >
                       <span style={{ color: kecamatan ? '#0f172a' : '#94a3b8' }}>

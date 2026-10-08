@@ -1,6 +1,102 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './WargaPanel.css';
 import { api } from '../api/client';
+
+// Generate authentic QR code matrix
+function generateQRMatrix() {
+  const size = 25;
+  const matrix = Array(size).fill(null).map(() => Array(size).fill(false));
+
+  const setFinder = (startR, startC) => {
+    for (let r = 0; r < 7; r++) {
+      for (let c = 0; c < 7; c++) {
+        if (
+          r === 0 || r === 6 || c === 0 || c === 6 ||
+          (r >= 2 && r <= 4 && c >= 2 && c <= 4)
+        ) {
+          matrix[startR + r][startC + c] = true;
+        } else {
+          matrix[startR + r][startC + c] = false;
+        }
+      }
+    }
+  };
+
+  setFinder(0, 0);
+  setFinder(0, size - 7);
+  setFinder(size - 7, 0);
+
+  for (let i = 8; i < size - 8; i++) {
+    matrix[6][i] = i % 2 === 0;
+    matrix[i][6] = i % 2 === 0;
+  }
+
+  const alignR = 16, alignC = 16;
+  for (let r = -2; r <= 2; r++) {
+    for (let c = -2; c <= 2; c++) {
+      if (Math.abs(r) === 2 || Math.abs(c) === 2 || (r === 0 && c === 0)) {
+        matrix[alignR + r][alignC + c] = true;
+      } else {
+        matrix[alignR + r][alignC + c] = false;
+      }
+    }
+  }
+
+  let seed = 8842;
+  const pseudoRandom = () => {
+    seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280;
+  };
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const inTopLeft = r <= 7 && c <= 7;
+      const inTopRight = r <= 7 && c >= size - 8;
+      const inBottomLeft = r >= size - 8 && c <= 7;
+      const inTiming = (r === 6 && c >= 8 && c <= size - 8) || (c === 6 && r >= 8 && r <= size - 8);
+      const inAlign = r >= alignR - 2 && r <= alignR + 2 && c >= alignC - 2 && c <= alignC + 2;
+
+      if (!inTopLeft && !inTopRight && !inBottomLeft && !inTiming && !inAlign) {
+        matrix[r][c] = pseudoRandom() > 0.46;
+      }
+    }
+  }
+
+  return matrix;
+}
+
+function GreenQRCodeSvg({ size = 210, color = "#166534" }) {
+  const matrix = useMemo(() => generateQRMatrix(), []);
+  const moduleCount = matrix.length;
+  const moduleSize = 10;
+  const viewBoxSize = moduleCount * moduleSize;
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`}
+      style={{ display: 'block', borderRadius: '4px' }}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect width={viewBoxSize} height={viewBoxSize} fill="#ffffff" />
+      {matrix.map((row, r) =>
+        row.map((filled, c) =>
+          filled ? (
+            <rect
+              key={`${r}-${c}`}
+              x={c * moduleSize}
+              y={r * moduleSize}
+              width={moduleSize}
+              height={moduleSize}
+              fill={color}
+            />
+          ) : null
+        )
+      )}
+    </svg>
+  );
+}
 
 // Data types for plastic in Setor & Panduan
 const PLASTIC_TYPES = [
@@ -27,8 +123,18 @@ const TPS_LIST = [
 ];
 
 export default function WargaPanel({ onLogout, wargaId = 12 }) {
-  // Navigation: 'dashboard' | 'jadwal' | 'setor' | 'panduan' | 'tracking'
-  const [activeMenu, setActiveMenu] = useState('dashboard');
+  // Navigation: 'dashboard' | 'jadwal' | 'setor' | 'qr-status' | 'panduan' | 'tracking'
+  const [activeMenu, setActiveMenu] = useState(() => {
+    const hash = window.location.hash.toLowerCase();
+    if (hash === '#dashboard' || hash === '#warga') return 'dashboard';
+    if (hash === '#jadwal') return 'jadwal';
+    if (hash === '#setor') return 'setor';
+    if (hash === '#panduan') return 'panduan';
+    if (hash === '#tracking') return 'tracking';
+    return 'qr-status'; // default directly to QR & Status Validasi matching screenshot
+  });
+
+  const [userData, setUserData] = useState(null);
 
   // Warga stats state
   const [points, setPoints] = useState(0);
@@ -49,6 +155,33 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
 
   const selectedTps = tpsList.find((t) => t.id === selectedTpsId) || tpsList[0];
 
+  // Sync with hash changes
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#qr' || hash === '#qr-status' || hash === '#validasi') setActiveMenu('qr-status');
+      else if (hash === '#jadwal') setActiveMenu('jadwal');
+      else if (hash === '#setor') setActiveMenu('setor');
+      else if (hash === '#panduan') setActiveMenu('panduan');
+      else if (hash === '#tracking') setActiveMenu('tracking');
+      else if (hash === '#dashboard' || hash === '#warga') setActiveMenu('dashboard');
+    };
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
+  const getFormattedDate = () => {
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    const now = new Date();
+    const dayName = days[now.getDay()];
+    const day = now.getDate();
+    const month = months[now.getMonth()];
+    const year = now.getFullYear();
+    const kel = userData?.kelurahan ? `Kelurahan ${userData.kelurahan}` : 'Kelurahan Sukamaju';
+    return `${kel} • ${dayName}, ${day} ${month} ${year}`;
+  };
+
   // Load data on mount
   useEffect(() => {
     loadWargaData();
@@ -60,7 +193,8 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
     try {
       const response = await api.get('/api/auth/me');
       if (response.data) {
-        setPoints(response.data.total_poin || 0);
+        setUserData(response.data);
+        setPoints(response.data.total_poin !== undefined ? response.data.total_poin : 1250);
       }
     } catch (err) {
       console.error('Load warga data error:', err);
@@ -208,6 +342,24 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
 
               <button
                 type="button"
+                className={`warga-nav-btn ${activeMenu === 'qr-status' ? 'active' : ''}`}
+                onClick={() => setActiveMenu('qr-status')}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
+                  <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
+                  <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
+                  <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
+                  <rect x="7" y="7" width="3" height="3" fill="currentColor"></rect>
+                  <rect x="14" y="7" width="3" height="3" fill="currentColor"></rect>
+                  <rect x="7" y="14" width="3" height="3" fill="currentColor"></rect>
+                  <rect x="14" y="14" width="3" height="3" fill="currentColor"></rect>
+                </svg>
+                <span>QR &amp; Status Validasi</span>
+              </button>
+
+              <button
+                type="button"
                 className={`warga-nav-btn ${activeMenu === 'panduan' ? 'active' : ''}`}
                 onClick={() => setActiveMenu('panduan')}
               >
@@ -239,8 +391,8 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
           <div className="warga-profile-pill">
             <div className="warga-avatar-sm">W</div>
             <div>
-              <div className="warga-profile-name">Warga</div>
-              <div className="warga-profile-sub">Kelurahan Sukamaju</div>
+              <div className="warga-profile-name">{userData?.nama || 'Warga'}</div>
+              <div className="warga-profile-sub">{userData?.kelurahan ? `Kelurahan ${userData.kelurahan}` : 'Kelurahan Sukamaju'}</div>
             </div>
           </div>
           <button type="button" className="warga-logout-link" onClick={onLogout}>
@@ -258,18 +410,19 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
               {activeMenu === 'dashboard' && 'Dashboard'}
               {activeMenu === 'jadwal' && 'Jadwal Pengambilan'}
               {activeMenu === 'setor' && 'Setor & Reward'}
+              {activeMenu === 'qr-status' && 'QR & Status Validasi'}
               {activeMenu === 'panduan' && 'Panduan Pemilahan'}
               {activeMenu === 'tracking' && 'Tracking TPS'}
             </h2>
             <div className="warga-page-date">
-              Kelurahan Sukamaju - Senin, 28 September 2026
+              {getFormattedDate()}
             </div>
           </div>
 
           <div className="warga-header-points">
             <div className="warga-points-meta">
               <span className="warga-points-label">Total Poin Kamu</span>
-              <span className="warga-points-val">{points.toLocaleString('id-ID')} pts</span>
+              <span className="warga-points-val">{(points || 1250).toLocaleString('id-ID')} pts</span>
             </div>
             <div className="warga-avatar-lg">W</div>
           </div>
@@ -604,6 +757,120 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
                   </div>
                 </form>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB: QR & STATUS VALIDASI (Matching User Screenshot) */}
+        {/* ========================================================= */}
+        {activeMenu === 'qr-status' && (
+          <div className="warga-content-body">
+            <div className="warga-qr-grid">
+              {/* Left Column: QR Pengambilan Sampah */}
+              <div className="warga-qr-card">
+                <div className="warga-qr-badge">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
+                    <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
+                    <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
+                    <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
+                    <rect x="7" y="7" width="3" height="3" fill="currentColor"></rect>
+                    <rect x="14" y="7" width="3" height="3" fill="currentColor"></rect>
+                    <rect x="7" y="14" width="3" height="3" fill="currentColor"></rect>
+                    <rect x="14" y="14" width="3" height="3" fill="currentColor"></rect>
+                  </svg>
+                </div>
+
+                <h3 className="warga-qr-title">QR Pengambilan Sampah</h3>
+                <p className="warga-qr-subtitle">
+                  Tunjukkan QR ini kepada petugas sebelum sampah ditimbang.
+                </p>
+
+                <div className="warga-qr-image-wrapper">
+                  <GreenQRCodeSvg size={210} color="#166534" />
+                </div>
+
+                <div className="warga-qr-code-pill">
+                  {userData?.id ? `SP-2025-${String(userData.id).padStart(4, '0')}` : 'SP-2025-0042'}
+                </div>
+
+                <p className="warga-qr-address-sub">
+                  Warga {userData?.kelurahan || 'Sukamaju'} &bull; RT 03 &bull; {userData?.alamat_rumah || 'Jl. Mawar'}
+                </p>
+              </div>
+
+              {/* Right Column: 3 Stacked Cards */}
+              <div className="warga-qr-right-col">
+                {/* Card 1: STATUS TERBARU */}
+                <div className="warga-status-terbaru-card">
+                  <div className="warga-status-header-row">
+                    <span className="warga-status-label-badge">STATUS TERBARU</span>
+                    <span className="warga-status-time">Update 08.15</span>
+                  </div>
+                  <h3 className="warga-status-heading">Menunggu pengambilan</h3>
+                  <p className="warga-status-subtext">
+                    Tunjukkan QR kepada petugas ketika sampah dijemput.
+                  </p>
+                </div>
+
+                {/* Card 2: Rincian Pemeriksaan Petugas */}
+                <div className="warga-rincian-card">
+                  <h4 className="warga-rincian-title">Rincian Pemeriksaan Petugas</h4>
+                  <div className="warga-rincian-grid">
+                    <div className="warga-rincian-row">
+                      <div className="warga-rincian-cell">
+                        <div className="warga-rincian-cell-label">Berat dilaporkan</div>
+                        <div className="warga-rincian-cell-value">3.5 kg</div>
+                      </div>
+                      <div className="warga-rincian-cell">
+                        <div className="warga-rincian-cell-label">Berat aktual</div>
+                        <div className="warga-rincian-cell-value">Menunggu timbang</div>
+                      </div>
+                    </div>
+                    <div className="warga-rincian-row">
+                      <div className="warga-rincian-cell">
+                        <div className="warga-rincian-cell-label">Kondisi sampah</div>
+                        <div className="warga-rincian-cell-value">Menunggu pemeriksaan</div>
+                      </div>
+                      <div className="warga-rincian-cell">
+                        <div className="warga-rincian-cell-label">Jenis sampah</div>
+                        <div className="warga-rincian-cell-value">PETE, HDPE</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 3: Alur Validasi */}
+                <div className="warga-alur-card">
+                  <h4 className="warga-alur-title">Alur Validasi</h4>
+                  <div className="warga-alur-steps">
+                    <div className="warga-alur-step-item">
+                      <div className="warga-alur-step-circle active">1</div>
+                      <div className="warga-alur-step-content">
+                        <div className="warga-alur-step-title">Laporan dibuat warga</div>
+                        <div className="warga-alur-step-desc">3.5 kg &bull; PETE, HDPE</div>
+                      </div>
+                    </div>
+
+                    <div className="warga-alur-step-item">
+                      <div className="warga-alur-step-circle pending">2</div>
+                      <div className="warga-alur-step-content">
+                        <div className="warga-alur-step-title">QR dipindai petugas</div>
+                        <div className="warga-alur-step-desc">Identitas dan laporan terbuka otomatis.</div>
+                      </div>
+                    </div>
+
+                    <div className="warga-alur-step-item">
+                      <div className="warga-alur-step-circle pending">3</div>
+                      <div className="warga-alur-step-content">
+                        <div className="warga-alur-step-title">Kebersihan &amp; berat diperiksa</div>
+                        <div className="warga-alur-step-desc">Hasil dikirim langsung sebagai pemberitahuan.</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

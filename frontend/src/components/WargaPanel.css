@@ -1021,8 +1021,253 @@
   font-size: 0.74rem;
 }
 
+/* ==========================================================================
+   QR & STATUS VALIDASI (Matching User Screenshot)
+   ========================================================================== */
+.warga-qr-grid {
+  display: grid;
+  grid-template-columns: 440px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.warga-qr-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 36px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.warga-qr-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #dcfce7;
+  color: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.warga-qr-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.warga-qr-subtitle {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0 0 24px 0;
+  max-width: 320px;
+  line-height: 1.45;
+}
+
+.warga-qr-image-wrapper {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.warga-qr-code-pill {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #16a34a;
+  letter-spacing: 0.04em;
+  margin-top: 18px;
+  margin-bottom: 4px;
+}
+
+.warga-qr-address-sub {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* Right Stacked Column */
+.warga-qr-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.warga-status-terbaru-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.warga-status-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.warga-status-label-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.warga-status-time {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.warga-status-heading {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 4px 0 6px 0;
+}
+
+.warga-status-subtext {
+  font-size: 0.86rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Card 2: Rincian Pemeriksaan */
+.warga-rincian-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.warga-rincian-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 16px 0;
+}
+
+.warga-rincian-grid {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.warga-rincian-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.warga-rincian-row:not(:last-child) {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.warga-rincian-cell {
+  padding: 14px 18px;
+}
+
+.warga-rincian-cell:first-child {
+  border-right: 1px solid #e2e8f0;
+}
+
+.warga-rincian-cell-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.warga-rincian-cell-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Card 3: Alur Validasi */
+.warga-alur-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.warga-alur-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 20px 0;
+}
+
+.warga-alur-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.warga-alur-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.warga-alur-step-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.warga-alur-step-circle.active {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.warga-alur-step-circle.pending {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+.warga-alur-step-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.warga-alur-step-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.warga-alur-step-desc {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
 /* Responsive adjustments */
 @media (max-width: 1100px) {
+  .warga-qr-grid {
+    grid-template-columns: 1fr;
+  }
   .warga-two-col-grid {
     grid-template-columns: 1fr;
   }
