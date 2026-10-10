@@ -44,7 +44,8 @@ def seed_users():
             existing = db.query(User).filter(User.email == data["email"]).first()
             if existing:
                 existing.hashed_password = hash_pw(data["password"])
-                print(f"Updated: {data['email']}")
+                existing.role = data["role"]
+                print(f"Updated: {data['email']} (role: {data['role']})")
             else:
                 user = User(
                     username=data["username"],

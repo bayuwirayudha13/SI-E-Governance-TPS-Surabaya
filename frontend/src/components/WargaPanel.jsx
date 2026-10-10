@@ -1,100 +1,70 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import QRCode from 'qrcode';
 import './WargaPanel.css';
 import { api } from '../api/client';
 
-// Generate authentic QR code matrix
-function generateQRMatrix() {
-  const size = 25;
-  const matrix = Array(size).fill(null).map(() => Array(size).fill(false));
+// Real Scannable QR Code Component
+function RealQRCode({ text, size = 210, color = "#166534", onGenerated }) {
+  const [dataUrl, setDataUrl] = useState('');
+  const [error, setError] = useState(null);
 
-  const setFinder = (startR, startC) => {
-    for (let r = 0; r < 7; r++) {
-      for (let c = 0; c < 7; c++) {
-        if (
-          r === 0 || r === 6 || c === 0 || c === 6 ||
-          (r >= 2 && r <= 4 && c >= 2 && c <= 4)
-        ) {
-          matrix[startR + r][startC + c] = true;
-        } else {
-          matrix[startR + r][startC + c] = false;
+  useEffect(() => {
+    let isMounted = true;
+    if (!text) return;
+
+    QRCode.toDataURL(text, {
+      width: Math.max(size * 2, 350), // High pixel density for sharp scan on phone screen
+      margin: 1,
+      color: {
+        dark: color,
+        light: '#ffffff'
+      },
+      errorCorrectionLevel: 'M'
+    })
+      .then((url) => {
+        if (isMounted) {
+          setDataUrl(url);
+          if (onGenerated) onGenerated(url);
         }
-      }
-    }
-  };
+      })
+      .catch((err) => {
+        console.error('Gagal generate real QR code:', err);
+        if (isMounted) setError(err);
+      });
 
-  setFinder(0, 0);
-  setFinder(0, size - 7);
-  setFinder(size - 7, 0);
+    return () => {
+      isMounted = false;
+    };
+  }, [text, size, color]);
 
-  for (let i = 8; i < size - 8; i++) {
-    matrix[6][i] = i % 2 === 0;
-    matrix[i][6] = i % 2 === 0;
+  if (error) {
+    return (
+      <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', fontSize: '0.8rem', textAlign: 'center', padding: '10px' }}>
+        Gagal memuat QR Code
+      </div>
+    );
   }
 
-  const alignR = 16, alignC = 16;
-  for (let r = -2; r <= 2; r++) {
-    for (let c = -2; c <= 2; c++) {
-      if (Math.abs(r) === 2 || Math.abs(c) === 2 || (r === 0 && c === 0)) {
-        matrix[alignR + r][alignC + c] = true;
-      } else {
-        matrix[alignR + r][alignC + c] = false;
-      }
-    }
+  if (!dataUrl) {
+    return (
+      <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '0.82rem' }}>
+        Membuat QR Asli...
+      </div>
+    );
   }
-
-  let seed = 8842;
-  const pseudoRandom = () => {
-    seed = (seed * 9301 + 49297) % 233280;
-    return seed / 233280;
-  };
-
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      const inTopLeft = r <= 7 && c <= 7;
-      const inTopRight = r <= 7 && c >= size - 8;
-      const inBottomLeft = r >= size - 8 && c <= 7;
-      const inTiming = (r === 6 && c >= 8 && c <= size - 8) || (c === 6 && r >= 8 && r <= size - 8);
-      const inAlign = r >= alignR - 2 && r <= alignR + 2 && c >= alignC - 2 && c <= alignC + 2;
-
-      if (!inTopLeft && !inTopRight && !inBottomLeft && !inTiming && !inAlign) {
-        matrix[r][c] = pseudoRandom() > 0.46;
-      }
-    }
-  }
-
-  return matrix;
-}
-
-function GreenQRCodeSvg({ size = 210, color = "#166534" }) {
-  const matrix = useMemo(() => generateQRMatrix(), []);
-  const moduleCount = matrix.length;
-  const moduleSize = 10;
-  const viewBoxSize = moduleCount * moduleSize;
 
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`}
-      style={{ display: 'block', borderRadius: '4px' }}
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <rect width={viewBoxSize} height={viewBoxSize} fill="#ffffff" />
-      {matrix.map((row, r) =>
-        row.map((filled, c) =>
-          filled ? (
-            <rect
-              key={`${r}-${c}`}
-              x={c * moduleSize}
-              y={r * moduleSize}
-              width={moduleSize}
-              height={moduleSize}
-              fill={color}
-            />
-          ) : null
-        )
-      )}
-    </svg>
+    <img
+      src={dataUrl}
+      alt="Kode QR Asli Validasi SI-PETASAN"
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        display: 'block',
+        borderRadius: '6px',
+        objectFit: 'contain'
+      }}
+    />
   );
 }
 
@@ -154,6 +124,195 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
   const [tpsList, setTpsList] = useState(TPS_LIST);
 
   const selectedTps = tpsList.find((t) => t.id === selectedTpsId) || tpsList[0];
+
+  // =========================================================
+  // RINCIAN PEMERIKSAAN & REAL QR CODE STATE
+  // =========================================================
+  const getInitialRincian = () => {
+    try {
+      const saved = localStorage.getItem('sipetasan_rincian_pemeriksaan');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Gagal membaca saved rincian:', e);
+    }
+    return {
+      kodeValidasi: 'SP-2025-0042',
+      beratDilaporkan: '3.5 kg',
+      beratAktual: 'Menunggu timbang',
+      kondisiSampah: 'Menunggu pemeriksaan',
+      jenisSampah: 'PETE, HDPE',
+      status: 'Menunggu pengambilan',
+      waktuUpdate: 'Update 08.15',
+      catatanPetugas: '',
+      itemsTambahan: []
+    };
+  };
+
+  const [rincianPemeriksaan, setRincianPemeriksaan] = useState(getInitialRincian);
+  const [showRincianModal, setShowRincianModal] = useState(false);
+  const [modalMode, setModalMode] = useState('edit'); // 'edit' | 'tambah'
+  const [activeModalTab, setActiveModalTab] = useState('utama'); // 'utama' | 'tambah-item'
+  const [rincianForm, setRincianForm] = useState(rincianPemeriksaan);
+  const [newItemLabel, setNewItemLabel] = useState('');
+  const [newItemValue, setNewItemValue] = useState('');
+  const [showQrPreviewModal, setShowQrPreviewModal] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [toastMessage, setToastMessage] = useState('');
+  const [copyFeedback, setCopyFeedback] = useState(false);
+
+  // Alur validasi step calculation (1: Laporan, 2: Dipindai, 3: Diperiksa)
+  const alurStep = useMemo(() => {
+    const st = (rincianPemeriksaan.status || '').toLowerCase();
+    if (st.includes('selesai') || st.includes('sudah') || st.includes('validasi')) return 3;
+    if (st.includes('proses') || (rincianPemeriksaan.beratAktual && rincianPemeriksaan.beratAktual !== 'Menunggu timbang')) return 2;
+    return 1;
+  }, [rincianPemeriksaan]);
+
+  // Real QR Content String (Scannable by Phone Camera / Google Lens / Barcode Scanner)
+  const qrTextContent = useMemo(() => {
+    const kode = rincianPemeriksaan.kodeValidasi || (userData?.id ? `SP-2025-${String(userData.id).padStart(4, '0')}` : 'SP-2025-0042');
+    const namaWarga = userData?.nama || userData?.full_name || 'Budi Santoso';
+    const kel = userData?.kelurahan || 'Sukamaju';
+    const alamat = `${kel} - RT 03 / ${userData?.alamat_rumah || 'Jl. Mawar'}`;
+
+    let text = `=== SI-PETASAN VALIDASI SAMPAH ===\n`;
+    text += `Kode Validasi : ${kode}\n`;
+    text += `Nama Warga    : ${namaWarga}\n`;
+    text += `Alamat        : ${alamat}\n`;
+    text += `Jenis Sampah  : ${rincianPemeriksaan.jenisSampah}\n`;
+    text += `Berat Laporan : ${rincianPemeriksaan.beratDilaporkan}\n`;
+    text += `Berat Aktual  : ${rincianPemeriksaan.beratAktual}\n`;
+    text += `Kondisi       : ${rincianPemeriksaan.kondisiSampah}\n`;
+    text += `Status        : ${rincianPemeriksaan.status}\n`;
+
+    if (rincianPemeriksaan.itemsTambahan && rincianPemeriksaan.itemsTambahan.length > 0) {
+      text += `Item Tambahan :\n`;
+      rincianPemeriksaan.itemsTambahan.forEach((it) => {
+        text += `- ${it.label}: ${it.value}\n`;
+      });
+    }
+
+    if (rincianPemeriksaan.catatanPetugas) {
+      text += `Catatan       : ${rincianPemeriksaan.catatanPetugas}\n`;
+    }
+
+    text += `----------------------------------\n`;
+    text += `Verifikasi Resmi DLH Kota Surabaya`;
+    return text;
+  }, [rincianPemeriksaan, userData]);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3500);
+  };
+
+  const handleOpenEditModal = () => {
+    setModalMode('edit');
+    setActiveModalTab('utama');
+    setRincianForm({ ...rincianPemeriksaan });
+    setShowRincianModal(true);
+  };
+
+  const handleOpenTambahModal = () => {
+    setModalMode('tambah');
+    setActiveModalTab('tambah-item');
+    setRincianForm({ ...rincianPemeriksaan });
+    setNewItemLabel('');
+    setNewItemValue('');
+    setShowRincianModal(true);
+  };
+
+  const handleSaveRincian = (e) => {
+    e.preventDefault();
+    const updated = {
+      ...rincianForm,
+      waktuUpdate: `Update ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(':', '.')}`
+    };
+    setRincianPemeriksaan(updated);
+    try {
+      localStorage.setItem('sipetasan_rincian_pemeriksaan', JSON.stringify(updated));
+    } catch (err) {
+      console.warn(err);
+    }
+    setShowRincianModal(false);
+    showToast('✅ Rincian pemeriksaan & Kode QR berhasil diperbarui!');
+  };
+
+  const handleAddExtraItem = () => {
+    if (!newItemLabel.trim() || !newItemValue.trim()) return;
+    const items = [...(rincianForm.itemsTambahan || []), { label: newItemLabel.trim(), value: newItemValue.trim() }];
+    const updated = { ...rincianForm, itemsTambahan: items };
+    setRincianForm(updated);
+    setNewItemLabel('');
+    setNewItemValue('');
+    showToast('Item berhasil ditambahkan ke daftar!');
+  };
+
+  const handleRemoveExtraItem = (idx) => {
+    const items = (rincianPemeriksaan.itemsTambahan || []).filter((_, i) => i !== idx);
+    const updated = { ...rincianPemeriksaan, itemsTambahan: items };
+    setRincianPemeriksaan(updated);
+    try {
+      localStorage.setItem('sipetasan_rincian_pemeriksaan', JSON.stringify(updated));
+    } catch (err) {
+      console.warn(err);
+    }
+    showToast('Item berhasil dihapus');
+  };
+
+  const handleCopyQrText = async () => {
+    try {
+      await navigator.clipboard.writeText(qrTextContent);
+      setCopyFeedback(true);
+      showToast('📋 Isi data QR berhasil disalin ke clipboard!');
+      setTimeout(() => setCopyFeedback(false), 2000);
+    } catch {
+      showToast('Gagal menyalin teks');
+    }
+  };
+
+  const handleDownloadQr = () => {
+    if (!qrDataUrl) return;
+    const a = document.createElement('a');
+    a.href = qrDataUrl;
+    a.download = `QR-SIPETASAN-${rincianPemeriksaan.kodeValidasi || 'VALIDASI'}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('⬇️ Kode QR berhasil diunduh!');
+  };
+
+  const handleQuickPreset = (type) => {
+    if (type === 'default') {
+      setRincianForm({
+        kodeValidasi: 'SP-2025-0042',
+        beratDilaporkan: '3.5 kg',
+        beratAktual: 'Menunggu timbang',
+        kondisiSampah: 'Menunggu pemeriksaan',
+        jenisSampah: 'PETE, HDPE',
+        status: 'Menunggu pengambilan',
+        catatanPetugas: '',
+        itemsTambahan: []
+      });
+    } else if (type === 'verified') {
+      setRincianForm({
+        kodeValidasi: 'SP-2025-0042',
+        beratDilaporkan: '3.5 kg',
+        beratAktual: '3.8 kg',
+        kondisiSampah: 'Bersih & Terpilah',
+        jenisSampah: 'PETE, HDPE',
+        status: 'Sudah Divalidasi / Selesai',
+        catatanPetugas: 'Sampah terpilah bersih tanpa sisa cairan. Poin reward penuh.',
+        itemsTambahan: [{ label: 'Petugas Lapangan', value: 'Hendra (Armada 02)' }]
+      });
+    } else if (type === 'process') {
+      setRincianForm({
+        ...rincianForm,
+        status: 'Sedang Diproses Petugas',
+        kondisiSampah: 'Dalam Pemeriksaan Lapangan'
+      });
+    }
+  };
 
   // Sync with hash changes
   useEffect(() => {
@@ -762,12 +921,13 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
         )}
 
         {/* ========================================================= */}
+        {/* ========================================================= */}
         {/* TAB: QR & STATUS VALIDASI (Matching User Screenshot) */}
         {/* ========================================================= */}
         {activeMenu === 'qr-status' && (
           <div className="warga-content-body">
             <div className="warga-qr-grid">
-              {/* Left Column: QR Pengambilan Sampah */}
+              {/* Left Column: QR Pengambilan Sampah (Real Scannable QR Code) */}
               <div className="warga-qr-card">
                 <div className="warga-qr-badge">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -787,17 +947,72 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
                   Tunjukkan QR ini kepada petugas sebelum sampah ditimbang.
                 </p>
 
+                {/* Real Scannable QR Code */}
                 <div className="warga-qr-image-wrapper">
-                  <GreenQRCodeSvg size={210} color="#166534" />
+                  <RealQRCode
+                    text={qrTextContent}
+                    size={210}
+                    color="#166534"
+                    onGenerated={setQrDataUrl}
+                  />
+                </div>
+
+                {/* Live Scanner indicator */}
+                <div className="warga-qr-scannable-pill">
+                  <span className="qr-scannable-dot"></span>
+                  <span>Kode QR Asli &bull; Siap di-scan Kamera HP</span>
                 </div>
 
                 <div className="warga-qr-code-pill">
-                  {userData?.id ? `SP-2025-${String(userData.id).padStart(4, '0')}` : 'SP-2025-0042'}
+                  {rincianPemeriksaan.kodeValidasi || (userData?.id ? `SP-2025-${String(userData.id).padStart(4, '0')}` : 'SP-2025-0042')}
                 </div>
 
                 <p className="warga-qr-address-sub">
                   Warga {userData?.kelurahan || 'Sukamaju'} &bull; RT 03 &bull; {userData?.alamat_rumah || 'Jl. Mawar'}
                 </p>
+
+                {/* Action Buttons for User testing */}
+                <div className="warga-qr-btn-group">
+                  <button
+                    type="button"
+                    className="warga-qr-util-btn"
+                    onClick={handleCopyQrText}
+                    title="Salin isi data teks QR"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    <span>{copyFeedback ? 'Tersalin!' : 'Salin Teks'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="warga-qr-util-btn"
+                    onClick={() => setShowQrPreviewModal(true)}
+                    title="Lihat teks yang terkandung dalam QR"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    </svg>
+                    <span>Isi QR</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="warga-qr-util-btn download"
+                    onClick={handleDownloadQr}
+                    title="Download gambar QR Code"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Unduh</span>
+                  </button>
+                </div>
               </div>
 
               {/* Right Column: 3 Stacked Cards */}
@@ -806,39 +1021,112 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
                 <div className="warga-status-terbaru-card">
                   <div className="warga-status-header-row">
                     <span className="warga-status-label-badge">STATUS TERBARU</span>
-                    <span className="warga-status-time">Update 08.15</span>
+                    <span className="warga-status-time">{rincianPemeriksaan.waktuUpdate || 'Update 08.15'}</span>
                   </div>
-                  <h3 className="warga-status-heading">Menunggu pengambilan</h3>
+                  <h3 className="warga-status-heading">
+                    {rincianPemeriksaan.status}
+                  </h3>
                   <p className="warga-status-subtext">
-                    Tunjukkan QR kepada petugas ketika sampah dijemput.
+                    {rincianPemeriksaan.status.toLowerCase().includes('selesai') || rincianPemeriksaan.status.toLowerCase().includes('sudah')
+                      ? 'Sampah telah berhasil diverifikasi dan ditimbang petugas. Poin reward telah ditambahkan!'
+                      : rincianPemeriksaan.status.toLowerCase().includes('proses')
+                      ? 'Petugas armada sedang menimbang dan memeriksa kebersihan sampah di lokasi.'
+                      : 'Tunjukkan QR kepada petugas ketika sampah dijemput.'}
                   </p>
                 </div>
 
                 {/* Card 2: Rincian Pemeriksaan Petugas */}
                 <div className="warga-rincian-card">
-                  <h4 className="warga-rincian-title">Rincian Pemeriksaan Petugas</h4>
+                  <div className="warga-rincian-header">
+                    <div>
+                      <h4 className="warga-rincian-title">Rincian Pemeriksaan Petugas</h4>
+                      <span className="warga-rincian-subtitle">Data setoran terhubung otomatis dengan QR aktif</span>
+                    </div>
+                    <div className="warga-rincian-actions">
+                      <button
+                        type="button"
+                        className="warga-action-chip-btn edit"
+                        onClick={handleOpenEditModal}
+                        title="Edit nilai rincian pemeriksaan"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        <span>Edit Rincian</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="warga-action-chip-btn tambah"
+                        onClick={handleOpenTambahModal}
+                        title="Tambah jenis sampah / item pemeriksaan baru"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <line x1="12" y1="5" x2="12" y2="19"></line>
+                          <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>Tambah Data</span>
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="warga-rincian-grid">
                     <div className="warga-rincian-row">
                       <div className="warga-rincian-cell">
                         <div className="warga-rincian-cell-label">Berat dilaporkan</div>
-                        <div className="warga-rincian-cell-value">3.5 kg</div>
+                        <div className="warga-rincian-cell-value">{rincianPemeriksaan.beratDilaporkan}</div>
                       </div>
                       <div className="warga-rincian-cell">
                         <div className="warga-rincian-cell-label">Berat aktual</div>
-                        <div className="warga-rincian-cell-value">Menunggu timbang</div>
+                        <div className={`warga-rincian-cell-value ${rincianPemeriksaan.beratAktual !== 'Menunggu timbang' ? 'highlight-val' : ''}`}>
+                          {rincianPemeriksaan.beratAktual}
+                        </div>
                       </div>
                     </div>
                     <div className="warga-rincian-row">
                       <div className="warga-rincian-cell">
                         <div className="warga-rincian-cell-label">Kondisi sampah</div>
-                        <div className="warga-rincian-cell-value">Menunggu pemeriksaan</div>
+                        <div className={`warga-rincian-cell-value ${rincianPemeriksaan.kondisiSampah.toLowerCase().includes('bersih') ? 'highlight-green' : ''}`}>
+                          {rincianPemeriksaan.kondisiSampah}
+                        </div>
                       </div>
                       <div className="warga-rincian-cell">
                         <div className="warga-rincian-cell-label">Jenis sampah</div>
-                        <div className="warga-rincian-cell-value">PETE, HDPE</div>
+                        <div className="warga-rincian-cell-value">{rincianPemeriksaan.jenisSampah}</div>
                       </div>
                     </div>
                   </div>
+
+                  {/* Extra Items List if added */}
+                  {rincianPemeriksaan.itemsTambahan && rincianPemeriksaan.itemsTambahan.length > 0 && (
+                    <div className="warga-extra-items-box">
+                      <div className="warga-extra-items-title">Item Tambahan Terdaftar:</div>
+                      <div className="warga-extra-items-list">
+                        {rincianPemeriksaan.itemsTambahan.map((it, idx) => (
+                          <div key={idx} className="warga-extra-item-chip">
+                            <span className="dot"></span>
+                            <span><strong>{it.label}:</strong> {it.value}</span>
+                            <button
+                              type="button"
+                              className="remove-chip-btn"
+                              onClick={() => handleRemoveExtraItem(idx)}
+                              title="Hapus item ini"
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {rincianPemeriksaan.catatanPetugas && (
+                    <div className="warga-rincian-note-box">
+                      <span>💬</span>
+                      <span><strong>Catatan Petugas:</strong> {rincianPemeriksaan.catatanPetugas}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Card 3: Alur Validasi */}
@@ -849,23 +1137,33 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
                       <div className="warga-alur-step-circle active">1</div>
                       <div className="warga-alur-step-content">
                         <div className="warga-alur-step-title">Laporan dibuat warga</div>
-                        <div className="warga-alur-step-desc">3.5 kg &bull; PETE, HDPE</div>
+                        <div className="warga-alur-step-desc">
+                          {rincianPemeriksaan.beratDilaporkan} &bull; {rincianPemeriksaan.jenisSampah}
+                        </div>
                       </div>
                     </div>
 
                     <div className="warga-alur-step-item">
-                      <div className="warga-alur-step-circle pending">2</div>
+                      <div className={`warga-alur-step-circle ${alurStep >= 2 ? 'active' : 'pending'}`}>2</div>
                       <div className="warga-alur-step-content">
                         <div className="warga-alur-step-title">QR dipindai petugas</div>
-                        <div className="warga-alur-step-desc">Identitas dan laporan terbuka otomatis.</div>
+                        <div className="warga-alur-step-desc">
+                          {alurStep >= 2
+                            ? 'Petugas armada telah memindai QR code ini di lokasi.'
+                            : 'Identitas dan laporan terbuka otomatis saat di-scan.'}
+                        </div>
                       </div>
                     </div>
 
                     <div className="warga-alur-step-item">
-                      <div className="warga-alur-step-circle pending">3</div>
+                      <div className={`warga-alur-step-circle ${alurStep >= 3 ? 'active' : 'pending'}`}>3</div>
                       <div className="warga-alur-step-content">
                         <div className="warga-alur-step-title">Kebersihan &amp; berat diperiksa</div>
-                        <div className="warga-alur-step-desc">Hasil dikirim langsung sebagai pemberitahuan.</div>
+                        <div className="warga-alur-step-desc">
+                          {alurStep >= 3
+                            ? `Selesai: ${rincianPemeriksaan.beratAktual} (${rincianPemeriksaan.kondisiSampah})`
+                            : 'Hasil dikirim langsung sebagai pemberitahuan.'}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1163,6 +1461,316 @@ export default function WargaPanel({ onLogout, wargaId = 12 }) {
           </div>
         )}
       </main>
+
+      {/* ========================================================= */}
+      {/* MODAL: EDIT / TAMBAH RINCIAN PEMERIKSAAN PETUGAS          */}
+      {/* ========================================================= */}
+      {showRincianModal && (
+        <div className="warga-modal-backdrop" onClick={() => setShowRincianModal(false)}>
+          <div className="warga-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="warga-modal-header">
+              <h3 className="warga-modal-title">
+                {modalMode === 'edit' ? '✏️ Edit Rincian Pemeriksaan' : '➕ Tambah Data Pemeriksaan'}
+              </h3>
+              <button
+                type="button"
+                className="warga-modal-close-btn"
+                onClick={() => setShowRincianModal(false)}
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="warga-modal-tabs">
+              <button
+                type="button"
+                className={`warga-modal-tab-btn ${activeModalTab === 'utama' ? 'active' : ''}`}
+                onClick={() => setActiveModalTab('utama')}
+              >
+                Form Data Utama
+              </button>
+              <button
+                type="button"
+                className={`warga-modal-tab-btn ${activeModalTab === 'tambah-item' ? 'active' : ''}`}
+                onClick={() => setActiveModalTab('tambah-item')}
+              >
+                Tambah Item Tambahan
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="warga-modal-body">
+              {activeModalTab === 'utama' ? (
+                <form id="rincian-edit-form" onSubmit={handleSaveRincian} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {/* Quick Presets */}
+                  <div>
+                    <span className="warga-form-label">Preset Cepat Demo:</span>
+                    <div className="warga-quick-presets">
+                      <button
+                        type="button"
+                        className="warga-preset-pill"
+                        onClick={() => handleQuickPreset('default')}
+                      >
+                        🔄 Reset ke Menunggu
+                      </button>
+                      <button
+                        type="button"
+                        className="warga-preset-pill"
+                        onClick={() => handleQuickPreset('process')}
+                      >
+                        ⏳ Sedang Diproses
+                      </button>
+                      <button
+                        type="button"
+                        className="warga-preset-pill"
+                        onClick={() => handleQuickPreset('verified')}
+                      >
+                        ✅ Selesai Divalidasi (3.8 kg, Bersih)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="warga-form-row-2">
+                    <div className="warga-form-group">
+                      <label className="warga-form-label">Kode Validasi / QR:</label>
+                      <input
+                        type="text"
+                        className="warga-form-input"
+                        value={rincianForm.kodeValidasi}
+                        onChange={(e) => setRincianForm({ ...rincianForm, kodeValidasi: e.target.value })}
+                        placeholder="Contoh: SP-2025-0042"
+                        required
+                      />
+                    </div>
+                    <div className="warga-form-group">
+                      <label className="warga-form-label">Status Validasi:</label>
+                      <select
+                        className="warga-form-select"
+                        value={rincianForm.status}
+                        onChange={(e) => setRincianForm({ ...rincianForm, status: e.target.value })}
+                      >
+                        <option value="Menunggu pengambilan">Menunggu pengambilan</option>
+                        <option value="Sedang Diproses Petugas">Sedang Diproses Petugas</option>
+                        <option value="Sudah Divalidasi / Selesai">Sudah Divalidasi / Selesai</option>
+                        <option value="Perlu Pemeriksaan Ulang">Perlu Pemeriksaan Ulang</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="warga-form-row-2">
+                    <div className="warga-form-group">
+                      <label className="warga-form-label">Berat Dilaporkan:</label>
+                      <input
+                        type="text"
+                        className="warga-form-input"
+                        value={rincianForm.beratDilaporkan}
+                        onChange={(e) => setRincianForm({ ...rincianForm, beratDilaporkan: e.target.value })}
+                        placeholder="Contoh: 3.5 kg"
+                        required
+                      />
+                    </div>
+                    <div className="warga-form-group">
+                      <label className="warga-form-label">Berat Aktual:</label>
+                      <input
+                        type="text"
+                        className="warga-form-input"
+                        value={rincianForm.beratAktual}
+                        onChange={(e) => setRincianForm({ ...rincianForm, beratAktual: e.target.value })}
+                        placeholder="Contoh: Menunggu timbang atau 3.8 kg"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="warga-form-row-2">
+                    <div className="warga-form-group">
+                      <label className="warga-form-label">Kondisi Sampah:</label>
+                      <select
+                        className="warga-form-select"
+                        value={rincianForm.kondisiSampah}
+                        onChange={(e) => setRincianForm({ ...rincianForm, kondisiSampah: e.target.value })}
+                      >
+                        <option value="Menunggu pemeriksaan">Menunggu pemeriksaan</option>
+                        <option value="Bersih & Terpilah">Bersih & Terpilah</option>
+                        <option value="Kering Bersih">Kering Bersih</option>
+                        <option value="Sedikit Kotor">Sedikit Kotor</option>
+                        <option value="Tercampur Organik">Tercampur Organik</option>
+                      </select>
+                    </div>
+                    <div className="warga-form-group">
+                      <label className="warga-form-label">Jenis Sampah:</label>
+                      <input
+                        type="text"
+                        className="warga-form-input"
+                        value={rincianForm.jenisSampah}
+                        onChange={(e) => setRincianForm({ ...rincianForm, jenisSampah: e.target.value })}
+                        placeholder="Contoh: PETE, HDPE"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="warga-form-group">
+                    <label className="warga-form-label">Catatan Tambahan Petugas (Opsional):</label>
+                    <textarea
+                      rows="2"
+                      className="warga-form-textarea"
+                      value={rincianForm.catatanPetugas}
+                      onChange={(e) => setRincianForm({ ...rincianForm, catatanPetugas: e.target.value })}
+                      placeholder="Catatan hasil timbang atau kondisi pilahan warga..."
+                    ></textarea>
+                  </div>
+                </form>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <p style={{ fontSize: '0.84rem', color: '#64748b', margin: 0 }}>
+                    Tambahkan item pemeriksaan atau jenis sampah tambahan ke dalam rincian dan QR code ini.
+                  </p>
+
+                  <div className="warga-form-group">
+                    <label className="warga-form-label">Nama Item / Kategori:</label>
+                    <input
+                      type="text"
+                      className="warga-form-input"
+                      value={newItemLabel}
+                      onChange={(e) => setNewItemLabel(e.target.value)}
+                      placeholder="Contoh: Sampah Tambahan, Petugas Lapangan, Reward Estimasi"
+                    />
+                  </div>
+
+                  <div className="warga-form-group">
+                    <label className="warga-form-label">Nilai / Detail Keterangan:</label>
+                    <input
+                      type="text"
+                      className="warga-form-input"
+                      value={newItemValue}
+                      onChange={(e) => setNewItemValue(e.target.value)}
+                      placeholder="Contoh: Kardus Karton 1.2 kg, Truk Armada #02, +150 Poin"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="warga-btn-primary"
+                    onClick={handleAddExtraItem}
+                    style={{ alignSelf: 'flex-start' }}
+                  >
+                    ➕ Tambahkan ke Daftar
+                  </button>
+
+                  {/* Preview Current Extra Items */}
+                  <div style={{ marginTop: '10px' }}>
+                    <span className="warga-form-label">Daftar Item Tambahan Saat Ini:</span>
+                    {rincianForm.itemsTambahan && rincianForm.itemsTambahan.length > 0 ? (
+                      <div className="warga-extra-items-list" style={{ marginTop: '8px' }}>
+                        {rincianForm.itemsTambahan.map((it, idx) => (
+                          <div key={idx} className="warga-extra-item-chip">
+                            <span className="dot"></span>
+                            <span><strong>{it.label}:</strong> {it.value}</span>
+                            <button
+                              type="button"
+                              className="remove-chip-btn"
+                              onClick={() => {
+                                const filtered = rincianForm.itemsTambahan.filter((_, i) => i !== idx);
+                                setRincianForm({ ...rincianForm, itemsTambahan: filtered });
+                              }}
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic', margin: '6px 0 0 0' }}>
+                        Belum ada item tambahan. Isi formulir di atas untuk menambahkan.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="warga-modal-footer">
+              <button
+                type="button"
+                className="warga-btn-secondary"
+                onClick={() => setShowRincianModal(false)}
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                form="rincian-edit-form"
+                className="warga-btn-primary"
+                onClick={(e) => {
+                  if (activeModalTab === 'tambah-item') {
+                    handleSaveRincian(e);
+                  }
+                }}
+              >
+                💾 Simpan Perubahan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: PREVIEW ISI KODE QR                                */}
+      {/* ========================================================= */}
+      {showQrPreviewModal && (
+        <div className="warga-modal-backdrop" onClick={() => setShowQrPreviewModal(false)}>
+          <div className="warga-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="warga-modal-header">
+              <h3 className="warga-modal-title">
+                📱 Isi Teks Kode QR Asli
+              </h3>
+              <button
+                type="button"
+                className="warga-modal-close-btn"
+                onClick={() => setShowQrPreviewModal(false)}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="warga-modal-body">
+              <p style={{ fontSize: '0.85rem', color: '#475569', margin: 0 }}>
+                Berikut adalah isi data nyata yang terenkode di dalam QR Code. Ketika kamera HP atau Google Lens memindai QR, teks ini akan langsung terbaca:
+              </p>
+
+              <div className="warga-preview-code-block">
+                {qrTextContent}
+              </div>
+            </div>
+
+            <div className="warga-modal-footer">
+              <button
+                type="button"
+                className="warga-btn-secondary"
+                onClick={() => setShowQrPreviewModal(false)}
+              >
+                Tutup
+              </button>
+              <button
+                type="button"
+                className="warga-btn-primary"
+                onClick={handleCopyQrText}
+              >
+                📋 {copyFeedback ? 'Tersalin!' : 'Salin Teks QR'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="warga-toast-notification">
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 }
