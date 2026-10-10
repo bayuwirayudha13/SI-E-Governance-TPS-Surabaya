@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 
 const API_BASE = 'http://localhost:8000';
 
-export default function SuperadminPanel({ onLogout }) {
+export default function SuperadminPanel({ onLogout, currentUser: userFromProp }) {
   const [activeMenu, setActiveMenu] = useState('dashboard');
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(userFromProp);
   const [users, setUsers] = useState([]);
   const [petugasList, setPetugasList] = useState([]);
   const [tpsList, setTpsList] = useState([]);
@@ -19,19 +19,37 @@ export default function SuperadminPanel({ onLogout }) {
   // Form states
   const [newUser, setNewUser] = useState({ nama_lengkap: '', email: '', password: '', role: 'warga' });
   const [newJadwal, setNewJadwal] = useState({ hari: '', waktu_mulai: '', waktu_selesai: '', area: '', petugas: '', tipe: 'Rutin' });
-  const [newTps, setNewTps] = useState({ nama: '', kecamatan: '', status: 'AMAN' });
+  const [newTps, setNewTps] = useState({
+    nama: '',
+    kecamatan: '',
+    wilayah_kota: 'Surabaya Pusat',
+    lokasi: '',
+    jenis_tps: 'TPS Resmi',
+    latitude: '',
+    longitude: '',
+    jumlah_container: '',
+    daya_tampung_m3: '',
+    status: 'Aktif'
+  });
+  const [editingTpsId, setEditingTpsId] = useState(null);
   const [settings, setSettings] = useState({ website_name: 'SI-PETASAN', website_email: 'admin@sipetasan.com', current_password: '', new_password: '' });
 
   // Load current user
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     const userData = localStorage.getItem('user_role');
+    const authUser = localStorage.getItem('auth_user');
+
     if (token) {
-      setCurrentUser({
-        role: userData,
-        email: localStorage.getItem('user_email') || 'superadmin@sipetasan.com',
-        nama: 'Super Admin'
-      });
+      if (authUser) {
+        setCurrentUser(JSON.parse(authUser));
+      } else {
+        setCurrentUser({
+          role: userData,
+          email: localStorage.getItem('user_email') || 'superadmin@sipetasan.com',
+          nama_lengkap: 'Super Admin'
+        });
+      }
     }
   }, []);
 
@@ -63,10 +81,11 @@ export default function SuperadminPanel({ onLogout }) {
     return targetIndex < todayIndex;
   };
 
-  const token = localStorage.getItem('access_token');
+  const getToken = () => localStorage.getItem('access_token');
 
   const loadUsers = async () => {
     try {
+      const token = getToken();
       const response = await fetch(`${API_BASE}/api/admin/users`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -94,10 +113,16 @@ export default function SuperadminPanel({ onLogout }) {
 
   const loadTps = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/tps/`);
+      const token = getToken();
+      const response = await fetch(`${API_BASE}/api/tps/`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
       if (response.ok) {
         const data = await response.json();
         setTpsList(data);
+      } else {
+        const txt = await response.text();
+        console.error('Load TPS failed:', response.status, txt);
       }
     } catch (err) {
       console.error('Load TPS error:', err);
@@ -109,14 +134,43 @@ export default function SuperadminPanel({ onLogout }) {
     setIsLoading(true);
     setError('');
     try {
-      const response = await fetch(`${API_BASE}/api/tps/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTps)
+      const token = getToken();
+      if (!token) throw new Error('Token tidak ditemukan, login ulang sebagai superadmin');
+      
+      const payload = {
+        ...newTps,
+        latitude: newTps.latitude ? parseFloat(newTps.latitude) : null,
+        longitude: newTps.longitude ? parseFloat(newTps.longitude) : null,
+        daya_tampung_m3: newTps.daya_tampung_m3 ? parseFloat(newTps.daya_tampung_m3) : null
+      };
+
+      const url = editingTpsId ? `${API_BASE}/api/tps/${editingTpsId}` : `${API_BASE}/api/tps/`;
+      const method = editingTpsId ? 'PUT' : 'POST';
+      const response = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(payload)
       });
-      if (!response.ok) throw new Error('Gagal menambah TPS');
-      setSuccess('TPS berhasil ditambahkan');
-      setNewTps({ nama: '', kecamatan: '', status: 'AMAN' });
+      let resText = await response.text();
+      if (!response.ok) {
+        let msg = resText;
+        try { const j = JSON.parse(resText); msg = j.detail || resText; } catch {}
+        throw new Error(msg || (editingTpsId ? 'Gagal mengupdate TPS' : 'Gagal menambah TPS'));
+      }
+      setSuccess(editingTpsId ? 'TPS berhasil diupdate' : 'TPS berhasil ditambahkan');
+      setNewTps({
+        nama: '',
+        kecamatan: '',
+        wilayah_kota: 'Surabaya Pusat',
+        lokasi: '',
+        jenis_tps: 'TPS Resmi',
+        latitude: '',
+        longitude: '',
+        jumlah_container: '',
+        daya_tampung_m3: '',
+        status: 'Aktif'
+      });
+      setEditingTpsId(null);
       setShowAddTpsModal(false);
       loadTps();
     } catch (err) {
@@ -126,17 +180,49 @@ export default function SuperadminPanel({ onLogout }) {
     }
   };
 
+  const handleEditTps = (tps) => {
+    setEditingTpsId(tps.id);
+    setNewTps({
+      nama: tps.nama || '',
+      kecamatan: tps.kecamatan || '',
+      wilayah_kota: tps.wilayah_kota || 'Surabaya Pusat',
+      lokasi: tps.lokasi || '',
+      jenis_tps: tps.jenis_tps || 'TPS Resmi',
+      latitude: tps.latitude !== null && tps.latitude !== undefined ? tps.latitude : '',
+      longitude: tps.longitude !== null && tps.longitude !== undefined ? tps.longitude : '',
+      jumlah_container: tps.jumlah_container || '',
+      daya_tampung_m3: tps.daya_tampung_m3 !== null && tps.daya_tampung_m3 !== undefined ? tps.daya_tampung_m3 : '',
+      status: tps.status || 'Aktif'
+    });
+    setShowAddTpsModal(true);
+  };
+
   const handleDeleteTps = async (tpsId) => {
     if (!window.confirm('Yakin ingin menghapus TPS ini?')) return;
+    setError('');
+    setSuccess('');
     try {
+      const token = getToken();
+      if (!token) throw new Error('Token tidak ditemukan, login ulang sebagai superadmin');
       const response = await fetch(`${API_BASE}/api/tps/${tpsId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!response.ok) throw new Error('Gagal menghapus TPS');
+      let body = '';
+      try { body = await response.text(); } catch {}
+      if (!response.ok) {
+        let msg = body;
+        try { const j = JSON.parse(body); msg = j.detail || body; } catch {}
+        throw new Error(msg || `Gagal menghapus TPS (${response.status})`);
+      }
       setSuccess('TPS berhasil dihapus');
       loadTps();
     } catch (err) {
-      setError(err.message);
+      if (err.message === 'Failed to fetch') {
+        setError('Gagal terhubung ke server (http://localhost:8000). Pastikan backend nyala.');
+      } else {
+        setError(err.message);
+      }
     }
   };
 
@@ -145,6 +231,7 @@ export default function SuperadminPanel({ onLogout }) {
     setIsLoading(true);
     setError('');
     try {
+      const token = getToken();
       const response = await fetch(`${API_BASE}/api/admin/users`, {
         method: 'POST',
         headers: {
@@ -196,6 +283,7 @@ export default function SuperadminPanel({ onLogout }) {
   const handleDeleteUser = async (userId) => {
     if (!window.confirm('Yakin ingin menghapus user ini?')) return;
     try {
+      const token = getToken();
       const response = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -224,6 +312,7 @@ export default function SuperadminPanel({ onLogout }) {
 
   const loadSettings = async () => {
     try {
+      const token = getToken();
       const response = await fetch(`${API_BASE}/api/admin/settings`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -246,6 +335,7 @@ export default function SuperadminPanel({ onLogout }) {
     setIsLoading(true);
     setError('');
     try {
+      const token = getToken();
       const updateData = {
         website_name: settings.website_name,
         website_email: settings.website_email
@@ -347,10 +437,14 @@ export default function SuperadminPanel({ onLogout }) {
         {/* Bottom profile */}
         <div className="admin-bottom-profile">
           <div className="admin-profile-card">
-            <div className="admin-profile-avatar">SA</div>
+            <div className="admin-profile-avatar">
+              {(currentUser?.nama_lengkap || currentUser?.nama || 'SA').charAt(0).toUpperCase()}
+            </div>
             <div>
-              <div className="admin-profile-name">{currentUser?.nama || 'Superadmin'}</div>
-              <div className="admin-profile-email">{currentUser?.email || 'superadmin@sipetasan.com'}</div>
+              <div className="admin-profile-name">{currentUser?.nama_lengkap || currentUser?.nama || 'Superadmin'}</div>
+              <div className="admin-profile-role" style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'capitalize' }}>
+                {currentUser?.role || 'Super Admin'}
+              </div>
             </div>
           </div>
           <button type="button" className="admin-logout-btn" onClick={onLogout}>
@@ -526,12 +620,23 @@ export default function SuperadminPanel({ onLogout }) {
           </div>
         )}
 
-        {/* TPS */}
+        {/* TPS CRUD */}
         {activeMenu === 'tps' && (
           <div className="admin-content-view">
             <div className="admin-card full-table-card">
               <div className="table-header-row">
-                <h3 className="admin-card-title">Data TPS</h3>
+                <h3 className="admin-card-title">Kelola Data TPS</h3>
+                <button
+                  type="button"
+                  className="btn-add-primary"
+                  onClick={() => {
+                    setEditingTpsId(null);
+                    setNewTps({ nama: '', kecamatan: '', wilayah_kota: 'Surabaya Pusat', lokasi: '', jenis_tps: 'TPS Resmi', latitude: '', longitude: '', jumlah_container: '', daya_tampung_m3: '', status: 'Aktif' });
+                    setShowAddTpsModal(true);
+                  }}
+                >
+                  + Tambah TPS
+                </button>
               </div>
               <div className="admin-table-wrap">
                 <table className="admin-table">
@@ -539,7 +644,13 @@ export default function SuperadminPanel({ onLogout }) {
                     <tr>
                       <th>NAMA TPS</th>
                       <th>KECAMATAN</th>
+                      <th>WILAYAH</th>
+                      <th>LOKASI</th>
+                      <th>LAT/LNG</th>
+                      <th>CONTAINER</th>
+                      <th>DAYA (m³)</th>
                       <th>STATUS</th>
+                      <th>AKSI</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -547,7 +658,31 @@ export default function SuperadminPanel({ onLogout }) {
                       <tr key={t.id}>
                         <td><strong>{t.nama}</strong></td>
                         <td>{t.kecamatan}</td>
-                        <td><span className="status-pill status-aktif">{t.status}</span></td>
+                        <td>{t.wilayah_kota}</td>
+                        <td className="text-muted">{t.lokasi || '—'}</td>
+                        <td className="text-muted" style={{ fontSize: '0.8rem' }}>{t.latitude && t.longitude ? `${t.latitude}, ${t.longitude}` : '—'}</td>
+                        <td>{t.jumlah_container || '—'}</td>
+                        <td>{t.daya_tampung_m3 ?? '—'}</td>
+                        <td><span className={`status-pill ${t.status === 'Aktif' ? 'status-aktif' : ''}`}>{t.status}</span></td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              type="button"
+                              className="btn-table-edit"
+                              style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}
+                              onClick={() => handleEditTps(t)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-table-delete"
+                              onClick={() => handleDeleteTps(t.id)}
+                            >
+                              &times; Hapus
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -800,6 +935,142 @@ export default function SuperadminPanel({ onLogout }) {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
                 <button type="button" onClick={() => setShowAddJadwalModal(false)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Batal</button>
                 <button type="submit" className="btn-add-primary" disabled={isLoading}>Simpan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Tambah / Edit TPS */}
+      {showAddTpsModal && (
+        <div className="modal-overlay" onClick={() => { setShowAddTpsModal(false); setEditingTpsId(null); }}>
+          <div className="modal-dialog admin-modal-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">{editingTpsId ? 'Edit TPS' : 'Tambah TPS Baru'}</h3>
+              <button type="button" className="modal-close-btn" onClick={() => { setShowAddTpsModal(false); setEditingTpsId(null); }}>&times;</button>
+            </div>
+            <form onSubmit={handleAddTps} style={{ padding: '24px' }}>
+              <div className="form-group">
+                <label className="form-label">Nama TPS *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="TPS Keputih"
+                  className="settings-input"
+                  value={newTps.nama}
+                  onChange={(e) => setNewTps({ ...newTps, nama: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Kecamatan *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Sukolilo"
+                  className="settings-input"
+                  value={newTps.kecamatan}
+                  onChange={(e) => setNewTps({ ...newTps, kecamatan: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Wilayah Kota *</label>
+                <select
+                  required
+                  className="settings-input"
+                  value={newTps.wilayah_kota}
+                  onChange={(e) => setNewTps({ ...newTps, wilayah_kota: e.target.value })}
+                >
+                  <option value="Surabaya Pusat">Surabaya Pusat</option>
+                  <option value="Surabaya Utara">Surabaya Utara</option>
+                  <option value="Surabaya Selatan">Surabaya Selatan</option>
+                  <option value="Surabaya Barat">Surabaya Barat</option>
+                  <option value="Surabaya Timur">Surabaya Timur</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Lokasi / Alamat</label>
+                <input
+                  type="text"
+                  placeholder="Jl. Keputih No. 10"
+                  className="settings-input"
+                  value={newTps.lokasi}
+                  onChange={(e) => setNewTps({ ...newTps, lokasi: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Jenis TPS</label>
+                <select
+                  className="settings-input"
+                  value={newTps.jenis_tps}
+                  onChange={(e) => setNewTps({ ...newTps, jenis_tps: e.target.value })}
+                >
+                  <option value="TPS Resmi">TPS Resmi</option>
+                  <option value="TPS Liar">TPS Liar</option>
+                  <option value="TPS Sementara">TPS Sementara</option>
+                  <option value="Depo">Depo</option>
+                </select>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label className="form-label">Latitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="-7.2575"
+                    className="settings-input"
+                    value={newTps.latitude}
+                    onChange={(e) => setNewTps({ ...newTps, latitude: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Longitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="112.7521"
+                    className="settings-input"
+                    value={newTps.longitude}
+                    onChange={(e) => setNewTps({ ...newTps, longitude: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label className="form-label">Jumlah Container</label>
+                  <input
+                    type="text"
+                    placeholder="2 (contoh: 50)"
+                    className="settings-input"
+                    value={newTps.jumlah_container}
+                    onChange={(e) => setNewTps({ ...newTps, jumlah_container: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Daya Tampung (m³)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="28.00"
+                    className="settings-input"
+                    value={newTps.daya_tampung_m3}
+                    onChange={(e) => setNewTps({ ...newTps, daya_tampung_m3: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Status</label>
+                <select
+                  className="settings-input"
+                  value={newTps.status}
+                  onChange={(e) => setNewTps({ ...newTps, status: e.target.value })}
+                >
+                  <option value="Aktif">Aktif</option>
+                  <option value="Tidak Aktif">Tidak Aktif</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
+                <button type="button" onClick={() => { setShowAddTpsModal(false); setEditingTpsId(null); }} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Batal</button>
+                <button type="submit" className="btn-add-primary" disabled={isLoading}>{isLoading ? 'Menyimpan...' : (editingTpsId ? 'Update' : 'Simpan')}</button>
               </div>
             </form>
           </div>

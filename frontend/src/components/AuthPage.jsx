@@ -301,6 +301,7 @@ export default function AuthPage({
           localStorage.setItem('access_token', data.access_token);
           localStorage.setItem('user_id', userData.id?.toString() || '');
           localStorage.setItem('user_role', userData.role?.toString() || 'warga');
+          localStorage.setItem('auth_user', JSON.stringify(userData));
         }
 
         setIsSuccess(true);

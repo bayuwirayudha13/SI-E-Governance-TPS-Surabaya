@@ -114,7 +114,7 @@ def verify_otp_endpoint(
     )
 
     access_token = create_access_token(
-        data={"sub": user.email},
+        data={"sub": user.email, "role": "warga"},
         expires_delta=access_token_expires
     )
 
@@ -126,6 +126,12 @@ def verify_otp_endpoint(
             "id": user.id,
             "email": user.email,
             "full_name": user.nama,
+            "nama_lengkap": user.nama,
+            "nama": user.nama,
+            "role": "warga",
+            "kecamatan": user.kecamatan,
+            "kelurahan": user.kelurahan,
+            "alamat_rumah": user.alamat_rumah,
             "total_poin": user.total_poin
         }
     }
