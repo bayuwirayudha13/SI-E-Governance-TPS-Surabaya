@@ -107,15 +107,58 @@ def get_current_user(token: str = None, db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
+        role: str = payload.get("role")
         if email is None:
             raise HTTPException(status_code=401, detail="Invalid token")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
     
-    user = db.query(Warga).filter(Warga.email == email).first()
-    if user is None:
-        raise HTTPException(status_code=401, detail="User not found")
-    return user
+    # Cek Warga dulu jika role = warga
+    if role == "warga":
+        warga = db.query(Warga).filter(Warga.email == email).first()
+        if warga:
+            return {
+                "id": warga.id,
+                "email": warga.email,
+                "nama_lengkap": warga.nama,
+                "nama": warga.nama,
+                "full_name": warga.nama,
+                "role": "warga",
+                "kecamatan": warga.kecamatan,
+                "kelurahan": warga.kelurahan,
+                "alamat_rumah": warga.alamat_rumah,
+                "total_poin": warga.total_poin
+            }
+    
+    # Cek tabel users (admin/petugas/superadmin)
+    user = db.query(User).filter(User.email == email).first()
+    if user:
+        return {
+            "id": user.id,
+            "email": user.email,
+            "nama_lengkap": user.nama_lengkap,
+            "nama": user.nama_lengkap,
+            "full_name": user.nama_lengkap,
+            "role": user.role,
+            "username": user.username
+        }
+    
+    # Fallback Warga by email
+    warga = db.query(Warga).filter(Warga.email == email).first()
+    if warga:
+        return {
+            "id": warga.id,
+            "email": warga.email,
+            "nama_lengkap": warga.nama,
+            "nama": warga.nama,
+            "full_name": warga.nama,
+            "role": "warga",
+            "kecamatan": warga.kecamatan,
+            "kelurahan": warga.kelurahan,
+            "alamat_rumah": warga.alamat_rumah,
+            "total_poin": warga.total_poin
+        }
+    raise HTTPException(status_code=401, detail="User not found")
 
 # Routes
 @app.get("/")
@@ -241,7 +284,11 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
                     "email": warga.email,
                     "full_name": warga.nama,
                     "role": "warga",
-                    "total_poin": warga.total_poin
+                    "total_poin": warga.total_poin,
+                    "kecamatan": warga.kecamatan,
+                    "kelurahan": warga.kelurahan,
+                    "nama_lengkap": warga.nama,
+                    "nama": warga.nama
                 }
             }
 

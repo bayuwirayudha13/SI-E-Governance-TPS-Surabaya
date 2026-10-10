@@ -14,5 +14,5 @@ class TPSKelurahan(Base):
     )
 
     # Relationships
-    tps = relationship("TPS", foreign_keys=[tps_id])
+    tps = relationship("TPS", foreign_keys=[tps_id], back_populates="kelurahans")
     kelurahan = relationship("Kelurahan", foreign_keys=[kelurahan_id])

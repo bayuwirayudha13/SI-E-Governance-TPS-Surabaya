@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 
 const API_BASE = 'http://localhost:8000';
 
-export default function AdminPanel({ onLogout }) {
+export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
   const [activeMenu, setActiveMenu] = useState('dashboard');
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(userFromProp);
   const [wargas, setWargas] = useState([]);
   const [jadwals, setJadwals] = useState([]);
   const [chatMessages, setChatMessages] = useState([]);
@@ -20,12 +20,18 @@ export default function AdminPanel({ onLogout }) {
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     const userData = localStorage.getItem('user_role');
+    const authUser = localStorage.getItem('auth_user');
+    
     if (token) {
-      setCurrentUser({
-        role: userData,
-        email: localStorage.getItem('user_email') || 'admin@sipetasan.com',
-        nama: 'Admin'
-      });
+      if (authUser) {
+        setCurrentUser(JSON.parse(authUser));
+      } else {
+        setCurrentUser({
+          role: userData,
+          email: localStorage.getItem('user_email') || 'admin@sipetasan.com',
+          nama_lengkap: 'Admin'
+        });
+      }
     }
   }, []);
 
@@ -238,10 +244,14 @@ export default function AdminPanel({ onLogout }) {
         {/* Bottom profile */}
         <div className="admin-bottom-profile">
           <div className="admin-profile-card">
-            <div className="admin-profile-avatar">A</div>
+            <div className="admin-profile-avatar">
+              {(currentUser?.nama_lengkap || currentUser?.nama || 'A').charAt(0).toUpperCase()}
+            </div>
             <div>
-              <div className="admin-profile-name">{currentUser?.nama || 'Admin'}</div>
-              <div className="admin-profile-email">{currentUser?.email || 'admin@sipetasan.com'}</div>
+              <div className="admin-profile-name">{currentUser?.nama_lengkap || currentUser?.nama || 'Admin'}</div>
+              <div className="admin-profile-role" style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'capitalize' }}>
+                {currentUser?.role || 'Admin'}
+              </div>
             </div>
           </div>
           <button type="button" className="admin-logout-btn" onClick={onLogout}>

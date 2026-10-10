@@ -3,8 +3,8 @@ import './PetugasPanel.css';
 import { api } from '../api/client';
 
 export default function PetugasPanel({ onLogout, officerName = 'Hendra', officerRole = 'Petugas Pengangkut', currentUser }) {
-  const displayOfficerName = currentUser?.nama_lengkap || officerName;
-  const displayOfficerRole = currentUser?.role === 'petugas' ? 'Petugas Pengangkut' : officerRole;
+  const displayOfficerName = currentUser?.nama_lengkap || currentUser?.nama || officerName;
+  const displayOfficerRole = currentUser?.role ? (currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)) : officerRole;
 
   // Navigation: 'tugas' | 'scan' | 'riwayat'
   const [activeMenu, setActiveMenu] = useState('scan');

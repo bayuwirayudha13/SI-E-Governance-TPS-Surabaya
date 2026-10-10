@@ -122,6 +122,7 @@ export default function App() {
   };
 
   const handleLoginSuccess = (user) => {
+    localStorage.setItem('auth_user', JSON.stringify(user));
     setCurrentUser(user); 
     localStorage.setItem('user_role', user.role || 'warga');
     localStorage.setItem('user_email', user.email || '');
@@ -154,13 +155,13 @@ export default function App() {
     if (currentUser?.role === 'superadmin') {
       return (
         <ProtectedRoute allowedRoles={['superadmin', 'admin']}>
-          <SuperadminPanel onLogout={handleLogout} />
+          <SuperadminPanel onLogout={handleLogout} currentUser={currentUser} />
         </ProtectedRoute>
       );
     }
     return (
       <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
-        <AdminPanel onLogout={handleLogout} />
+        <AdminPanel onLogout={handleLogout} currentUser={currentUser} />
       </ProtectedRoute>
     );
   }
@@ -184,6 +185,7 @@ export default function App() {
         <WargaPanel 
           onLogout={handleLogout}
           wargaId={currentUser?.id}
+          currentUser={currentUser}
         />
       </ProtectedRoute>
     );
