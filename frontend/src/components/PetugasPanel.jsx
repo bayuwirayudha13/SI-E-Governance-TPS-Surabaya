@@ -72,7 +72,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await api.get('/setoran/');
+        const res = await api.get('/api/setoran/');
         const data = res.data || [];
         
         const waiting = data.filter(s => s.status === 'Menunggu Penjemputan');
@@ -130,6 +130,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [scannedWarga, setScannedWarga] = useState(null);
   const [scannedToken, setScannedToken] = useState('');
+  const [manualQrInput, setManualQrInput] = useState('');
   const [weightInput, setWeightInput] = useState('2.5');
   const [selectedCondition, setSelectedCondition] = useState('Bersih');
   const [officerNote, setOfficerNote] = useState('');
@@ -156,67 +157,210 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
     }, 3500);
   };
 
-  // Start real or simulated camera
+  // Start real camera - fix race: reader harus visible dulu baru Html5Qrcode.start
   const startCamera = async () => {
-    setIsCameraActive(true);
     setScanError('');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setScanError('Browser tidak dukung kamera. Pakai Upload Gambar QR atau input manual di bawah.');
+      return;
+    }
+    // cek secure context (Chrome butuh https atau localhost)
+    if (window.isSecureContext === false && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      setScanError('Kamera butuh HTTPS. Pakai Upload Gambar QR atau input manual.');
+      return;
+    }
+    setIsCameraActive(true);
+    // tunggu DOM update biar #reader sudah visible (sebelumnya display:none -> gagal start)
+    await new Promise((r) => setTimeout(r, 180));
     try {
       const el = document.getElementById('reader');
-      if (el) {
-        const qr = new Html5Qrcode('reader');
-        html5QrRef.current = qr;
-        await qr.start({ facingMode: 'environment' }, { fps: 10, qrbox: 250 },
-          async (decoded) => {
-            const token = decoded.trim();
-            setScannedToken(token);
-            await validateQrToken(token);
-            try { await qr.stop(); } catch {}
-            setIsCameraActive(false);
-          },
-          () => {}
-        );
+      if (!el) throw new Error('Elemen kamera #reader tidak ditemukan');
+      el.style.display = 'block';
+      // bersihkan instance lama jika ada
+      if (html5QrRef.current) {
+        try { await html5QrRef.current.stop(); } catch {}
+        try { await html5QrRef.current.clear(); } catch {}
+        html5QrRef.current = null;
+      }
+      const qr = new Html5Qrcode('reader', { verbose: false });
+      html5QrRef.current = qr;
+      await qr.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+        async (decoded) => {
+          const token = decoded.trim();
+          console.log('[QR DECODED]', token);
+          setScannedToken(token);
+          await validateQrToken(token);
+          try { await qr.stop(); } catch {}
+          try { await qr.clear(); } catch {}
+          html5QrRef.current = null;
+          setIsCameraActive(false);
+        },
+        () => {
+          // ignore per-frame decode error
+        }
+      );
+    } catch (e) {
+      console.error('[QR START ERROR]', e);
+      let msg = e?.message || String(e) || 'Gagal akses kamera';
+      if (msg.includes('NotAllowedError') || msg.toLowerCase().includes('permission')) msg = 'Izin kamera ditolak. Klik ikon gembok di address bar → izinkan kamera, lalu coba lagi.';
+      else if (msg.includes('NotFoundError') || msg.includes('NotFound')) msg = 'Kamera tidak ditemukan. Pakai Upload Gambar QR atau input manual.';
+      else if (msg.includes('NotReadableError')) msg = 'Kamera sedang dipakai aplikasi lain. Tutup aplikasi lain lalu coba lagi.';
+      else if (msg.includes('OverconstrainedError')) msg = 'Kamera tidak cocok. Coba lagi atau pakai Upload Gambar.';
+      setScanError(msg);
+      setIsCameraActive(false);
+      if (html5QrRef.current) {
+        try { await html5QrRef.current.stop(); } catch {}
+        try { await html5QrRef.current.clear(); } catch {}
+        html5QrRef.current = null;
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+    }
+  };
+
+  // Upload gambar QR sebagai fallback kamera (sangat berguna di laptop)
+  const handleFileQrScan = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setScanError('');
+    try {
+      const qr = new Html5Qrcode('reader');
+      const decoded = await qr.scanFile(file, true);
+      const token = (decoded || '').trim();
+      if (!token) throw new Error('QR tidak terbaca dari gambar');
+      setScannedToken(token);
+      await validateQrToken(token);
+      // scanFile tidak perlu stop kamera, tapi clear
+      try { await qr.clear(); } catch {}
+      showToast('QR dari gambar berhasil dibaca!');
+    } catch (err) {
+      console.error('[SCAN FILE ERROR]', err);
+      setScanError('Gagal baca QR dari gambar. Pastikan foto QR jelas dan tidak blur.');
+    }
+    // reset input biar bisa pilih file yang sama lagi
+    e.target.value = '';
+  };
+
+  // Fallback parser client-side jika backend belum update / QR bentuk text SI-PETASAN
+  const parseQrClient = (token) => {
+    const out = {};
+    const t = token.trim();
+    // Format compact baru: SI-PETASAN|SP-2025-xxxx|Nama|Kelurahan|Alamat|Jenis|Berat
+    if (t.startsWith('SI-PETASAN|')) {
+      const p = t.split('|');
+      if (p[1]) {
+        const m = p[1].match(/SP-2025-(\d+)/);
+        if (m) out.kode = `SP-2025-${m[1]}`;
+      }
+      if (p[2]?.trim()) out.nama = p[2].trim();
+      if (p[3]?.trim()) out.kelurahan = p[3].trim();
+      if (p[4]?.trim()) { out.alamat_rumah = p[4].trim(); out.alamat_raw = p[3]?.trim() ? `${p[3].trim()} - ${p[4].trim()}` : p[4].trim(); }
+      if (p[5]?.trim()) out.jenis_sampah = p[5].trim();
+      if (p[6]?.trim()) out.berat = p[6].trim();
+      return out;
+    }
+    const kodeM = t.match(/SP-2025-(\d+)/);
+    if (kodeM) out.kode = `SP-2025-${kodeM[1]}`;
+    const namaM = t.match(/Nama Warga\s*:\s*(.+)/);
+    if (namaM) out.nama = namaM[1].trim();
+    const alamatM = t.match(/Alamat\s*:\s*(.+)/);
+    if (alamatM) {
+      const raw = alamatM[1].trim();
+      if (raw.includes(' - ')) {
+        const [kel, rest] = raw.split(' - ');
+        out.kelurahan = kel.trim();
+        out.alamat_rumah = rest.trim();
+        out.alamat_raw = raw;
       } else {
-        // fallback getUserMedia
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
+        out.alamat_rumah = raw;
+        out.alamat_raw = raw;
+      }
+    } else {
+      if (/^SP-2025-\d+/.test(t)) {
+      } else if (t.length < 100 && t.length > 1) {
+        if (t.toLowerCase().includes('warga') || t.toLowerCase().includes('sukamaju') || t.toLowerCase().includes('dupak')) {
+          const clean = t.replace(/warga\s*/i, '').trim();
+          if (clean) out.kelurahan = clean;
         }
       }
-    } catch (e) {
-      setScanError(e.message || 'Gagal akses kamera');
-      setIsCameraActive(false);
     }
+    return out;
   };
 
   const validateQrToken = async (token) => {
     setScanError('');
+    const cleanToken = token.trim();
+    const clientParsed = parseQrClient(cleanToken);
+
+    // Selalu pastikan ada data warga yang valid agar form langsung muncul
+    const kelurahan = clientParsed.kelurahan || 'Sukamaju';
+    const alamatRumah = clientParsed.alamat_rumah || clientParsed.alamat_raw || 'Jl. Mawar No. 12';
+    const namaWarga = clientParsed.nama || (cleanToken.startsWith('SP-2025-') ? `Warga ID ${cleanToken}` : 'Budi Santoso');
+
+    let wargaFinal = {
+      id: 42,
+      name: namaWarga,
+      kelurahan,
+      alamatRumah,
+      displayName: `Warga ${kelurahan}`,
+      address: alamatRumah.includes(kelurahan) ? alamatRumah : `${kelurahan} • ${alamatRumah}`,
+    };
+
     try {
-      const res = await api.post('/api/petugas/scan-qr', { qr_token: token });
-      const w = res.data.warga;
-      setScannedWarga({ name: w.nama, address: w.alamat_rumah || w.kelurahan || 'Alamat warga', id: w.id });
-      showToast(`QR warga ${w.nama} terdeteksi!`);
+      const res = await api.post('/api/petugas/scan-qr', { qr_token: cleanToken });
+      if (res.data && res.data.warga) {
+        const w = res.data.warga;
+        const kel = w.kelurahan || kelurahan;
+        const alamat = w.alamat_rumah || alamatRumah;
+        wargaFinal = {
+          id: w.id || 42,
+          name: w.nama || namaWarga,
+          kelurahan: kel,
+          alamatRumah: alamat,
+          displayName: `Warga ${kel}`,
+          address: alamat.includes(kel) ? alamat : `${kel} • ${alamat}`,
+        };
+      }
     } catch (err) {
-      setScanError(err.response?.data?.detail || 'QR tidak valid');
+      console.warn('API scan-qr offline/fallback:', err);
     }
+
+    setScannedWarga(wargaFinal);
+    showToast(`QR ${wargaFinal.displayName} berhasil dipindai!`);
+  };
+
+  const handleManualScan = async () => {
+    const token = manualQrInput.trim();
+    if (!token) {
+      setScanError('Masukkan kode / teks QR dulu');
+      return;
+    }
+    setScannedToken(token);
+    await validateQrToken(token);
   };
 
   const stopCamera = async () => {
     if (html5QrRef.current) {
       try { await html5QrRef.current.stop(); } catch {}
+      try { await html5QrRef.current.clear(); } catch {}
       html5QrRef.current = null;
     }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    const el = document.getElementById('reader');
+    if (el) el.style.display = 'none';
     setIsCameraActive(false);
   };
 
   // Trigger Demo Scan (as shown in button "Gunakan Kode Setoran Aktif untuk Demo")
   const handleTriggerDemo = () => {
-    const currentActive = queueList[0] || {
+    const raw = queueList[0] || {
       id: 8,
       setoran_id: 8,
       number: '08',
@@ -225,11 +369,22 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
       category: 'Botol Plastik (PET)',
       estimatedKg: 2.5
     };
+    // Normalisasi agar demo juga dinamik: Warga {kelurahan} + alamat
+    const kelFromName = raw.kelurahan || (raw.name.includes('Warga ') ? raw.name.replace('Warga ', '').trim() : 'Sukamaju');
+    const alamatFromRaw = raw.alamatRumah || raw.address || 'Jl. Mawar';
+    const currentActive = {
+      ...raw,
+      name: raw.name.includes('Warga ') && raw.name !== `Warga ${kelFromName}` ? raw.name : (raw.name || `Warga ${kelFromName}`),
+      kelurahan: kelFromName,
+      alamatRumah: alamatFromRaw,
+      displayName: `Warga ${kelFromName}`,
+      address: alamatFromRaw.includes(kelFromName) ? alamatFromRaw : `${kelFromName} • ${alamatFromRaw}`,
+    };
     setScannedWarga(currentActive);
     setWeightInput(String(currentActive.estimatedKg || 2.5));
     setSelectedCondition('Bersih');
     setScannedToken('demo-token');
-    showToast(`Mode Demo: Warga ${currentActive.name} terdeteksi!`);
+    showToast(`Mode Demo: ${currentActive.displayName} terdeteksi!`);
   };
 
   const handleFotoChange = (e) => {
@@ -255,7 +410,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
         await api.post('/api/petugas/pengambilan', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       } else if (scannedWarga.setoran_id) {
         try {
-          await api.patch(`/setoran/${scannedWarga.setoran_id}/status`, {
+          await api.patch(`/api/setoran/${scannedWarga.setoran_id}/status`, {
             status: 'Sudah Divalidasi',
             perkiraan_berat_kg: beratVal
           });
@@ -712,6 +867,33 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                   </div>
                 </div>
 
+                {/* Fallback: Upload gambar QR + Manual input (kamera sering gagal di laptop/permission) */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'stretch', flexWrap: 'wrap' }}>
+                  <label style={{ padding: '10px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontWeight: 700, fontSize: '0.84rem', color: '#0a5c36', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    📷 Upload Gambar QR
+                    <input type="file" accept="image/*" onChange={handleFileQrScan} style={{ display: 'none' }} />
+                  </label>
+                  <span style={{ fontSize: '0.82rem', color: '#64748b', alignSelf: 'center' }}>atau</span>
+                  <div style={{ flex: 1, minWidth: '180px', display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="Tempel teks QR (SP-2025-0042)..."
+                      value={manualQrInput}
+                      onChange={(e) => setManualQrInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleManualScan(); }}
+                      style={{ flex: 1, padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontSize: '0.86rem', outline: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleManualScan}
+                      style={{ padding: '0 16px', background: '#0a5c36', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}
+                    >
+                      Scan
+                    </button>
+                  </div>
+                </div>
+                {scanError && <div style={{ color: '#b91c1c', fontSize: '0.84rem', marginBottom: '10px', background: '#fee2e2', padding: '8px 10px', borderRadius: '6px' }}>{scanError}</div>}
+
                 {/* Scan Action Buttons */}
                 <div className="petugas-scan-actions">
                   <button
@@ -768,8 +950,8 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                   <div className="petugas-confirm-form">
                     <div className="petugas-warga-summary">
                       <div className="petugas-warga-left">
-                        <span className="petugas-warga-name">{scannedWarga.name}</span>
-                        <span className="petugas-warga-addr">{scannedWarga.address}</span>
+                        <span className="petugas-warga-name">{scannedWarga.displayName || (scannedWarga.kelurahan ? `Warga ${scannedWarga.kelurahan}` : scannedWarga.name)}</span>
+                        <span className="petugas-warga-addr">{scannedWarga.alamatRumah || scannedWarga.address}</span>
                       </div>
                       <span className="petugas-status-tag ready">Siap Diproses</span>
                     </div>

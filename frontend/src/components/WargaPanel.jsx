@@ -13,13 +13,13 @@ function RealQRCode({ text, size = 210, color = "#166534", onGenerated }) {
     if (!text) return;
 
     QRCode.toDataURL(text, {
-      width: Math.max(size * 2, 350), // High pixel density for sharp scan on phone screen
+      width: Math.max(size * 2, 350),
       margin: 1,
       color: {
         dark: color,
         light: '#ffffff'
       },
-      errorCorrectionLevel: 'M'
+      errorCorrectionLevel: 'L' // Low -> QR lebih jarang, lebih mudah di-scan cepat
     })
       .then((url) => {
         if (isMounted) {
@@ -174,37 +174,17 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
     return 1;
   }, [rincianPemeriksaan]);
 
-  // Real QR Content String (Scannable by Phone Camera / Google Lens / Barcode Scanner)
+  // Compact QR Payload - mudah di-scan petugas (pakai delimiter |, bukan multiline panjang)
+  // Format: SI-PETASAN|KODE|NAMA|KELURAHAN|ALAMAT|JENIS|BERAT => < 120 char, QR low-density
   const qrTextContent = useMemo(() => {
     const kode = rincianPemeriksaan.kodeValidasi || (userData?.id ? `SP-2025-${String(userData.id).padStart(4, '0')}` : 'SP-2025-0042');
-    const namaWarga = userData?.nama || userData?.full_name || 'Budi Santoso';
-    const kel = userData?.kelurahan || 'Sukamaju';
-    const alamat = `${kel} - RT 03 / ${userData?.alamat_rumah || 'Jl. Mawar'}`;
-
-    let text = `=== SI-PETASAN VALIDASI SAMPAH ===\n`;
-    text += `Kode Validasi : ${kode}\n`;
-    text += `Nama Warga    : ${namaWarga}\n`;
-    text += `Alamat        : ${alamat}\n`;
-    text += `Jenis Sampah  : ${rincianPemeriksaan.jenisSampah}\n`;
-    text += `Berat Laporan : ${rincianPemeriksaan.beratDilaporkan}\n`;
-    text += `Berat Aktual  : ${rincianPemeriksaan.beratAktual}\n`;
-    text += `Kondisi       : ${rincianPemeriksaan.kondisiSampah}\n`;
-    text += `Status        : ${rincianPemeriksaan.status}\n`;
-
-    if (rincianPemeriksaan.itemsTambahan && rincianPemeriksaan.itemsTambahan.length > 0) {
-      text += `Item Tambahan :\n`;
-      rincianPemeriksaan.itemsTambahan.forEach((it) => {
-        text += `- ${it.label}: ${it.value}\n`;
-      });
-    }
-
-    if (rincianPemeriksaan.catatanPetugas) {
-      text += `Catatan       : ${rincianPemeriksaan.catatanPetugas}\n`;
-    }
-
-    text += `----------------------------------\n`;
-    text += `Verifikasi Resmi DLH Kota Surabaya`;
-    return text;
+    const namaWarga = (userData?.nama || userData?.full_name || 'Budi Santoso').replace(/\|/g, ' ').trim();
+    const kel = (userData?.kelurahan || 'Sukamaju').replace(/\|/g, ' ').trim();
+    const alamatClean = (userData?.alamat_rumah || 'Jl. Mawar').replace(/\|/g, ' ').replace(/,/g, ' ').trim();
+    const jenis = (rincianPemeriksaan.jenisSampah || 'PETE').replace(/\|/g, ',').trim();
+    const berat = (rincianPemeriksaan.beratDilaporkan || '3.5 kg').replace(/\|/g, ' ').trim();
+    // Compact: SI-PETASAN|SP-2025-0042|Budi Santoso|Sukamaju|Jl Mawar|PETE|3.5kg
+    return `SI-PETASAN|${kode}|${namaWarga}|${kel}|${alamatClean}|${jenis}|${berat}`;
   }, [rincianPemeriksaan, userData]);
 
   const showToast = (msg) => {

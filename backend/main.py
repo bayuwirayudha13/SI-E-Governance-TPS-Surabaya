@@ -170,6 +170,10 @@ def get_current_user(token: str = None, db: Session = Depends(get_db)):
     raise HTTPException(status_code=401, detail="User not found")
 
 # Routes
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
 @app.get("/")
 def root():
     return {"message": "SampahPintar API - Connected to MySQL"}
