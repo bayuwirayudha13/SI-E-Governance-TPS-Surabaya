@@ -1,11 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './PetugasPanel.css';
-import { api } from '../api/client';
+import { api, authService } from '../api/client';
 import { Html5Qrcode } from 'html5-qrcode';
 
-export default function PetugasPanel({ onLogout, officerName = 'Hendra', officerRole = 'Petugas Pengangkut', currentUser }) {
-  const displayOfficerName = currentUser?.nama_lengkap || currentUser?.nama || officerName;
-  const displayOfficerRole = currentUser?.role ? (currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)) : officerRole;
+export default function PetugasPanel({ onLogout, officerName = 'Hendra', officerRole = 'Petugas Pengangkut', currentUser: currentUserProp }) {
+  // merah = nama petugas login (dinamik dari backend); dengar auth:change + refresh /api/auth/me
+  const [authUser, setAuthUser] = useState(() => currentUserProp || authService.getCurrentUser());
+  useEffect(() => { setAuthUser(currentUserProp || authService.getCurrentUser()); }, [currentUserProp]);
+  useEffect(() => {
+    const h = () => setAuthUser(authService.getCurrentUser());
+    window.addEventListener('auth:change', h);
+    // sinkron dari backend saat mount (biar hijau langsung akurat kalau superadmin baru ganti wilayah)
+    authService.getProfile().then((u) => { if (u) setAuthUser((prev) => ({ ...prev, ...u })); }).catch(() => {});
+    return () => window.removeEventListener('auth:change', h);
+  }, []);
+  const displayOfficerName = authUser?.nama_lengkap || authUser?.nama || authUser?.full_name || currentUserProp?.nama_lengkap || officerName;
+  const displayOfficerRole = authUser?.role ? (authUser.role.charAt(0).toUpperCase() + authUser.role.slice(1)) : (currentUserProp?.role ? currentUserProp.role.charAt(0).toUpperCase() + currentUserProp.role.slice(1) : officerRole);
+  // hijau = wilayah kerja petugas (diatur superadmin: kecamatan + kelurahan + kota)
+  const wilayahKecamatan = authUser?.wilayah_kecamatan || null;
+  const wilayahKelurahan = authUser?.wilayah_kelurahan || null;
+  const wilayahKota = authUser?.wilayah_kota || 'Surabaya';
+  const wilayahDisplay = [wilayahKecamatan, wilayahKelurahan].filter(Boolean).join(' — ') || 'Belum diatur superadmin';
+  const wilayahLineShort = [wilayahKelurahan, wilayahKecamatan].filter(Boolean).join(', ') || wilayahDisplay;
 
   // Navigation: 'tugas' | 'scan' | 'riwayat'
   const [activeMenu, setActiveMenu] = useState('scan');
@@ -451,29 +467,18 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
     setScannedWarga(null);
   };
 
-  // Helper title & subtitle for the top bar
+  // Helper title & subtitle for the top bar — hijau dinamik dari wilayah petugas
+  const wilayahSub = `Wilayah: ${wilayahDisplay} · ${wilayahKota}`;
   const getHeaderInfo = () => {
     switch (activeMenu) {
       case 'tugas':
-        return {
-          title: 'Tugas Hari Ini',
-          sub: 'Rute A · B 1234 XY · Kelurahan Sukamaju'
-        };
+        return { title: 'Tugas Hari Ini', sub: wilayahSub };
       case 'scan':
-        return {
-          title: 'Scan QR Warga',
-          sub: 'Rute A · B 1234 XY · Kelurahan Sukamaju'
-        };
+        return { title: 'Scan QR Warga', sub: wilayahSub };
       case 'riwayat':
-        return {
-          title: 'Riwayat Pengambilan',
-          sub: 'Rute A · B 1234 XY · Kelurahan Sukamaju'
-        };
+        return { title: 'Riwayat Pengambilan', sub: wilayahSub };
       default:
-        return {
-          title: 'Tugas Hari Ini',
-          sub: 'Rute A · B 1234 XY · Kelurahan Sukamaju'
-        };
+        return { title: 'Tugas Hari Ini', sub: wilayahSub };
     }
   };
 

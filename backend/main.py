@@ -149,7 +149,11 @@ def get_current_user(token: str = None, db: Session = Depends(get_db)):
             "nama": user.nama_lengkap,
             "full_name": user.nama_lengkap,
             "role": user.role,
-            "username": user.username
+            "username": user.username,
+            "wilayah_kecamatan": getattr(user, "wilayah_kecamatan", None),
+            "wilayah_kelurahan": getattr(user, "wilayah_kelurahan", None),
+            "wilayah_kota": getattr(user, "wilayah_kota", None),
+            "foto_url": getattr(user, "foto_url", None),
         }
     
     # Fallback Warga by email
@@ -278,7 +282,14 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
                     "id": user.id,
                     "email": user.email,
                     "full_name": user.nama_lengkap,
-                    "role": user.role
+                    "nama_lengkap": user.nama_lengkap,
+                    "nama": user.nama_lengkap,
+                    "role": user.role,
+                    "username": user.username,
+                    "wilayah_kecamatan": getattr(user, "wilayah_kecamatan", None),
+                    "wilayah_kelurahan": getattr(user, "wilayah_kelurahan", None),
+                    "wilayah_kota": getattr(user, "wilayah_kota", None),
+                    "foto_url": getattr(user, "foto_url", None),
                 }
             }
 

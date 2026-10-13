@@ -16,8 +16,19 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Form states
-  const [newUser, setNewUser] = useState({ nama_lengkap: '', email: '', password: '', role: 'warga' });
+  // Form states — dropdown kecamatan/kelurahan seperti register warga
+  const KEC_DEFAULT = [
+    'Asemrowo','Benowo','Bubutan','Bulak','Dukuh Pakis','Gayungan','Genteng','Gubeng','Gunung Anyar','Jambangan','Karang Pilang','Kenjeran','Krembangan','Lakarsantri','Mulyorejo','Pabean Cantian','Pakal','Rungkut','Sambikerep','Sawahan','Semampir','Simokerto','Sukolilo','Sukomanunggal','Tambaksari','Tandes','Tegalsari','Tenggilis Mejoyo','Wiyung','Wonocolo','Wonokromo'
+  ];
+  const [newUser, setNewUser] = useState({ nama_lengkap: '', email: '', password: '', role: 'petugas', wilayah_kecamatan: '', wilayah_kelurahan: '', foto_url: '' });
+  const [editUser, setEditUser] = useState(null); // {id, ...} saat klik Edit (hijau) / View (merah)
+  const [viewUser, setViewUser] = useState(null);
+  const [kecamatanOptions, setKecamatanOptions] = useState(KEC_DEFAULT);
+  const [kelurahanOptions, setKelurahanOptions] = useState([]);
+  const [newUserFotoFile, setNewUserFotoFile] = useState(null);
+  const [newUserFotoPreview, setNewUserFotoPreview] = useState('');
+  const [editFotoFile, setEditFotoFile] = useState(null);
+  const [editFotoPreview, setEditFotoPreview] = useState('');
   const [newJadwal, setNewJadwal] = useState({ hari: '', waktu_mulai: '', waktu_selesai: '', area: '', petugas: '', tipe: 'Rutin' });
   const [newTps, setNewTps] = useState({
     nama: '',
@@ -53,13 +64,34 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
     }
   }, []);
 
-  // Load users & jadwals
+  // Load users & jadwals + kecamatan dari backend (dropdown seperti register warga)
   useEffect(() => {
     loadUsers();
     loadJadwals();
     loadTps();
     loadSettings();
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE}/api/wilayah/kecamatan`);
+        if (r.ok) {
+          const d = await r.json();
+          if (Array.isArray(d) && d.length) setKecamatanOptions(d.map(x => x.nama || x));
+        }
+      } catch {}
+    })();
   }, []);
+
+  // load kelurahan saat kecamatan newUser / editUser berubah (dropdown tingkat 2)
+  useEffect(() => {
+    const kec = editUser ? editUser.wilayah_kecamatan : newUser.wilayah_kecamatan;
+    if (!kec) { setKelurahanOptions([]); return; }
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE}/api/wilayah/kelurahan?kecamatan=${encodeURIComponent(kec)}`);
+        if (r.ok) { const d = await r.json(); setKelurahanOptions((d||[]).map(x=>x.nama||x)); }
+      } catch { setKelurahanOptions([]); }
+    })();
+  }, [newUser.wilayah_kecamatan, editUser?.wilayah_kecamatan]);
 
   // Get current date
   const getCurrentDate = () => {
@@ -226,6 +258,20 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
     }
   };
 
+  const uploadPetugasFoto = async (userId, file) => {
+    if (!file) return null;
+    const fd = new FormData();
+    fd.append('foto', file);
+    const r = await fetch(`${API_BASE}/api/admin/users/${userId}/foto`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${getToken()}` },
+      body: fd
+    });
+    if (!r.ok) throw new Error((await r.text()) || 'Gagal upload foto');
+    const j = await r.json();
+    return j.foto_url;
+  };
+
   const handleAddUser = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -243,12 +289,25 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
           email: newUser.email,
           password: newUser.password,
           role: newUser.role,
-          username: newUser.email.split('@')[0]
+          username: newUser.email.split('@')[0],
+          wilayah_kecamatan: newUser.wilayah_kecamatan || null,
+          wilayah_kelurahan: newUser.wilayah_kelurahan || null,
+          wilayah_kota: 'Surabaya',
         })
       });
-      if (!response.ok) throw new Error('Gagal menambah user');
+      let txt = await response.text();
+      if (!response.ok) {
+        let msg = txt; try { msg = JSON.parse(txt).detail || txt; } catch {}
+        throw new Error(msg || 'Gagal menambah user');
+      }
+      let created = null; try { created = JSON.parse(txt); } catch {}
+      const uid = created?.id;
+      if (uid && newUserFotoFile) {
+        try { await uploadPetugasFoto(uid, newUserFotoFile); } catch (fe) { console.warn(fe); }
+      }
       setSuccess('User berhasil ditambahkan');
-      setNewUser({ nama_lengkap: '', email: '', password: '', role: 'petugas' });
+      setNewUser({ nama_lengkap: '', email: '', password: '', role: 'petugas', wilayah_kecamatan: '', wilayah_kelurahan: '', foto_url: '' });
+      setNewUserFotoFile(null); setNewUserFotoPreview('');
       setShowAddUserModal(false);
       loadUsers();
     } catch (err) {
@@ -256,6 +315,38 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const openEditUser = (u) => {
+    setEditUser({ id: u.id, nama_lengkap: u.nama_lengkap, email: u.email, role: u.role, wilayah_kecamatan: u.wilayah_kecamatan || '', wilayah_kelurahan: u.wilayah_kelurahan || '', foto_url: u.foto_url || '' });
+    setEditFotoFile(null); setEditFotoPreview(u.foto_url ? `${API_BASE}${u.foto_url}` : '');
+  };
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    if (!editUser) return;
+    setIsLoading(true); setError('');
+    try {
+      const token = getToken();
+      // upload foto dulu jika ada file baru
+      let fotoUrl = editUser.foto_url;
+      if (editFotoFile) fotoUrl = await uploadPetugasFoto(editUser.id, editFotoFile);
+      const r = await fetch(`${API_BASE}/api/admin/users/${editUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ nama_lengkap: editUser.nama_lengkap, role: editUser.role, wilayah_kecamatan: editUser.wilayah_kecamatan || '', wilayah_kelurahan: editUser.wilayah_kelurahan || '', wilayah_kota: 'Surabaya', foto_url: fotoUrl })
+      });
+      let txt = await r.text();
+      if (!r.ok) { let m=txt; try{m=JSON.parse(txt).detail||txt;}catch{} throw new Error(m); }
+      setSuccess('Petugas berhasil diperbarui');
+      setEditUser(null); setEditFotoFile(null); setEditFotoPreview('');
+      loadUsers();
+    } catch (err) { setError(err.message); } finally { setIsLoading(false); }
+  };
+  const openViewUser = async (u) => {
+    try {
+      const r = await fetch(`${API_BASE}/api/admin/users/${u.id}`, { headers: { 'Authorization': `Bearer ${getToken()}` } });
+      if (r.ok) setViewUser(await r.json()); else setViewUser(u);
+    } catch { setViewUser(u); }
   };
 
   const handleAddJadwal = async (e) => {
@@ -590,26 +681,28 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                 <table className="admin-table">
                   <thead>
                     <tr>
+                      <th>FOTO</th>
                       <th>NAMA</th>
                       <th>EMAIL</th>
                       <th>ROLE</th>
+                      <th>WILAYAH TUGAS</th>
                       <th>AKSI</th>
                     </tr>
                   </thead>
                   <tbody>
                     {petugasList.map(p => (
                       <tr key={p.id}>
+                        <td>{p.foto_url ? <img src={`${API_BASE}${p.foto_url}`} alt={p.nama_lengkap} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'1px solid #e2e8f0'}} /> : <span style={{width:36,height:36,borderRadius:'50%',background:'#e2e8f0',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:'0.75rem',fontWeight:700,color:'#64748b'}}>{p.nama_lengkap?.charAt(0)?.toUpperCase()||'P'}</span>}</td>
                         <td><strong>{p.nama_lengkap}</strong></td>
                         <td className="text-muted">{p.email}</td>
                         <td><span className={`role-pill role-${p.role}`}>{p.role}</span></td>
+                        <td className="text-muted" style={{fontSize:'0.82rem'}}>{[p.wilayah_kecamatan,p.wilayah_kelurahan].filter(Boolean).join(' — ') || <span style={{color:'#94a3b8'}}>Belum diatur</span>}</td>
                         <td>
-                          <button
-                            type="button"
-                            className="btn-table-delete"
-                            onClick={() => handleDeleteUser(p.id)}
-                          >
-                            &times; Hapus
-                          </button>
+                          <div style={{display:'flex',gap:'6px',flexWrap:'wrap'}}>
+                            <button type="button" title="Lihat (merah)" onClick={() => openViewUser(p)} style={{padding:'5px 10px',borderRadius:'6px',border:'1px solid #fecaca',background:'#fef2f2',color:'#b91c1c',cursor:'pointer',fontWeight:600,fontSize:'0.78rem'}}>👁 View</button>
+                            <button type="button" title="Edit (hijau)" onClick={() => openEditUser(p)} style={{padding:'5px 10px',borderRadius:'6px',border:'1px solid #bbf7d0',background:'#f0fdf4',color:'#166534',cursor:'pointer',fontWeight:600,fontSize:'0.78rem'}}>✎ Edit</button>
+                            <button type="button" className="btn-table-delete" onClick={() => handleDeleteUser(p.id)}>× Hapus</button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -809,7 +902,7 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
         )}
       </main>
 
-      {/* MODAL: Tambah User */}
+      {/* MODAL: Tambah User + foto + dropdown kecamatan/kelurahan seperti register warga */}
       {showAddUserModal && (
         <div className="modal-overlay" onClick={() => setShowAddUserModal(false)}>
           <div className="modal-dialog admin-modal-dialog" onClick={(e) => e.stopPropagation()}>
@@ -818,6 +911,13 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
               <button type="button" className="modal-close-btn" onClick={() => setShowAddUserModal(false)}>&times;</button>
             </div>
             <form onSubmit={handleAddUser} style={{ padding: '24px' }}>
+              <div className="form-group">
+                <label className="form-label">Foto Petugas</label>
+                <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
+                  {newUserFotoPreview ? <img src={newUserFotoPreview} alt="preview" style={{width:56,height:56,borderRadius:'50%',objectFit:'cover'}} /> : <span style={{width:56,height:56,borderRadius:'50%',background:'#e2e8f0',display:'inline-flex',alignItems:'center',justifyContent:'center',color:'#64748b',fontWeight:700}}>📷</span>}
+                  <input type="file" accept="image/*" onChange={(e)=>{const f=e.target.files?.[0]; if(!f)return; setNewUserFotoFile(f); setNewUserFotoPreview(URL.createObjectURL(f));}} />
+                </div>
+              </div>
               <div className="form-group">
                 <label className="form-label">Nama Lengkap</label>
                 <input
@@ -860,11 +960,103 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   <option value="driver">Driver</option>
                 </select>
               </div>
+              <div className="form-group">
+                <label className="form-label">Kecamatan Tugas</label>
+                <select className="settings-input" value={newUser.wilayah_kecamatan} onChange={(e)=>setNewUser({...newUser, wilayah_kecamatan:e.target.value, wilayah_kelurahan:''})}>
+                  <option value="">— Pilih Kecamatan —</option>
+                  {kecamatanOptions.map(k=><option key={k} value={k}>{k}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Kelurahan Tugas</label>
+                <select className="settings-input" value={newUser.wilayah_kelurahan} onChange={(e)=>setNewUser({...newUser, wilayah_kelurahan:e.target.value})}>
+                  <option value="">— Pilih Kelurahan —</option>
+                  {kelurahanOptions.map(k=><option key={k} value={k}>{k}</option>)}
+                </select>
+              </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
                 <button type="button" onClick={() => setShowAddUserModal(false)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Batal</button>
                 <button type="submit" className="btn-add-primary" disabled={isLoading}>Simpan</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* MODAL Edit (hijau): form sama kayak tambah + ganti foto + dropdown wilayah */}
+      {editUser && (
+        <div className="modal-overlay" onClick={() => setEditUser(null)}>
+          <div className="modal-dialog admin-modal-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Edit Petugas / Admin</h3>
+              <button type="button" className="modal-close-btn" onClick={() => setEditUser(null)}>&times;</button>
+            </div>
+            <form onSubmit={handleUpdateUser} style={{ padding: '24px' }}>
+              <div className="form-group">
+                <label className="form-label">Foto Petugas</label>
+                <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
+                  {editFotoPreview ? <img src={editFotoPreview} alt="preview" style={{width:56,height:56,borderRadius:'50%',objectFit:'cover'}} /> : <span style={{width:56,height:56,borderRadius:'50%',background:'#e2e8f0',display:'inline-flex',alignItems:'center',justifyContent:'center',color:'#64748b',fontWeight:700}}>📷</span>}
+                  <input type="file" accept="image/*" onChange={(e)=>{const f=e.target.files?.[0]; if(!f)return; setEditFotoFile(f); setEditFotoPreview(URL.createObjectURL(f));}} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Nama Lengkap</label>
+                <input type="text" required className="settings-input" value={editUser.nama_lengkap} onChange={(e)=>setEditUser({...editUser, nama_lengkap:e.target.value})} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Email</label>
+                <input type="email" disabled className="settings-input" value={editUser.email} style={{opacity:.6}} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Role</label>
+                <select className="settings-input" value={editUser.role} onChange={(e)=>setEditUser({...editUser, role:e.target.value})}>
+                  <option value="admin">Admin</option>
+                  <option value="petugas">Petugas</option>
+                  <option value="driver">Driver</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Kecamatan Tugas</label>
+                <select className="settings-input" value={editUser.wilayah_kecamatan} onChange={(e)=>setEditUser({...editUser, wilayah_kecamatan:e.target.value, wilayah_kelurahan:''})}>
+                  <option value="">— Pilih Kecamatan —</option>
+                  {kecamatanOptions.map(k=><option key={k} value={k}>{k}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Kelurahan Tugas</label>
+                <select className="settings-input" value={editUser.wilayah_kelurahan} onChange={(e)=>setEditUser({...editUser, wilayah_kelurahan:e.target.value})}>
+                  <option value="">— Pilih Kelurahan —</option>
+                  {kelurahanOptions.map(k=><option key={k} value={k}>{k}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
+                <button type="button" onClick={() => setEditUser(null)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Batal</button>
+                <button type="submit" className="btn-add-primary" disabled={isLoading}>Simpan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* MODAL View (merah): lihat data + foto */}
+      {viewUser && (
+        <div className="modal-overlay" onClick={() => setViewUser(null)}>
+          <div className="modal-dialog admin-modal-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Detail Petugas</h3>
+              <button type="button" className="modal-close-btn" onClick={() => setViewUser(null)}>&times;</button>
+            </div>
+            <div style={{ padding: '24px', display:'flex', gap:'16px' }}>
+              {viewUser.foto_url ? <img src={`${API_BASE}${viewUser.foto_url}`} alt={viewUser.nama_lengkap} style={{width:96,height:96,borderRadius:'12px',objectFit:'cover',border:'1px solid #e2e8f0'}} /> : <span style={{width:96,height:96,borderRadius:'12px',background:'#e2e8f0',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:'1.5rem',fontWeight:800,color:'#64748b'}}>{viewUser.nama_lengkap?.charAt(0)?.toUpperCase()}</span>}
+              <div style={{fontSize:'0.88rem',lineHeight:1.7}}>
+                <div><b>Nama:</b> {viewUser.nama_lengkap}</div>
+                <div><b>Email:</b> {viewUser.email}</div>
+                <div><b>Role:</b> {viewUser.role}</div>
+                <div><b>Tugas:</b> {[viewUser.wilayah_kecamatan,viewUser.wilayah_kelurahan].filter(Boolean).join(' — ') || 'Belum diatur'}</div>
+                <div><b>Status:</b> {viewUser.is_active ? 'Aktif' : 'Nonaktif'}</div>
+              </div>
+            </div>
+            <div style={{display:'flex',justifyContent:'flex-end',padding:'0 24px 24px'}}>
+              <button type="button" onClick={() => { setViewUser(null); openEditUser(viewUser); }} style={{padding:'8px 16px',borderRadius:'6px',border:'none',background:'#166534',color:'#fff',cursor:'pointer',fontWeight:700}}>Edit</button>
+            </div>
           </div>
         </div>
       )}

@@ -131,11 +131,19 @@ export const authService = {
     }
   },
 
-  // API Call: Get Current Profile
+  // API Call: Get Current Profile (sinkron wilayah petugas biar hijau live)
   getProfile: async () => {
     try {
       const response = await api.get('/api/auth/me');
-      return response.data;
+      const u = response.data;
+      if (u) {
+        // merge ke auth_user biar PetugasPanel langsung baca wilayah terbaru
+        const cur = authService.getCurrentUser() || {};
+        const merged = { ...cur, ...u, wilayah_kecamatan: u.wilayah_kecamatan ?? cur.wilayah_kecamatan, wilayah_kelurahan: u.wilayah_kelurahan ?? cur.wilayah_kelurahan, wilayah_kota: u.wilayah_kota ?? cur.wilayah_kota };
+        localStorage.setItem('auth_user', JSON.stringify(merged));
+        window.dispatchEvent(new Event('auth:change'));
+      }
+      return u;
     } catch {
       return authService.getCurrentUser();
     }

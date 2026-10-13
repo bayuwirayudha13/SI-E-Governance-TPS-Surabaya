@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, HTTPException, Depends, Header, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from core.database import get_db
 from datetime import datetime
 from models.users import User
@@ -13,6 +13,8 @@ from schemas.settings_schema import SystemSettingsResponse, SystemSettingsUpdate
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 import os
+import uuid
+import shutil
 
 router = APIRouter(prefix="/admin", tags=["Admin Panel"])
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
@@ -66,10 +68,134 @@ def list_all_users(db: Session = Depends(get_db), current_user: User = Depends(g
             "email": u.email,
             "nama_lengkap": u.nama_lengkap,
             "role": u.role,
-            "is_active": u.is_active
+            "is_active": u.is_active,
+            "wilayah_kecamatan": getattr(u, "wilayah_kecamatan", None),
+            "wilayah_kelurahan": getattr(u, "wilayah_kelurahan", None),
+            "wilayah_kota": getattr(u, "wilayah_kota", None),
+            "foto_url": getattr(u, "foto_url", None),
         }
         for u in users
     ]
+
+@router.get("/users/{user_id}")
+def detail_user_account(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_superadmin),
+):
+    """Detail petugas/admin untuk tombol View (merah): data + foto + wilayah."""
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="User tidak ditemukan")
+    return {
+        "id": u.id,
+        "username": u.username,
+        "email": u.email,
+        "nama_lengkap": u.nama_lengkap,
+        "role": u.role,
+        "is_active": u.is_active,
+        "wilayah_kecamatan": getattr(u, "wilayah_kecamatan", None),
+        "wilayah_kelurahan": getattr(u, "wilayah_kelurahan", None),
+        "wilayah_kota": getattr(u, "wilayah_kota", None),
+        "foto_url": getattr(u, "foto_url", None),
+        "created_at": u.created_at.isoformat() if u.created_at else None,
+    }
+
+@router.put("/users/{user_id}", response_model=dict)
+def update_user_account(
+    user_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_superadmin),
+):
+    """Edit petugas/admin (tombol hijau): nama, role, wilayah, foto_url."""
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="User tidak ditemukan")
+    if data.get("nama_lengkap"):
+        u.nama_lengkap = data["nama_lengkap"]
+    if data.get("role") in ("admin", "petugas", "driver", "superadmin"):
+        u.role = data["role"]
+    if "wilayah_kecamatan" in data:
+        u.wilayah_kecamatan = (data["wilayah_kecamatan"] or "").strip() or None
+    if "wilayah_kelurahan" in data:
+        u.wilayah_kelurahan = (data["wilayah_kelurahan"] or "").strip() or None
+    if "wilayah_kota" in data:
+        u.wilayah_kota = (data["wilayah_kota"] or "").strip() or "Surabaya"
+    if "foto_url" in data:
+        u.foto_url = data["foto_url"] or None
+    if "is_active" in data:
+        u.is_active = bool(data["is_active"])
+    if data.get("password"):
+        u.hashed_password = pwd_context.hash(data["password"])
+    db.commit()
+    db.refresh(u)
+    return {
+        "message": "User berhasil diperbarui",
+        "id": u.id,
+        "nama_lengkap": u.nama_lengkap,
+        "role": u.role,
+        "wilayah_kecamatan": u.wilayah_kecamatan,
+        "wilayah_kelurahan": u.wilayah_kelurahan,
+        "wilayah_kota": u.wilayah_kota,
+        "foto_url": u.foto_url,
+    }
+
+@router.post("/users/{user_id}/foto")
+def upload_user_foto(
+    user_id: int,
+    foto: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_superadmin),
+):
+    """Upload foto petugas/admin. Simpan ke /uploads/petugas/."""
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="User tidak ditemukan")
+    ext = (foto.filename or "").rsplit(".", 1)[-1].lower() if "." in (foto.filename or "") else "jpg"
+    if ext not in ("jpg", "jpeg", "png", "webp"):
+        raise HTTPException(status_code=400, detail="Format foto harus jpg/png/webp")
+    folder = "uploads/petugas"
+    os.makedirs(folder, exist_ok=True)
+    fname = f"petugas_{user_id}_{uuid.uuid4().hex[:8]}.{ext}"
+    fpath = os.path.join(folder, fname)
+    with open(fpath, "wb") as f:
+        shutil.copyfileobj(foto.file, f)
+    u.foto_url = f"/{fpath}".replace("//", "/")
+    db.commit()
+    db.refresh(u)
+    return {"message": "Foto berhasil diupload", "foto_url": u.foto_url}
+
+@router.put("/users/{user_id}/wilayah")
+def update_user_wilayah(
+    user_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_superadmin),
+):
+    """Superadmin set wilayah kerja petugas: kecamatan + kelurahan (hijau di petugas header)."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User tidak ditemukan")
+    # optional: validasi kecamatan/kelurahan ada di master wilayah
+    kec = data.get("wilayah_kecamatan")
+    kel = data.get("wilayah_kelurahan")
+    kota = data.get("wilayah_kota", "Surabaya")
+    if kec is not None:
+        user.wilayah_kecamatan = kec.strip() if kec.strip() else None
+    if kel is not None:
+        user.wilayah_kelurahan = kel.strip() if kel.strip() else None
+    if kota is not None:
+        user.wilayah_kota = kota.strip() if kota.strip() else "Surabaya"
+    db.commit()
+    db.refresh(user)
+    return {
+        "message": "Wilayah kerja petugas diperbarui",
+        "id": user.id,
+        "wilayah_kecamatan": user.wilayah_kecamatan,
+        "wilayah_kelurahan": user.wilayah_kelurahan,
+        "wilayah_kota": user.wilayah_kota,
+    }
 
 @router.post("/users", status_code=201)
 def create_user_account(
@@ -92,7 +218,10 @@ def create_user_account(
         hashed_password=hashed_pw,
         nama_lengkap=data.get("nama_lengkap", "User Si Petasan"),
         role=data.get("role", "petugas"),
-        is_active=True
+        is_active=True,
+        wilayah_kecamatan=data.get("wilayah_kecamatan"),
+        wilayah_kelurahan=data.get("wilayah_kelurahan"),
+        wilayah_kota=data.get("wilayah_kota", "Surabaya"),
     )
     db.add(new_user)
     db.commit()

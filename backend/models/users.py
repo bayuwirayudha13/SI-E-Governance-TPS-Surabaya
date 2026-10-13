@@ -11,6 +11,11 @@ class User(Base):
     nama_lengkap = Column(String(100), nullable=False)
     role = Column(Enum('admin', 'petugas', 'driver', 'superadmin'), nullable=False)
     is_active = Column(Boolean, default=True)
+    # Wilayah tugas petugas & foto profil
+    wilayah_kecamatan = Column(String(100), nullable=True)
+    wilayah_kelurahan = Column(String(100), nullable=True)
+    wilayah_kota = Column(String(50), nullable=True, default="Surabaya")
+    foto_url = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
