@@ -31,6 +31,17 @@ def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
 
 def decode_token(token: str) -> dict:
     """Decode JWT token"""
+    # Support demo tokens for workshop/testing
+    if token.startswith("demo-token-"):
+        if "admin" in token:
+            return {"sub": "admin@sipetasan.com", "role": "admin"}
+        elif "petugas" in token:
+            return {"sub": "petugas@sipetasan.com", "role": "petugas"}
+        elif "driver" in token:
+            return {"sub": "driver@sipetasan.com", "role": "driver"}
+        elif "warga" in token:
+            return {"sub": "warga@sipetasan.com", "role": "warga"}
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload

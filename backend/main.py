@@ -8,7 +8,11 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 import os
+import secrets
 from dotenv import load_dotenv
+from fastapi.staticfiles import StaticFiles
+from routes.qr_routes import router as qr_router
+from routes.pengambilan_routes import router as pengambilan_router
 from auth.routes import router as auth_router
 from core.database import engine, SessionLocal, Base, get_db
 from auth.otp import generate_otp, save_otp
@@ -29,6 +33,7 @@ from models.chat import ChatMessage
 from models.laporan import LaporanWarga
 from models.setoran import SetoranSampah
 from models.jadwal import JadwalPengambilan
+from models.pengambilan import PengambilanSampah
 
 load_dotenv()
 
@@ -48,6 +53,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Ensure uploads directory
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Database
 Base.metadata.create_all(bind=engine)
@@ -191,7 +200,8 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
             alamat_rumah=request.alamat_rumah,
             kecamatan=request.kecamatan,
             kelurahan=request.kelurahan,
-            email_verified=0
+            email_verified=0,
+            qr_token=secrets.token_hex(32)
         )
 
         db.add(user)
@@ -316,6 +326,8 @@ def logout():
     return {"message": "Logged out successfully"}
 
 app.include_router(auth_router, prefix="/api")
+app.include_router(qr_router, prefix="/api")
+app.include_router(pengambilan_router, prefix="/api")
 app.include_router(tps_router, prefix="/api")
 app.include_router(wilayah_router, prefix="/api")
 app.include_router(laporan_router, prefix="/api")

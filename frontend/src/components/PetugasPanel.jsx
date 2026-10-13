@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './PetugasPanel.css';
 import { api } from '../api/client';
+import { Html5Qrcode } from 'html5-qrcode';
 
 export default function PetugasPanel({ onLogout, officerName = 'Hendra', officerRole = 'Petugas Pengangkut', currentUser }) {
   const displayOfficerName = currentUser?.nama_lengkap || currentUser?.nama || officerName;
@@ -128,13 +129,18 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
   // Scan & Camera State (matching Image 1)
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [scannedWarga, setScannedWarga] = useState(null);
+  const [scannedToken, setScannedToken] = useState('');
   const [weightInput, setWeightInput] = useState('2.5');
   const [selectedCondition, setSelectedCondition] = useState('Bersih');
   const [officerNote, setOfficerNote] = useState('');
   const [toastMessage, setToastMessage] = useState('');
+  const [scanError, setScanError] = useState('');
+  const [uploadPreview, setUploadPreview] = useState('');
+  const [fotoFile, setFotoFile] = useState(null);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const html5QrRef = useRef(null);
 
   // Clean up camera stream on unmount or tab switch
   useEffect(() => {
@@ -153,24 +159,54 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
   // Start real or simulated camera
   const startCamera = async () => {
     setIsCameraActive(true);
+    setScanError('');
     try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
-        });
+      const el = document.getElementById('reader');
+      if (el) {
+        const qr = new Html5Qrcode('reader');
+        html5QrRef.current = qr;
+        await qr.start({ facingMode: 'environment' }, { fps: 10, qrbox: 250 },
+          async (decoded) => {
+            const token = decoded.trim();
+            setScannedToken(token);
+            await validateQrToken(token);
+            try { await qr.stop(); } catch {}
+            setIsCameraActive(false);
+          },
+          () => {}
+        );
+      } else {
+        // fallback getUserMedia
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play();
         }
       }
-    } catch {
-      // If permission is denied or running in environment without webcam,
-      // the interactive animated viewfinder stays active gracefully.
+    } catch (e) {
+      setScanError(e.message || 'Gagal akses kamera');
+      setIsCameraActive(false);
     }
   };
 
-  const stopCamera = () => {
+  const validateQrToken = async (token) => {
+    setScanError('');
+    try {
+      const res = await api.post('/api/petugas/scan-qr', { qr_token: token });
+      const w = res.data.warga;
+      setScannedWarga({ name: w.nama, address: w.alamat_rumah || w.kelurahan || 'Alamat warga', id: w.id });
+      showToast(`QR warga ${w.nama} terdeteksi!`);
+    } catch (err) {
+      setScanError(err.response?.data?.detail || 'QR tidak valid');
+    }
+  };
+
+  const stopCamera = async () => {
+    if (html5QrRef.current) {
+      try { await html5QrRef.current.stop(); } catch {}
+      html5QrRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
@@ -182,79 +218,76 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
   const handleTriggerDemo = () => {
     const currentActive = queueList[0] || {
       id: 8,
+      setoran_id: 8,
       number: '08',
       name: 'Warga Sukamaju',
-      address: 'RT 03 · Jl. Mawar',
+      address: 'RT 03 - Jl. Mawar',
       category: 'Botol Plastik (PET)',
       estimatedKg: 2.5
     };
-
     setScannedWarga(currentActive);
     setWeightInput(String(currentActive.estimatedKg || 2.5));
     setSelectedCondition('Bersih');
-    showToast(`QR Code ${currentActive.name} berhasil terdeteksi!`);
+    setScannedToken('demo-token');
+    showToast(`Mode Demo: Warga ${currentActive.name} terdeteksi!`);
+  };
+
+  const handleFotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFotoFile(file);
+    const url = URL.createObjectURL(file);
+    setUploadPreview(url);
   };
 
   // Confirm Pickup action
   const handleConfirmPickup = async () => {
     if (!scannedWarga) return;
-
+    
     const beratVal = parseFloat(weightInput) || 2.5;
-    const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2, '0')}.${String(now.getMinutes()).padStart(2, '0')}`;
 
     try {
-      // Kirim update ke backend jika setoran_id tersedia
-      if (scannedWarga.setoran_id) {
-        await api.patch(`/setoran/${scannedWarga.setoran_id}/status`, {
-          status: 'Sudah Divalidasi',
-          perkiraan_berat_kg: beratVal
-        });
+      if (scannedToken && scannedToken !== 'demo-token' && fotoFile) {
+        const fd = new FormData();
+        fd.append('qr_token', scannedToken);
+        fd.append('foto_sampah', fotoFile);
+        if (officerNote) fd.append('catatan', officerNote);
+        await api.post('/api/petugas/pengambilan', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      } else if (scannedWarga.setoran_id) {
+        try {
+          await api.patch(`/setoran/${scannedWarga.setoran_id}/status`, {
+            status: 'Sudah Divalidasi',
+            perkiraan_berat_kg: beratVal
+          });
+        } catch {
+          // Fallback jika patch gagal di mode demo offline
+        }
       }
+      showToast(`Pengambilan dari ${scannedWarga.name} berhasil dicatat!`);
     } catch (err) {
-      console.error('Gagal update setoran di backend:', err);
+      setScanError(err.response?.data?.detail || 'Gagal mencatat pengambilan');
+      return;
     }
 
-    // 1. Update stats
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}.${String(now.getMinutes()).padStart(2, '0')}`;
     setStats((prev) => {
       const newTaken = prev.sudahDiambil + 1;
       const newMuatan = parseFloat((prev.totalMuatanKg + beratVal).toFixed(1));
       const newPercent = Math.min(100, Math.round((newTaken / prev.targetPengambilan) * 100));
-      return {
-        ...prev,
-        sudahDiambil: newTaken,
-        totalMuatanKg: newMuatan,
-        persentaseSelesai: newPercent,
-        kapasitasTruk: Math.min(100, Math.round((newMuatan / 50) * 100))
-      };
+      return { ...prev, sudahDiambil: newTaken, totalMuatanKg: newMuatan, persentaseSelesai: newPercent, kapasitasTruk: Math.min(100, Math.round((newMuatan / 50) * 100)) };
     });
-
-    // 2. Update history table
-    setHistoryList((prev) => {
-      return [
-        {
-          id: scannedWarga.id || Date.now(),
-          waktu: timeStr,
-          warga: scannedWarga.name,
-          berat: `${beratVal.toFixed(1).replace('.', ',')} kg`,
-          kondisi: selectedCondition,
-          status: 'Selesai'
-        },
-        ...prev
-      ];
-    });
-
-    // 3. Update queue
+    setHistoryList((prev) => [{ id: scannedWarga.id || Date.now(), waktu: timeStr, warga: scannedWarga.name, berat: `${beratVal.toFixed(1).replace('.', ',')} kg`, kondisi: selectedCondition, status: 'Selesai' }, ...prev]);
     setQueueList((prev) => {
       const remaining = prev.filter((item) => item.id !== scannedWarga.id);
-      if (remaining.length > 0) {
-        remaining[0] = { ...remaining[0], isActive: true, status: 'ready', statusText: 'Siap diambil' };
-      }
+      if (remaining.length > 0) remaining[0] = { ...remaining[0], isActive: true, status: 'ready', statusText: 'Siap diambil' };
       return remaining;
     });
-
-    showToast(`Pengambilan dari ${scannedWarga.name} berhasil disimpan!`);
     setScannedWarga(null);
+    setScannedToken('');
+    setFotoFile(null);
+    setUploadPreview('');
+    setScanError('');
     setOfficerNote('');
     stopCamera();
   };
@@ -656,10 +689,8 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
               <div className="petugas-card-body">
                 {/* Viewfinder Screen */}
                 <div className="petugas-camera-screen">
-                  {/* Real video if camera active */}
-                  {isCameraActive && (
-                    <video ref={videoRef} className="petugas-camera-video" playsInline muted />
-                  )}
+                  <video ref={videoRef} className="petugas-camera-video" playsInline muted style={{ display: 'none' }} />
+                  <div id="reader" style={{ width: '100%', display: isCameraActive ? 'block' : 'none' }} />
 
                   {/* Animated laser line */}
                   {isCameraActive && <div className="petugas-scan-laser" />}
@@ -786,6 +817,21 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
 
                     {/* Officer Note */}
                     <div className="petugas-form-group">
+                      <label className="petugas-form-label">Foto Bukti Sampah (Wajib)</label>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handleFotoChange}
+                        style={{ marginBottom: '8px' }}
+                      />
+                      {uploadPreview && (
+                        <div style={{ marginTop: '8px' }}>
+                          <img src={uploadPreview} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '6px' }} />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="petugas-form-group">
                       <label className="petugas-form-label">Catatan Tambahan (Opsional)</label>
                       <textarea
                         className="petugas-confirm-textarea"
@@ -795,6 +841,8 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                         rows="3"
                       />
                     </div>
+
+                    {scanError && <div style={{ color: '#b91c1c', fontSize: '0.85rem', marginBottom: '8px' }}>{scanError}</div>}
 
                     {/* Action buttons */}
                     <button

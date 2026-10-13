@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, func
+from sqlalchemy import Column, Integer, String, DateTime, func, Text
 from core.database import Base
 
 class Warga(Base):
@@ -14,4 +14,6 @@ class Warga(Base):
     kecamatan = Column(String(100), nullable=True)
     kelurahan = Column(String(100), nullable=True)
     total_poin = Column(Integer, default=0)
+    qr_token = Column(String(64), unique=True, index=True, nullable=True)
+    qr_created_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=func.now())

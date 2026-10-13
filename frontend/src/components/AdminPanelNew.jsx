@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
   const [activeMenu, setActiveMenu] = useState('dashboard');
@@ -45,7 +45,26 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
     if (activeMenu === 'chat') {
       loadChatMessages();
     }
+    if (activeMenu === 'pengambilan') {
+      loadRiwayat();
+    }
   }, [activeMenu]);
+
+  const [riwayat, setRiwayat] = useState([]);
+
+  const loadRiwayat = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/pengambilan`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setRiwayat(data);
+      }
+    } catch (err) {
+      console.error('Load riwayat error:', err);
+    }
+  };
 
   const token = localStorage.getItem('access_token');
 
@@ -237,6 +256,19 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
               </svg>
               <span>Chat ke Warga</span>
+            </button>
+
+            <button
+              type="button"
+              className={`admin-nav-item ${activeMenu === 'pengambilan' ? 'active' : ''}`}
+              onClick={() => setActiveMenu('pengambilan')}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                <circle cx="9" cy="9" r="2"></circle>
+                <path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+              </svg>
+              <span>Riwayat Pengambilan</span>
             </button>
           </nav>
         </div>
@@ -511,6 +543,43 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
                     Pilih warga untuk memulai chat
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+        {activeMenu === 'pengambilan' && (
+          <div className="admin-content-view">
+            <div className="admin-card full-table-card">
+              <div className="table-header-row">
+                <h3 className="admin-card-title">Riwayat Pengambilan Sampah</h3>
+              </div>
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>WAKTU</th>
+                      <th>WARGA</th>
+                      <th>PETUGAS</th>
+                      <th>STATUS</th>
+                      <th>BUKTI</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {riwayat.map(r => (
+                      <tr key={r.id}>
+                        <td className="text-muted">{r.waktu_pengambilan ? new Date(r.waktu_pengambilan).toLocaleString('id-ID') : '—'}</td>
+                        <td>{r.warga_nama}</td>
+                        <td>{r.petugas_nama}</td>
+                        <td><span className="role-pill role-warga">{r.status}</span></td>
+                        <td>
+                          {r.foto_sampah ? (
+                            <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${r.foto_sampah}`} target="_blank" rel="noreferrer" style={{ color: '#0284c7' }}>Lihat</a>
+                          ) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>

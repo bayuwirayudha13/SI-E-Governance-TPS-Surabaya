@@ -383,7 +383,7 @@ export default function AuthPage({
     try {
       const token = localStorage.getItem('access_token');
       const response = await fetch(
-        'http://localhost:8000/api/auth/register',
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/register`,
         {
           method: 'POST',
           headers: {
@@ -454,7 +454,7 @@ export default function AuthPage({
 
     try {
       const response = await fetch(
-        'http://localhost:8000/api/auth/verify-otp',
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/verify-otp`,
         {
           method: 'POST',
           headers: {
@@ -530,7 +530,7 @@ export default function AuthPage({
 
     try {
       const response = await fetch(
-        'http://localhost:8000/api/auth/resend-otp',
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/resend-otp`,
         {
           method: 'POST',
           headers: {
@@ -596,7 +596,7 @@ export default function AuthPage({
 
     try {
       const response = await fetch(
-        'http://localhost:8000/api/auth/forgot-password',
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/forgot-password`,
         {
           method: 'POST',
           headers: {
@@ -672,7 +672,7 @@ export default function AuthPage({
 
     try {
       const response = await fetch(
-        'http://localhost:8000/api/auth/verify-reset-otp',
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/verify-reset-otp`,
         {
           method: 'POST',
           headers: {
@@ -749,7 +749,7 @@ export default function AuthPage({
 
     try {
       const response = await fetch(
-        'http://localhost:8000/api/auth/reset-password',
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/reset-password`,
         {
           method: 'POST',
           headers: {
