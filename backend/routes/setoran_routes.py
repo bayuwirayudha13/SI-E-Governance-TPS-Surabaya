@@ -69,3 +69,48 @@ def update_status_setoran(
     if not setoran:
         raise HTTPException(status_code=404, detail="Setoran tidak ditemukan")
     return setoran
+
+from pydantic import BaseModel
+from models.warga import Warga
+
+class TukarRewardRequest(BaseModel):
+    warga_id: int
+    reward_title: str
+    ewallet_type: str
+    nominal: str
+    poin_digunakan: int
+    nomor_ewallet: Optional[str] = None
+    atas_nama: Optional[str] = None
+    catatan: Optional[str] = None
+
+@router.post("/tukar-reward")
+def tukar_reward(data: TukarRewardRequest, db: Session = Depends(get_db)):
+    """Penukaran poin warga menjadi saldo e-wallet dengan data lengkap penerima"""
+    warga = db.query(Warga).filter(Warga.id == data.warga_id).first()
+    if not warga:
+        raise HTTPException(status_code=404, detail="Data warga tidak ditemukan")
+    current_pts = warga.total_poin or 0
+    if current_pts < data.poin_digunakan:
+        raise HTTPException(status_code=400, detail="Poin tidak mencukupi untuk penukaran ini")
+    
+    warga.total_poin = current_pts - data.poin_digunakan
+    # Simpan no_hp jika warga belum memiliki no_hp
+    if data.nomor_ewallet and not warga.no_hp:
+        warga.no_hp = data.nomor_ewallet
+    db.commit()
+    db.refresh(warga)
+    return {
+        "status": "success",
+        "message": f"Penukaran {data.reward_title} ke {data.ewallet_type} ({data.nomor_ewallet}) berhasil!",
+        "sisa_poin": warga.total_poin,
+        "detail": {
+            "reward_title": data.reward_title,
+            "ewallet_type": data.ewallet_type,
+            "nominal": data.nominal,
+            "nomor_ewallet": data.nomor_ewallet,
+            "atas_nama": data.atas_nama,
+            "poin_digunakan": data.poin_digunakan
+        }
+    }
+
+

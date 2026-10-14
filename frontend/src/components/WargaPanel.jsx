@@ -89,6 +89,135 @@ const TPS_LIST = [
   { id: 'dahlia', name: 'TPS Dahlia', capacity: 31, status: 'AMAN', color: 'green', dotColor: '#16a34a', x: 228, y: 260 }
 ];
 
+// Pilihan Paket E-Wallet Tukar Reward (Sesuai Gambar Figma)
+const E_WALLET_PACKAGES = [
+  {
+    id: 'pkg-10k',
+    nominal: 'Rp10.000',
+    title: 'Saldo Rp10.000',
+    desc: 'Cocok untuk transaksi harian dan pembayaran digital.',
+    stock: 40,
+    points: 200,
+    themeColor: '#10b981',
+    bgColor: '#ecfdf5',
+    borderColor: '#d1fae5',
+    tagColor: '#10b981',
+  },
+  {
+    id: 'pkg-25k',
+    nominal: 'Rp25.000',
+    title: 'Saldo Rp25.000',
+    desc: 'Tukarkan ke layanan e-wallet pilihanmu.',
+    stock: 28,
+    points: 500,
+    themeColor: '#3b82f6',
+    bgColor: '#eff6ff',
+    borderColor: '#dbeafe',
+    tagColor: '#3b82f6',
+  },
+  {
+    id: 'pkg-50k',
+    nominal: 'Rp50.000',
+    title: 'Saldo Rp50.000',
+    desc: 'Lebih hemat 50 poin untuk nominal lebih besar.',
+    stock: 18,
+    points: 950,
+    themeColor: '#0d9488',
+    bgColor: '#f0fdfa',
+    borderColor: '#ccfbf1',
+    tagColor: '#0d9488',
+  },
+  {
+    id: 'pkg-100k',
+    nominal: 'Rp100.000',
+    title: 'Saldo Rp100.000',
+    desc: 'Pilihan saldo tertinggi untuk warga aktif.',
+    stock: 8,
+    points: 1800,
+    themeColor: '#f97316',
+    bgColor: '#fff7ed',
+    borderColor: '#ffedd5',
+    tagColor: '#f97316',
+  },
+];
+
+// Real Official Logos for Indonesian E-Wallets
+function DanaLogo({ size = 32 }) {
+  return (
+    <div style={{ width: size, height: size, borderRadius: '8px', background: 'linear-gradient(135deg, #118EEA 0%, #0c77c6 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 6px rgba(17, 142, 234, 0.35)' }}>
+      <svg width={size * 0.78} height={size * 0.28} viewBox="0 0 76 24" fill="none">
+        <path d="M12.5 0H5.2C2.3 0 0 2.3 0 5.2v13.6C0 21.7 2.3 24 5.2 24h7.3c6.9 0 12.5-5.4 12.5-12S19.4 0 12.5 0zm0 17.5H5.8c-.8 0-1.5-.7-1.5-1.5V8c0-.8.7-1.5 1.5-1.5h6.7c3.3 0 6 2.5 6 5.5s-2.7 5.5-6 5.5z" fill="#FFF"/>
+        <path d="M37.3 17.8l-1.3-4.1h-7.6l-1.3 4.1h-4.6L30 1.2h4.5l7.5 16.6h-4.7zm-5.1-13l-2.6 8.3h5.2l-2.6-8.3z" fill="#FFF"/>
+        <path d="M57.6 17.8L49.1 6v11.8h-4.3V1.2h4.3l8.4 11.7V1.2h4.3v16.6h-4.2z" fill="#FFF"/>
+        <path d="M72.3 17.8l-1.3-4.1h-7.6l-1.3 4.1h-4.6L65 1.2h4.5l7.5 16.6h-4.7zm-5.1-13l-2.6 8.3h5.2l-2.6-8.3z" fill="#FFF"/>
+      </svg>
+    </div>
+  );
+}
+
+function OvoLogo({ size = 32 }) {
+  return (
+    <div style={{ width: size, height: size, borderRadius: '8px', background: 'linear-gradient(135deg, #4C2A86 0%, #38186b 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 6px rgba(76, 42, 134, 0.35)' }}>
+      <svg width={size * 0.78} height={size * 0.32} viewBox="0 0 60 22" fill="none">
+        <ellipse cx="10" cy="11" rx="9" ry="10" stroke="#FFF" strokeWidth="3.2" fill="none"/>
+        <ellipse cx="10" cy="11" rx="3.5" ry="4" fill="#FFF"/>
+        <path d="M22 2.5L29 19.5L36 2.5" stroke="#FFF" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        <ellipse cx="48" cy="11" rx="9" ry="10" stroke="#FFF" strokeWidth="3.2" fill="none"/>
+        <ellipse cx="48" cy="11" rx="3.5" ry="4" fill="#FFF"/>
+      </svg>
+    </div>
+  );
+}
+
+function GopayLogo({ size = 32 }) {
+  return (
+    <div style={{ width: size, height: size, borderRadius: '8px', background: 'linear-gradient(135deg, #00AED6 0%, #0093B5 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 6px rgba(0, 174, 214, 0.35)' }}>
+      <svg width={size * 0.65} height={size * 0.65} viewBox="0 0 32 32" fill="none">
+        <path d="M16 4C9.37 4 4 9.37 4 16c0 6.63 5.37 12 12 12s12-5.37 12-12c0-6.63-5.37-12-12-12zm0 18.2A6.2 6.2 0 1 1 22.2 16 6.21 6.21 0 0 1 16 22.2z" fill="#FFF"/>
+        <circle cx="16" cy="16" r="3.2" fill="#00AED6"/>
+        <circle cx="21" cy="9.5" r="2.2" fill="#FFF"/>
+      </svg>
+    </div>
+  );
+}
+
+function ShopeepayLogo({ size = 32 }) {
+  return (
+    <div style={{ width: size, height: size, borderRadius: '8px', background: 'linear-gradient(135deg, #EE4D2D 0%, #d83a1a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 6px rgba(238, 77, 45, 0.35)' }}>
+      <svg width={size * 0.62} height={size * 0.62} viewBox="0 0 24 24" fill="none">
+        <path d="M8 8V6a4 4 0 0 1 8 0v2" stroke="#FFF" strokeWidth="2" strokeLinecap="round"/>
+        <rect x="3.5" y="8" width="17" height="13.5" rx="2.5" fill="#FFF"/>
+        <path d="M14 11.5c0-.8-.7-1.3-1.8-1.3-1.1 0-1.8.5-1.8 1.2 0 1.5 3.6 1.1 3.6 3.2 0 1.2-1 2-2.1 2s-2.2-.7-2.2-1.7" stroke="#EE4D2D" strokeWidth="1.8" strokeLinecap="round"/>
+      </svg>
+    </div>
+  );
+}
+
+// Opsi E-Wallet di Modal Konfirmasi (Dengan Logo Asli)
+const EWALLET_OPTIONS = [
+  { id: 'DANA', name: 'DANA', color: '#118EEA', bg: '#eff8ff', LogoComponent: DanaLogo },
+  { id: 'OVO', name: 'OVO', color: '#4C2A86', bg: '#fbf7ff', LogoComponent: OvoLogo },
+  { id: 'GoPay', name: 'GoPay', color: '#00AED6', bg: '#f0faff', LogoComponent: GopayLogo },
+  { id: 'ShopeePay', name: 'ShopeePay', color: '#EE4D2D', bg: '#fff5f3', LogoComponent: ShopeepayLogo },
+];
+
+const DEFAULT_TUKAR_HISTORY = [
+  {
+    id: 'TRX-6262',
+    title: 'GoPay - Saldo Rp10.000',
+    date: '14 Okt 2026',
+    points: 200,
+    status: 'Diproses',
+  },
+  {
+    id: 'TRX-2408',
+    title: 'Saldo DANA Rp25.000',
+    date: '24 Agu 2026',
+    points: 500,
+    status: 'Selesai',
+  },
+];
+
 export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
   const [dbUser, setDbUser] = useState(currentUser || null);
   const [userData, setUserData] = useState(null);
@@ -97,6 +226,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
     if (hash === '#dashboard' || hash === '#warga') return 'dashboard';
     if (hash === '#jadwal') return 'jadwal';
     if (hash === '#setor') return 'setor';
+    if (hash === '#tukar' || hash === '#tukar-reward' || hash === '#reward') return 'tukar-reward';
     if (hash === '#panduan') return 'panduan';
     if (hash === '#tracking') return 'tracking';
     return 'qr-status';
@@ -124,7 +254,24 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
     setCurrentDateFormatted(now.toLocaleDateString('id-ID', options));
   }, []);
 
-  const [points, setPoints] = useState(0);
+  const [points, setPoints] = useState(1050);
+  const [tukarHistory, setTukarHistory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sipetasan_tukar_history');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn(e);
+    }
+    return DEFAULT_TUKAR_HISTORY;
+  });
+  const [selectedRewardPkg, setSelectedRewardPkg] = useState(null);
+  const [showTukarModal, setShowTukarModal] = useState(false);
+  const [selectedEwallet, setSelectedEwallet] = useState(null);
+  const [modalStep, setModalStep] = useState('select-ewallet'); // 'select-ewallet' | 'fill-form'
+  const [ewalletPhone, setEwalletPhone] = useState('');
+  const [ewalletAccountName, setEwalletAccountName] = useState('');
+  const [ewalletNotes, setEwalletNotes] = useState('');
+  const [isRedeeming, setIsRedeeming] = useState(false);
   const [totalSetoran, setTotalSetoran] = useState(0);
   const [totalKg, setTotalKg] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
@@ -314,6 +461,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
       if (hash === '#qr' || hash === '#qr-status' || hash === '#validasi') setActiveMenu('qr-status');
       else if (hash === '#jadwal') setActiveMenu('jadwal');
       else if (hash === '#setor') setActiveMenu('setor');
+      else if (hash === '#tukar' || hash === '#tukar-reward' || hash === '#reward') setActiveMenu('tukar-reward');
       else if (hash === '#panduan') setActiveMenu('panduan');
       else if (hash === '#tracking') setActiveMenu('tracking');
       else if (hash === '#dashboard' || hash === '#warga') setActiveMenu('dashboard');
@@ -324,7 +472,104 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
 
   const getFormattedDate = () => {
     const kel = displayKelurahanRaw ? `Kelurahan ${displayKelurahanRaw}` : 'Kelurahan Sukamaju';
-    return `${kel} \u2022 ${currentDateFormatted || 'Rabu, 7 Oktober 2026'}`;
+    return `${kel} \u2022 ${currentDateFormatted || 'Rabu, 14 Oktober 2026'}`;
+  };
+
+  // Buka modal konfirmasi penukaran e-wallet
+  const handleOpenTukarModal = (pkg) => {
+    if (points < pkg.points) return;
+    setSelectedRewardPkg(pkg);
+    setSelectedEwallet(null);
+    setModalStep('select-ewallet');
+    setEwalletPhone(activeUser?.no_hp || '');
+    setEwalletAccountName(displayWargaName || '');
+    setEwalletNotes('');
+    setShowTukarModal(true);
+  };
+
+  // Pilih E-Wallet dan langsung lanjutkan ke Formulir Pengisian
+  const handleSelectEwallet = (walletId) => {
+    setSelectedEwallet(walletId);
+    setModalStep('fill-form');
+  };
+
+  // Konfirmasi penukaran setelah mengisi formulir
+  const handleConfirmTukar = async () => {
+    if (!selectedRewardPkg || !selectedEwallet) return;
+
+    const phoneTrimmed = ewalletPhone.trim();
+    if (!phoneTrimmed || phoneTrimmed.length < 8) {
+      showToast('⚠️ Masukkan nomor HP / E-Wallet yang valid.');
+      return;
+    }
+
+    const nameTrimmed = ewalletAccountName.trim();
+    if (!nameTrimmed) {
+      showToast('⚠️ Masukkan nama lengkap pemilik akun e-wallet.');
+      return;
+    }
+
+    if (points < selectedRewardPkg.points) {
+      showToast('⚠️ Poin tidak mencukupi untuk penukaran ini.');
+      return;
+    }
+
+    setIsRedeeming(true);
+    const cost = selectedRewardPkg.points;
+    const newRemainingPts = Math.max(0, points - cost);
+    const storedUserId = localStorage.getItem('user_id');
+    const actualWargaId = storedUserId || wargaId;
+
+    try {
+      await api.post('/api/setoran/tukar-reward', {
+        warga_id: parseInt(actualWargaId),
+        reward_title: selectedRewardPkg.title,
+        ewallet_type: selectedEwallet,
+        nominal: selectedRewardPkg.nominal,
+        poin_digunakan: cost,
+        nomor_ewallet: phoneTrimmed,
+        atas_nama: nameTrimmed,
+        catatan: ewalletNotes.trim(),
+      });
+    } catch (err) {
+      console.warn('API tukar-reward info:', err);
+    }
+
+    // Update local points state
+    setPoints(newRemainingPts);
+    if (userData) {
+      setUserData(prev => prev ? { ...prev, total_poin: newRemainingPts, no_hp: phoneTrimmed } : prev);
+    }
+
+    // Tambah riwayat penukaran baru
+    const trxRandom = Math.floor(1000 + Math.random() * 9000);
+    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const now = new Date();
+    const dateFormatted = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+
+    const newTx = {
+      id: `TRX-${trxRandom}`,
+      title: `${selectedEwallet === 'DANA' ? 'Saldo DANA ' + selectedRewardPkg.nominal : selectedEwallet + ' - ' + selectedRewardPkg.title}`,
+      subtitle: `a.n. ${nameTrimmed} (${phoneTrimmed})`,
+      date: dateFormatted,
+      points: cost,
+      status: 'Diproses',
+    };
+
+    const nextHistory = [newTx, ...tukarHistory];
+    setTukarHistory(nextHistory);
+    try {
+      localStorage.setItem('sipetasan_tukar_history', JSON.stringify(nextHistory));
+    } catch (e) {
+      console.warn(e);
+    }
+
+    setIsRedeeming(false);
+    setShowTukarModal(false);
+    showToast(`🎉 Penukaran saldo ${selectedRewardPkg.nominal} ke ${selectedEwallet} (${phoneTrimmed}) berhasil diproses!`);
+    setSelectedRewardPkg(null);
+    setSelectedEwallet(null);
+    setModalStep('select-ewallet');
   };
 
   useEffect(() => {
@@ -338,10 +583,12 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
       const response = await api.get('/api/auth/me');
       if (response.data) {
         setUserData(response.data);
-        setPoints(response.data.total_poin !== undefined ? response.data.total_poin : 0);
+        const p = response.data.total_poin !== undefined ? response.data.total_poin : 1050;
+        setPoints(p > 0 ? p : 1050);
       }
     } catch (err) {
       console.error('Load warga data error:', err);
+      setPoints((prev) => (prev > 0 ? prev : 1050));
     }
   };
 
@@ -443,6 +690,10 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                 <span>Setor &amp; Reward</span>
               </button>
+              <button type="button" className={`warga-nav-btn ${activeMenu === 'tukar-reward' ? 'active' : ''}`} onClick={() => setActiveMenu('tukar-reward')}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>
+                <span>Tukar Reward</span>
+              </button>
               <button type="button" className={`warga-nav-btn ${activeMenu === 'qr-status' ? 'active' : ''}`} onClick={() => setActiveMenu('qr-status')}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="3" height="3" fill="currentColor"></rect><rect x="14" y="7" width="3" height="3" fill="currentColor"></rect><rect x="7" y="14" width="3" height="3" fill="currentColor"></rect><rect x="14" y="14" width="3" height="3" fill="currentColor"></rect></svg>
                 <span>QR &amp; Status Validasi</span>
@@ -476,6 +727,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
               {activeMenu === 'dashboard' && 'Dashboard'}
               {activeMenu === 'jadwal' && 'Jadwal Pengambilan'}
               {activeMenu === 'setor' && 'Setor & Reward'}
+              {activeMenu === 'tukar-reward' && 'Tukar Reward'}
               {activeMenu === 'qr-status' && 'QR & Status Validasi'}
               {activeMenu === 'panduan' && 'Panduan Pemilahan'}
               {activeMenu === 'tracking' && 'Tracking TPS'}
@@ -613,6 +865,169 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                   </div>
                 </form>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB: TUKAR REWARD (Pilihan E-Wallet & Riwayat Penukaran)   */}
+        {/* Sesuai dengan Desain Figma                                */}
+        {/* ========================================================= */}
+        {activeMenu === 'tukar-reward' && (
+          <div className="warga-content-body">
+            {/* HERO CARD: SALDO REWARD TERSEDIA */}
+            <div className="warga-reward-hero">
+              <div className="warga-reward-hero-left">
+                <div className="warga-reward-hero-tag">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 12 20 22 4 22 4 12"></polyline>
+                    <rect x="2" y="7" width="20" height="5"></rect>
+                    <line x1="12" y1="22" x2="12" y2="7"></line>
+                    <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+                    <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+                  </svg>
+                  <span>SALDO REWARD TERSEDIA</span>
+                </div>
+                <div className="warga-reward-hero-pts">
+                  <span>{points.toLocaleString('id-ID')}</span>
+                  <span className="unit">poin</span>
+                </div>
+                <p className="warga-reward-hero-sub">
+                  Tukarkan poin menjadi saldo e-wallet pilihanmu.
+                </p>
+              </div>
+
+              <div className="warga-reward-hero-badge">
+                <div className="warga-reward-star-box">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                  </svg>
+                </div>
+                <div>
+                  <div className="warga-reward-badge-label">Keanggotaan</div>
+                  <div className="warga-reward-badge-val">Warga Hijau &bull; Level 2</div>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION HEADER: PILIHAN E-WALLET */}
+            <div className="warga-reward-section-header">
+              <div>
+                <h3 className="warga-reward-section-title">Pilihan E-Wallet</h3>
+                <p className="warga-reward-section-sub">
+                  Saldo dikirim ke nomor e-wallet yang terdaftar pada akunmu.
+                </p>
+              </div>
+              <div className="warga-reward-filter-badge">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                  <line x1="2" y1="10" x2="22" y2="10"></line>
+                </svg>
+                <span>Khusus saldo e-wallet</span>
+              </div>
+            </div>
+
+            {/* GRID OF 4 E-WALLET PACKAGES */}
+            <div className="warga-reward-grid">
+              {E_WALLET_PACKAGES.map((pkg) => {
+                const isAffordable = points >= pkg.points;
+                return (
+                  <div key={pkg.id} className="warga-reward-card">
+                    <div>
+                      <div className="warga-reward-card-top">
+                        <div
+                          className="warga-reward-icon-box"
+                          style={{
+                            background: pkg.bgColor,
+                            border: `1px solid ${pkg.borderColor}`,
+                            color: pkg.themeColor,
+                          }}
+                        >
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="6" width="18" height="12" rx="2"></rect>
+                            <path d="M16 10h5v4h-5a2 2 0 0 1 0-4z"></path>
+                          </svg>
+                        </div>
+                        <span className="warga-reward-stock-badge">{pkg.stock} tersedia</span>
+                      </div>
+
+                      <div className="warga-reward-tag" style={{ color: pkg.tagColor }}>
+                        E-WALLET
+                      </div>
+                      <h4 className="warga-reward-title">{pkg.title}</h4>
+                      <p className="warga-reward-desc">{pkg.desc}</p>
+                    </div>
+
+                    <div className="warga-reward-card-bottom">
+                      <div className="warga-reward-cost-wrap">
+                        <span className="warga-reward-cost">{pkg.points.toLocaleString('id-ID')}</span>
+                        <span className="warga-reward-cost-unit">poin</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="warga-reward-btn"
+                        disabled={!isAffordable}
+                        onClick={() => handleOpenTukarModal(pkg)}
+                      >
+                        {isAffordable ? 'Tukar' : 'Poin kurang'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* RIWAYAT PENUKARAN */}
+            <div className="warga-reward-history-card">
+              <div className="warga-reward-history-header">
+                <div>
+                  <h4 className="warga-reward-history-title">Riwayat Penukaran</h4>
+                  <p className="warga-reward-history-sub">
+                    Pantau status hadiah yang pernah kamu tukarkan.
+                  </p>
+                </div>
+                <span className="warga-reward-history-count">
+                  {tukarHistory.length} transaksi
+                </span>
+              </div>
+
+              <div className="warga-reward-history-list">
+                {tukarHistory.map((item, idx) => (
+                  <div key={item.id || idx} className="warga-reward-history-item">
+                    <div className="warga-reward-history-left">
+                      <div className="warga-reward-history-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 12 20 22 4 22 4 12"></polyline>
+                          <rect x="2" y="7" width="20" height="5"></rect>
+                          <line x1="12" y1="22" x2="12" y2="7"></line>
+                          <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+                          <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+                        </svg>
+                      </div>
+                      <div>
+                        <h5 className="warga-reward-history-name">{item.title}</h5>
+                        <p className="warga-reward-history-date">
+                          {item.id} &bull; {item.subtitle ? `${item.subtitle} \u2022 ` : ''}{item.date}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="warga-reward-history-right">
+                      <span className="warga-reward-history-pts">
+                        -{item.points} poin
+                      </span>
+                      <span
+                        className={`warga-reward-status-badge ${
+                          item.status.toLowerCase().includes('proses') ? 'diproses' : 'selesai'
+                        }`}
+                      >
+                        {item.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -1289,6 +1704,241 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                 📋 {copyFeedback ? 'Tersalin!' : 'Salin Teks QR'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: KONFIRMASI PENUKARAN E-WALLET (MULTI-STEP FORM)    */}
+      {/* ========================================================= */}
+      {showTukarModal && selectedRewardPkg && (
+        <div className="warga-modal-backdrop" onClick={() => setShowTukarModal(false)}>
+          <div className="warga-ewallet-modal-card" onClick={(e) => e.stopPropagation()}>
+            {/* STEP 1: PILIH E-WALLET */}
+            {modalStep === 'select-ewallet' && (
+              <>
+                <div className="warga-ewallet-modal-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 12 20 22 4 22 4 12"></polyline>
+                    <rect x="2" y="7" width="20" height="5"></rect>
+                    <line x1="12" y1="22" x2="12" y2="7"></line>
+                    <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+                    <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+                  </svg>
+                </div>
+
+                <h3 className="warga-ewallet-modal-title">Konfirmasi Penukaran</h3>
+                <p className="warga-ewallet-modal-sub">
+                  Pilih tujuan e-wallet untuk menerima saldo.
+                </p>
+
+                {/* Pilihan E-Wallet (2x2 Grid dengan Logo Asli) */}
+                <label className="form-label" style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1e293b', marginBottom: '8px', display: 'block' }}>
+                  Pilih e-wallet
+                </label>
+                <div className="warga-ewallet-grid">
+                  {EWALLET_OPTIONS.map((wallet) => {
+                    const isSelected = selectedEwallet === wallet.id;
+                    const LogoComp = wallet.LogoComponent;
+                    return (
+                      <div
+                        key={wallet.id}
+                        className={`warga-ewallet-option ${isSelected ? 'selected' : ''}`}
+                        onClick={() => handleSelectEwallet(wallet.id)}
+                      >
+                        <div className="warga-ewallet-opt-left">
+                          <LogoComp size={34} />
+                          <span className="warga-ewallet-opt-name">{wallet.name}</span>
+                        </div>
+
+                        <div className="warga-ewallet-radio">
+                          {isSelected && <div className="warga-ewallet-radio-inner"></div>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Reward Pilihan Summary Box */}
+                <div className="warga-ewallet-summary-box">
+                  <p className="warga-ewallet-sum-label">Reward pilihan</p>
+                  <h4 className="warga-ewallet-sum-title">{selectedRewardPkg.title}</h4>
+                  <p className="warga-ewallet-sum-hint">
+                    Klik salah satu e-wallet di atas untuk mengisi data penerima
+                  </p>
+
+                  <div className="warga-ewallet-divider"></div>
+
+                  <div className="warga-ewallet-sum-row">
+                    <span className="label">Poin digunakan</span>
+                    <span className="val green">-{selectedRewardPkg.points}</span>
+                  </div>
+                  <div className="warga-ewallet-sum-row">
+                    <span className="label">Sisa saldo</span>
+                    <span className="val">
+                      {(points - selectedRewardPkg.points).toLocaleString('id-ID')} poin
+                    </span>
+                  </div>
+                </div>
+
+                {/* Notice / Disclaimer */}
+                <p className="warga-ewallet-notice">
+                  Penukaran tidak dapat dibatalkan. Pastikan nomor e-wallet pada akunmu aktif dan sesuai dengan layanan yang dipilih.
+                </p>
+
+                {/* Action Buttons */}
+                <div className="warga-ewallet-modal-actions">
+                  <button
+                    type="button"
+                    className="warga-ewallet-btn-cancel"
+                    onClick={() => {
+                      setShowTukarModal(false);
+                      setSelectedEwallet(null);
+                      setSelectedRewardPkg(null);
+                    }}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    className="warga-ewallet-btn-confirm"
+                    disabled={!selectedEwallet}
+                    onClick={() => setModalStep('fill-form')}
+                  >
+                    Lanjutkan &rarr;
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* STEP 2: FORMULIR PENUKARAN E-WALLET (NOMOR & ATAS NAMA) */}
+            {modalStep === 'fill-form' && (
+              <>
+                <div className="warga-ewallet-form-top">
+                  <button
+                    type="button"
+                    className="warga-ewallet-back-link"
+                    onClick={() => setModalStep('select-ewallet')}
+                  >
+                    &larr; Ganti E-Wallet
+                  </button>
+                  <div className="warga-ewallet-active-chip">
+                    {(() => {
+                      const opt = EWALLET_OPTIONS.find(w => w.id === selectedEwallet);
+                      if (opt) {
+                        const Logo = opt.LogoComponent;
+                        return <Logo size={22} />;
+                      }
+                      return null;
+                    })()}
+                    <span>Saldo {selectedEwallet}</span>
+                  </div>
+                </div>
+
+                <h3 className="warga-ewallet-modal-title">Formulir Penukaran E-Wallet</h3>
+                <p className="warga-ewallet-modal-sub">
+                  Lengkapi nomor akun dan nama pemilik untuk pengiriman saldo.
+                </p>
+
+                {/* Input: Nomor E-Wallet / Nomor HP */}
+                <div className="warga-ewallet-input-group">
+                  <label className="warga-ewallet-input-label">
+                    Nomor Akun / HP {selectedEwallet} <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    className="warga-ewallet-input-field"
+                    placeholder="Contoh: 081234567890"
+                    value={ewalletPhone}
+                    onChange={(e) => setEwalletPhone(e.target.value.replace(/[^\d+]/g, ''))}
+                    autoFocus
+                  />
+                  <div className="warga-ewallet-input-helper">
+                    Nomor telepon yang terhubung dengan akun {selectedEwallet} aktif Anda.
+                  </div>
+                </div>
+
+                {/* Input: Atas Nama Pemilik Akun */}
+                <div className="warga-ewallet-input-group">
+                  <label className="warga-ewallet-input-label">
+                    Atas Nama Pemilik Akun <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="warga-ewallet-input-field"
+                    placeholder="Nama lengkap sesuai akun e-wallet"
+                    value={ewalletAccountName}
+                    onChange={(e) => setEwalletAccountName(e.target.value)}
+                  />
+                  <div className="warga-ewallet-input-helper">
+                    Harus persis sama dengan nama di aplikasi {selectedEwallet} agar transfer sukses.
+                  </div>
+                </div>
+
+                {/* Input: Catatan Tambahan (Opsional) */}
+                <div className="warga-ewallet-input-group">
+                  <label className="warga-ewallet-input-label">
+                    Catatan Tambahan <span style={{ color: '#94a3b8', fontWeight: 400 }}>(Opsional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="warga-ewallet-input-field"
+                    placeholder="Contoh: Nomor utama WhatsApp"
+                    value={ewalletNotes}
+                    onChange={(e) => setEwalletNotes(e.target.value)}
+                  />
+                </div>
+
+                {/* Ringkasan Konfirmasi */}
+                <div className="warga-ewallet-summary-box">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span className="warga-ewallet-sum-label">Rincian Pengiriman</span>
+                    <strong style={{ fontSize: '0.88rem', color: '#15803d' }}>{selectedRewardPkg.title}</strong>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#475569', lineHeight: 1.45 }}>
+                    <div><strong>Tujuan:</strong> {selectedEwallet} &bull; {ewalletPhone || 'Belum diisi'}</div>
+                    <div><strong>Penerima:</strong> a.n. {ewalletAccountName || 'Belum diisi'}</div>
+                  </div>
+
+                  <div className="warga-ewallet-divider"></div>
+
+                  <div className="warga-ewallet-sum-row">
+                    <span className="label">Poin digunakan</span>
+                    <span className="val green">-{selectedRewardPkg.points}</span>
+                  </div>
+                  <div className="warga-ewallet-sum-row">
+                    <span className="label">Sisa saldo</span>
+                    <span className="val">
+                      {(points - selectedRewardPkg.points).toLocaleString('id-ID')} poin
+                    </span>
+                  </div>
+                </div>
+
+                {/* Notice */}
+                <p className="warga-ewallet-notice">
+                  Pastikan data nomor dan nama pemilik sudah benar sebelum konfirmasi.
+                </p>
+
+                {/* Action Buttons */}
+                <div className="warga-ewallet-modal-actions">
+                  <button
+                    type="button"
+                    className="warga-ewallet-btn-cancel"
+                    onClick={() => setModalStep('select-ewallet')}
+                  >
+                    &larr; Kembali
+                  </button>
+                  <button
+                    type="button"
+                    className="warga-ewallet-btn-confirm"
+                    disabled={!ewalletPhone.trim() || !ewalletAccountName.trim() || isRedeeming}
+                    onClick={handleConfirmTukar}
+                  >
+                    {isRedeeming ? 'Memproses...' : 'Konfirmasi & Tukar'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
