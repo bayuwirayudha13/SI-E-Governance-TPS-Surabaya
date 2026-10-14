@@ -117,6 +117,13 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
   const displayAvatar = displayWargaName.charAt(0).toUpperCase();
 
   const [currentDateFormatted, setCurrentDateFormatted] = useState('');
+
+  useEffect(() => {
+    const now = new Date();
+    const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+    setCurrentDateFormatted(now.toLocaleDateString('id-ID', options));
+  }, []);
+
   const [points, setPoints] = useState(0);
   const [totalSetoran, setTotalSetoran] = useState(0);
   const [totalKg, setTotalKg] = useState(0);
