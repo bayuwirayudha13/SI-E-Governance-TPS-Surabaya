@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, DECIMAL, Date, Text, Enum, DateTime, func
+from sqlalchemy import Column, Integer, String, DECIMAL, Date, Text, Enum, DateTime
 from sqlalchemy.orm import relationship
 from core.database import Base
+from core.timezone import get_wib_now
 
 class TPS(Base):
     __tablename__ = "tps"
@@ -20,8 +21,8 @@ class TPS(Base):
     sumber_data = Column(String(100), default='Data internal DLH')
     tanggal_update = Column(Date, nullable=True)
     catatan = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, default=get_wib_now)
+    updated_at = Column(DateTime, default=get_wib_now, onupdate=get_wib_now)
 
     # Relationships
     kelurahans = relationship("TPSKelurahan", back_populates="tps", cascade="all, delete-orphan")

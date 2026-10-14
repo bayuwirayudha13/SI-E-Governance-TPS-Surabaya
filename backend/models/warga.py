@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, DateTime, func, Text
+from sqlalchemy import Column, Integer, String, DateTime, Text
 from core.database import Base
+from core.timezone import get_wib_now
 
 class Warga(Base):
     __tablename__ = "warga"
@@ -16,4 +17,4 @@ class Warga(Base):
     total_poin = Column(Integer, default=0)
     qr_token = Column(String(64), unique=True, index=True, nullable=True)
     qr_created_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=get_wib_now)

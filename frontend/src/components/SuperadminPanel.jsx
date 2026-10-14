@@ -124,7 +124,7 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
       if (response.ok) {
         const data = await response.json();
         setUsers(data);
-        setPetugasList(data.filter(u => u.role === 'petugas' || u.role === 'admin'));
+        setPetugasList(data.filter(u => u.role === 'petugas' || u.role === 'admin' || u.role === 'superadmin' || u.role === 'driver'));
       }
     } catch (err) {
       console.error('Load users error:', err);
@@ -953,13 +953,16 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                 <select
                   className="settings-input"
                   value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value, wilayah_kecamatan: '', wilayah_kelurahan: '' })}
                 >
                   <option value="admin">Admin</option>
+                  <option value="superadmin">Superadmin</option>
                   <option value="petugas">Petugas</option>
                   <option value="driver">Driver</option>
                 </select>
               </div>
+              {(newUser.role === 'petugas' || newUser.role === 'driver') && (
+              <>
               <div className="form-group">
                 <label className="form-label">Kecamatan Tugas</label>
                 <select className="settings-input" value={newUser.wilayah_kecamatan} onChange={(e)=>setNewUser({...newUser, wilayah_kecamatan:e.target.value, wilayah_kelurahan:''})}>
@@ -974,6 +977,8 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   {kelurahanOptions.map(k=><option key={k} value={k}>{k}</option>)}
                 </select>
               </div>
+              </>
+              )}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
                 <button type="button" onClick={() => setShowAddUserModal(false)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Batal</button>
                 <button type="submit" className="btn-add-primary" disabled={isLoading}>Simpan</button>
@@ -1008,12 +1013,15 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
               </div>
               <div className="form-group">
                 <label className="form-label">Role</label>
-                <select className="settings-input" value={editUser.role} onChange={(e)=>setEditUser({...editUser, role:e.target.value})}>
+                <select className="settings-input" value={editUser.role} onChange={(e)=>setEditUser({...editUser, role:e.target.value, wilayah_kecamatan: '', wilayah_kelurahan: ''})}>
                   <option value="admin">Admin</option>
+                  <option value="superadmin">Superadmin</option>
                   <option value="petugas">Petugas</option>
                   <option value="driver">Driver</option>
                 </select>
               </div>
+              {(editUser.role === 'petugas' || editUser.role === 'driver') && (
+              <>
               <div className="form-group">
                 <label className="form-label">Kecamatan Tugas</label>
                 <select className="settings-input" value={editUser.wilayah_kecamatan} onChange={(e)=>setEditUser({...editUser, wilayah_kecamatan:e.target.value, wilayah_kelurahan:''})}>
@@ -1028,6 +1036,8 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   {kelurahanOptions.map(k=><option key={k} value={k}>{k}</option>)}
                 </select>
               </div>
+              </>
+              )}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
                 <button type="button" onClick={() => setEditUser(null)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Batal</button>
                 <button type="submit" className="btn-add-primary" disabled={isLoading}>Simpan</button>

@@ -82,6 +82,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
 
   // Pickup History Table (matching Image 3)
   const [historyList, setHistoryList] = useState([]);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
 
   // Fetch data dari backend
   useEffect(() => {
@@ -108,21 +109,67 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
           setoran_id: s.id
         })));
 
-        // Format history list
-        setHistoryList(done.map(s => {
-          const waktuValidasi = s.waktu_validasi || s.waktu_setor;
-          const date = new Date(waktuValidasi);
-          const waktuStr = `${String(date.getHours()).padStart(2, '0')}.${String(date.getMinutes()).padStart(2, '0')}`;
-          
-          return {
-            id: s.id,
-            waktu: waktuStr,
-            warga: `Warga ID: ${s.warga_id}`,
-            berat: `${parseFloat(s.perkiraan_berat_kg || 0).toFixed(1).replace('.', ',')} kg`,
-            kondisi: s.jenis_sampah || 'Sampah',
-            status: 'Selesai'
-          };
-        }));
+        // Format history list dari scan-history dan setoran
+        try {
+          const histRes = await api.get('/api/petugas/scan-history');
+          if (histRes.data && Array.isArray(histRes.data) && histRes.data.length > 0) {
+            setHistoryList(histRes.data.map(h => {
+              const dt = h.scanned_at ? new Date(h.scanned_at) : new Date();
+              // Convert UTC to WIB (+7 hours)
+              const wibTime = new Date(dt.getTime() + (7 * 60 * 60 * 1000));
+              const waktuStr = `${String(wibTime.getUTCHours()).padStart(2, '0')}.${String(wibTime.getUTCMinutes()).padStart(2, '0')}`;
+              return {
+                id: h.id,
+                waktu: waktuStr,
+                warga: h.nama_warga || 'Warga',
+                alamat: h.alamat_warga || '-',
+                kelurahan: h.kelurahan || '-',
+                berat: h.berat || '2.5 kg',
+                kondisi: h.jenis_sampah || 'Sampah Disetor',
+                status: 'Selesai',
+                foto_bukti_url: h.foto_bukti_url,
+                catatan: h.catatan,
+                qr_token: h.qr_token
+              };
+            }));
+          } else {
+            setHistoryList(done.map(s => {
+              const waktuValidasi = s.waktu_validasi || s.waktu_setor;
+              const date = new Date(waktuValidasi);
+              const waktuStr = `${String(date.getHours()).padStart(2, '0')}.${String(date.getMinutes()).padStart(2, '0')}`;
+              return {
+                id: s.id,
+                waktu: waktuStr,
+                warga: `Warga ID: ${s.warga_id}`,
+                alamat: s.alamat_penjemputan || 'Jl. Mawar',
+                kelurahan: 'Sukamaju',
+                berat: `${parseFloat(s.perkiraan_berat_kg || 0).toFixed(1).replace('.', ',')} kg`,
+                kondisi: s.jenis_sampah || 'Sampah',
+                status: 'Selesai',
+                foto_bukti_url: s.foto_bukti_url,
+                catatan: s.catatan || 'Selesai diambil'
+              };
+            }));
+          }
+        } catch {
+          setHistoryList(done.map(s => {
+            const waktuValidasi = s.waktu_validasi || s.waktu_setor;
+            const date = new Date(waktuValidasi);
+            const waktuStr = `${String(date.getHours()).padStart(2, '0')}.${String(date.getMinutes()).padStart(2, '0')}`;
+            return {
+              id: s.id,
+              waktu: waktuStr,
+              warga: `Warga ID: ${s.warga_id}`,
+              alamat: s.alamat_penjemputan || 'Jl. Mawar',
+              kelurahan: 'Sukamaju',
+              berat: `${parseFloat(s.perkiraan_berat_kg || 0).toFixed(1).replace('.', ',')} kg`,
+              kondisi: s.jenis_sampah || 'Sampah',
+              status: 'Selesai',
+              foto_bukti_url: s.foto_bukti_url,
+              catatan: s.catatan || 'Selesai diambil'
+            };
+          }));
+        }
 
         // Update stats
         const totalKg = done.reduce((acc, curr) => acc + (parseFloat(curr.perkiraan_berat_kg) || 0), 0);
@@ -418,21 +465,33 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
     const beratVal = parseFloat(weightInput) || 2.5;
 
     try {
-      if (scannedToken && scannedToken !== 'demo-token' && fotoFile) {
-        const fd = new FormData();
-        fd.append('qr_token', scannedToken);
+      const fd = new FormData();
+      fd.append('qr_token', scannedToken || 'demo-token');
+      if (scannedWarga) {
+        fd.append('nama', scannedWarga.name || scannedWarga.displayName || 'Warga');
+        fd.append('alamat', scannedWarga.address || scannedWarga.alamatRumah || 'Jl. Mawar');
+        fd.append('kelurahan', scannedWarga.kelurahan || 'Sukamaju');
+        fd.append('jenis_sampah', selectedCondition || 'Bersih');
+        fd.append('berat', `${beratVal.toFixed(1)} kg`);
+      }
+      if (fotoFile) {
         fd.append('foto_sampah', fotoFile);
-        if (officerNote) fd.append('catatan', officerNote);
-        await api.post('/api/petugas/pengambilan', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      } else if (scannedWarga.setoran_id) {
+      }
+      if (officerNote) {
+        fd.append('catatan', officerNote);
+      }
+      
+      await api.post('/api/petugas/pengambilan', fd, { 
+        headers: { 'Content-Type': 'multipart/form-data' } 
+      });
+      
+      if (scannedWarga.setoran_id) {
         try {
           await api.patch(`/api/setoran/${scannedWarga.setoran_id}/status`, {
             status: 'Sudah Divalidasi',
             perkiraan_berat_kg: beratVal
           });
-        } catch {
-          // Fallback jika patch gagal di mode demo offline
-        }
+        } catch {}
       }
       showToast(`Pengambilan dari ${scannedWarga.name} berhasil dicatat!`);
     } catch (err) {
@@ -1070,16 +1129,19 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
             </div>
 
             <div className="petugas-table-card">
-            <h2 className="petugas-table-header-title">Riwayat Pengambilan Hari Ini</h2>
+            <h2 className="petugas-table-header-title">Riwayat Scan QR Pengambilan</h2>
             <div className="petugas-table-container">
               <table className="petugas-table">
                 <thead>
                   <tr>
                     <th>WAKTU</th>
                     <th>WARGA</th>
+                    <th>ALAMAT</th>
+                    <th>JENIS SAMPAH</th>
                     <th>BERAT</th>
-                    <th>KONDISI</th>
+                    <th>FOTO</th>
                     <th>STATUS</th>
+                    <th>AKSI</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1087,8 +1149,30 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                     <tr key={row.id}>
                       <td>{row.waktu}</td>
                       <td className="petugas-warga-cell">{row.warga}</td>
-                      <td>{row.berat}</td>
+                      <td style={{ fontSize: '0.82rem', color: '#475569' }}>{row.alamat || row.kelurahan}</td>
                       <td>{row.kondisi}</td>
+                      <td>{row.berat}</td>
+                      <td>
+                        {row.foto_bukti_url ? (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedHistoryItem(row)}
+                            style={{
+                              background: '#3b82f6',
+                              color: '#fff',
+                              border: 'none',
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              fontSize: '0.78rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Lihat Foto
+                          </button>
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>Tidak ada</span>
+                        )}
+                      </td>
                       <td>
                         <span
                           className={`petugas-table-badge ${
@@ -1098,12 +1182,124 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                           {row.status}
                         </span>
                       </td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedHistoryItem(row)}
+                          style={{
+                            background: '#10b981',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '4px 12px',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Lihat Detail
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             </div>
+
+            {/* Modal Detail History dengan Foto */}
+            {selectedHistoryItem && (
+              <div
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0,0,0,0.6)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 9999
+                }}
+                onClick={() => setSelectedHistoryItem(null)}
+              >
+                <div
+                  style={{
+                    background: '#fff',
+                    borderRadius: '12px',
+                    padding: '24px',
+                    maxWidth: '500px',
+                    width: '90%',
+                    maxHeight: '85vh',
+                    overflow: 'auto'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h3 style={{ marginBottom: '20px', fontSize: '1.2rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>Detail Pengambilan Sampah</h3>
+                  
+                  <div style={{ marginBottom: '10px' }}>
+                    <strong>ID:</strong> #{selectedHistoryItem.id}
+                  </div>
+                  <div style={{ marginBottom: '10px' }}>
+                    <strong>Waktu Scan:</strong> {selectedHistoryItem.waktu}
+                    {selectedHistoryItem.scanned_at && <span style={{ color: '#64748b', display: 'block', fontSize: '0.75rem' }}>{new Date(selectedHistoryItem.scanned_at).toLocaleString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
+                  </div>
+                  <div style={{ marginBottom: '10px' }}>
+                    <strong>Nama Warga:</strong> {selectedHistoryItem.warga}
+                  </div>
+                  <div style={{ marginBottom: '10px' }}>
+                    <strong>Alamat Lengkap:</strong> {selectedHistoryItem.alamat || selectedHistoryItem.kelurahan}
+                  </div>
+                  <div style={{ marginBottom: '10px' }}>
+                    <strong>Jenis Sampah:</strong> {selectedHistoryItem.kondisi}
+                  </div>
+                  <div style={{ marginBottom: '10px' }}>
+                    <strong>Berat:</strong> {selectedHistoryItem.berat}
+                  </div>
+                  <div style={{ marginBottom: '10px' }}>
+                    <strong>Status:</strong> <span className={`petugas-table-badge ${selectedHistoryItem.status === 'Selesai' ? 'completed' : 'pending'}`}>{selectedHistoryItem.status}</span>
+                  </div>
+                  {selectedHistoryItem.catatan && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <strong>Catatan Petugas:</strong>
+                      <div style={{ background: '#f1f5f9', padding: '8px', borderRadius: '6px', fontSize: '0.85rem', marginTop: '4px' }}>{selectedHistoryItem.catatan}</div>
+                    </div>
+                  )}
+
+                  {selectedHistoryItem.foto_bukti_url && (
+                    <div style={{ marginTop: '16px' }}>
+                      <strong>Foto Bukti Pengambilan:</strong>
+                      <div style={{ marginTop: '8px' }}>
+                        <img
+                          src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${selectedHistoryItem.foto_bukti_url}`}
+                          alt="Foto Sampah"
+                          style={{ width: '100%', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedHistoryItem(null)}
+                    style={{
+                      marginTop: '20px',
+                      width: '100%',
+                      background: '#059669',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '10px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 600
+                    }}
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>

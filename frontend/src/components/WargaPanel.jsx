@@ -282,6 +282,9 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
   const [depositSuccessMsg, setDepositSuccessMsg] = useState('');
   const [selectedTpsId, setSelectedTpsId] = useState('mawar');
   const [tpsList] = useState(TPS_LIST);
+  const [scanHistory, setScanHistory] = useState([]);
+  const [selectedScanFoto, setSelectedScanFoto] = useState(null);
+  const [showScanFotoModal, setShowScanFotoModal] = useState(false);
 
   const selectedTps = tpsList.find((t) => t.id === selectedTpsId) || tpsList[0];
 
@@ -576,6 +579,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
     loadWargaData();
     loadSetoranData();
     loadJadwalData();
+    loadScanHistory();
   }, [wargaId]);
 
   const loadWargaData = async () => {
@@ -604,6 +608,19 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
       }
     } catch (err) {
       console.error('Load setoran data error:', err);
+    }
+  };
+
+  const loadScanHistory = async () => {
+    try {
+      const storedUserId = localStorage.getItem('user_id');
+      const actualWargaId = storedUserId || wargaId;
+      const response = await api.get(`/api/petugas/scan-history?warga_id=${actualWargaId}`);
+      if (response.data && Array.isArray(response.data)) {
+        setScanHistory(response.data);
+      }
+    } catch (err) {
+      console.error('Load scan history error:', err);
     }
   };
 
@@ -694,6 +711,10 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>
                 <span>Tukar Reward</span>
               </button>
+              <button type="button" className={`warga-nav-btn ${activeMenu === 'riwayat-pengambilan' ? 'active' : ''}`} onClick={() => setActiveMenu('riwayat-pengambilan')}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 11H5m14 0a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2m14 0V9a2 2 0 0 0-2-2M5 11V9a2 2 0 0 1 2-2m0 0V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"></path></svg>
+                <span>Riwayat Pengambilan</span>
+              </button>
               <button type="button" className={`warga-nav-btn ${activeMenu === 'qr-status' ? 'active' : ''}`} onClick={() => setActiveMenu('qr-status')}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="3" height="3" fill="currentColor"></rect><rect x="14" y="7" width="3" height="3" fill="currentColor"></rect><rect x="7" y="14" width="3" height="3" fill="currentColor"></rect><rect x="14" y="14" width="3" height="3" fill="currentColor"></rect></svg>
                 <span>QR &amp; Status Validasi</span>
@@ -728,6 +749,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
               {activeMenu === 'jadwal' && 'Jadwal Pengambilan'}
               {activeMenu === 'setor' && 'Setor & Reward'}
               {activeMenu === 'tukar-reward' && 'Tukar Reward'}
+              {activeMenu === 'riwayat-pengambilan' && 'Riwayat Pengambilan Sampah'}
               {activeMenu === 'qr-status' && 'QR & Status Validasi'}
               {activeMenu === 'panduan' && 'Panduan Pemilahan'}
               {activeMenu === 'tracking' && 'Tracking TPS'}
@@ -1029,6 +1051,90 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB: RIWAYAT PENGAMBILAN SAMPAH */}
+        {/* ========================================================= */}
+        {activeMenu === 'riwayat-pengambilan' && (
+          <div className="warga-content-body">
+            <h3 className="warga-section-title">Riwayat Pengambilan Sampah</h3>
+            <p className="warga-section-subtitle">Daftar pengambilan sampah yang telah dilakukan petugas</p>
+
+            {scanHistory.length === 0 ? (
+              <div className="warga-empty-state" style={{ marginTop: '40px' }}>
+                <div className="warga-empty-icon" style={{ color: '#94a3b8' }}>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M19 11H5m14 0a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2m14 0V9a2 2 0 0 0-2-2M5 11V9a2 2 0 0 1 2-2m0 0V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2" />
+                  </svg>
+                </div>
+                <p style={{ color: '#94a3b8', marginTop: '16px' }}>Belum ada riwayat pengambilan</p>
+              </div>
+            ) : (
+              <div className="warga-reward-history-list">
+                {scanHistory.map((item, idx) => (
+                  <div key={item.id || idx} className="warga-reward-history-item">
+                    <div className="warga-reward-history-left">
+                      <div className="warga-reward-history-icon" style={{ background: '#d1fae5', color: '#059669' }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M19 11H5m14 0a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2m14 0V9a2 2 0 0 0-2-2M5 11V9a2 2 0 0 1 2-2m0 0V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h5 className="warga-reward-history-name">Pengambilan Sampah</h5>
+                        <p className="warga-reward-history-date">
+                          {item.id} &bull; {item.nama_warga || 'Warga'} • {item.kelurahan || '-'}
+                        </p>
+                        <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+                          {item.jenis_sampah || '-'} • {item.berat || '-'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="warga-reward-history-right">
+                      <span className="warga-reward-history-date" style={{ fontSize: '0.75rem' }}>
+                        {item.scanned_at ? (() => {
+                          const dt = new Date(item.scanned_at);
+                          const wibTime = new Date(dt.getTime() + (7 * 60 * 60 * 1000));
+                          return wibTime.toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
+                        })() : '-'}
+                      </span>
+                      {item.foto_bukti_url && (
+                        <button
+                          onClick={() => { setSelectedScanFoto(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${item.foto_bukti_url}`); setShowScanFotoModal(true); }}
+                          style={{ marginTop: '8px', padding: '4px 12px', fontSize: '0.7rem', background: '#e0f2fe', color: '#0284c7', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          Lihat Foto
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {showScanFotoModal && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }} onClick={() => setShowScanFotoModal(false)}>
+                <div style={{ maxWidth: '500px', width: '90%', background: '#fff', borderRadius: '12px', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+                  <div style={{ padding: '16px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <h4 style={{ margin: 0 }}>Foto Bukti Pengambilan</h4>
+                    <button onClick={() => setShowScanFotoModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>×</button>
+                  </div>
+                  <div style={{ padding: '24px' }}>
+                    {selectedScanFoto && (
+                      <img src={selectedScanFoto} alt="Foto Bukti" style={{ width: '100%', borderRadius: '8px', border: '1px solid #e2e8f0' }} onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'block'; }} />
+                    )}
+                    <div style={{ display: 'none', background: '#f1f5f9', padding: '32px', borderRadius: '8px', textAlign: 'center', color: '#64748b' }}>
+                      <p>Gagal memuat foto</p>
+                    </div>
+                  </div>
+                  <div style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
+                    <button onClick={() => setShowScanFotoModal(false)} style={{ padding: '8px 24px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Tutup</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
