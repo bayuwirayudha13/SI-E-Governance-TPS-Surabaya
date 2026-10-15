@@ -64,6 +64,21 @@ app.add_middleware(
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+app.include_router(auth_router, prefix="/api")
+app.include_router(qr_router, prefix="/api")
+app.include_router(pengambilan_router, prefix="/api")
+app.include_router(tps_router, prefix="/api")
+app.include_router(wilayah_router, prefix="/api")
+app.include_router(laporan_router, prefix="/api")
+app.include_router(setoran_router, prefix="/api")
+app.include_router(jadwal_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
+
+# Mount frontend dist folder
+frontend_dist_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if os.path.exists(frontend_dist_path):
+    app.mount("/", StaticFiles(directory=frontend_dist_path, html=True), name="frontend")
+
 # Database
 Base.metadata.create_all(bind=engine)
 
@@ -71,21 +86,6 @@ Base.metadata.create_all(bind=engine)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Schemas
-class RegisterRequest(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    email: str
-    password: str
-    full_name: str
-    alamat_rumah: Optional[str] = None
-    kecamatan: Optional[str] = None
-    kelurahan: Optional[str] = None
-
-class LoginRequest(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    email: str
-    password: str
-    username: Optional[str] = None
-
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
@@ -100,22 +100,6 @@ class UserResponse(BaseModel):
     created_at: datetime | None = None
 
 # Utilities
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-def create_access_token(data: dict, expires_delta: timedelta = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
 def get_current_user(token: str = None, db: Session = Depends(get_db)):
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -189,146 +173,6 @@ def root():
     return {"message": "SampahPintar API - Connected to MySQL"}
 
 
-@app.post("/api/auth/register")
-def register(request: RegisterRequest, db: Session = Depends(get_db)):
-    try:
-        # Check if user exists
-        existing_user = db.query(Warga).filter(
-            Warga.email == request.email
-        ).first()
-
-        if existing_user:
-            raise HTTPException(
-                status_code=400,
-                detail="Email sudah terdaftar"
-            )
-
-        # Hash password
-        hashed_password = get_password_hash(request.password)
-
-        # Create user
-        user = Warga(
-            email=request.email,
-            password_hash=hashed_password,
-            nama=request.full_name,
-            alamat_rumah=request.alamat_rumah,
-            kecamatan=request.kecamatan,
-            kelurahan=request.kelurahan,
-            email_verified=0,
-            qr_token=secrets.token_hex(32)
-        )
-
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-
-        # Generate OTP
-        otp = generate_otp()
-
-        # Save OTP
-        save_otp(
-            user.email,
-            otp
-        )
-
-        # Send OTP
-        try:
-            send_otp_email(
-                user.email,
-                otp
-            )
-
-        except Exception as e:
-            db.delete(user)
-            db.commit()
-
-            raise HTTPException(
-                status_code=500,
-                detail=f"Gagal mengirim OTP: {str(e)}"
-            )
-
-        return {
-            "message": "Registrasi berhasil. OTP telah dikirim ke email.",
-            "email": user.email
-        }
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        db.rollback()
-
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error register: {str(e)}"
-        )
-
-@app.post("/api/auth/login")
-def login(request: LoginRequest, db: Session = Depends(get_db)):
-    try:
-        login_id = request.email or request.username
-        if not login_id:
-            raise HTTPException(status_code=400, detail="Email atau username wajib diisi")
-
-        # Cek di tabel users (admin, petugas, driver, superadmin)
-        user = db.query(User).filter(
-            (User.email == login_id) | (User.username == login_id)
-        ).first()
-        
-        if user and verify_password(request.password, user.hashed_password):
-            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-            access_token = create_access_token(
-                data={"sub": user.email, "role": user.role},
-                expires_delta=access_token_expires
-            )
-            return {
-                "access_token": access_token,
-                "token_type": "bearer",
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    "full_name": user.nama_lengkap,
-                    "nama_lengkap": user.nama_lengkap,
-                    "nama": user.nama_lengkap,
-                    "role": user.role,
-                    "username": user.username,
-                    "wilayah_kecamatan": getattr(user, "wilayah_kecamatan", None),
-                    "wilayah_kelurahan": getattr(user, "wilayah_kelurahan", None),
-                    "wilayah_kota": getattr(user, "wilayah_kota", None),
-                    "foto_url": getattr(user, "foto_url", None),
-                }
-            }
-
-        # Fallback: cek Warga (Email)
-        warga = db.query(Warga).filter(Warga.email == login_id).first()
-        if warga and verify_password(request.password, warga.password_hash):
-            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-            access_token = create_access_token(
-                data={"sub": warga.email, "role": "warga"},
-                expires_delta=access_token_expires
-            )
-            return {
-                "access_token": access_token,
-                "token_type": "bearer",
-                "user": {
-                    "id": warga.id,
-                    "email": warga.email,
-                    "full_name": warga.nama,
-                    "role": "warga",
-                    "total_poin": warga.total_poin,
-                    "kecamatan": warga.kecamatan,
-                    "kelurahan": warga.kelurahan,
-                    "nama_lengkap": warga.nama,
-                    "nama": warga.nama
-                }
-            }
-
-        raise HTTPException(status_code=401, detail="Email/Username atau password salah")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error login: {str(e)}")
-
 from fastapi import Header
 
 @app.get("/api/auth/me")
@@ -341,20 +185,6 @@ def get_me(
     token = authorization.replace("Bearer ", "")
     user = get_current_user(token, db)
     return user
-
-@app.post("/api/auth/logout")
-def logout():
-    return {"message": "Logged out successfully"}
-
-app.include_router(auth_router, prefix="/api")
-app.include_router(qr_router, prefix="/api")
-app.include_router(pengambilan_router, prefix="/api")
-app.include_router(tps_router, prefix="/api")
-app.include_router(wilayah_router, prefix="/api")
-app.include_router(laporan_router, prefix="/api")
-app.include_router(setoran_router, prefix="/api")
-app.include_router(jadwal_router, prefix="/api")
-app.include_router(admin_router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn
