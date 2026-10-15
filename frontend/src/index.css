@@ -1787,9 +1787,31 @@ img {
 
 @media (max-width: 768px) {
 
-  .nav-links,
-  .nav-actions .btn-pill-dark {
+  .nav-links {
     display: none;
+  }
+
+  .nav-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .nav-actions .btn-pill-dark {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+  }
+
+  .nav-actions .btn-pill-dark span {
+    display: none;
+  }
+
+  .nav-actions .btn-pill-dark svg {
+    width: 18px;
+    height: 18px;
   }
 
   .menu-toggle {

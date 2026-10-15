@@ -11,19 +11,13 @@ import os
 import secrets
 from dotenv import load_dotenv
 from fastapi.staticfiles import StaticFiles
-from routes.qr_routes import router as qr_router
-from routes.pengambilan_routes import router as pengambilan_router
-from auth.routes import router as auth_router
+
+load_dotenv()
+
+# Import core database FIRST
 from core.database import engine, SessionLocal, Base, get_db
-from auth.otp import generate_otp, save_otp
-from services.email_service import send_otp_email
-from routes.tps_routes import router as tps_router
-from routes.wilayah_routes import router as wilayah_router
-from routes.laporan_routes import router as laporan_router
-from routes.setoran_routes import router as setoran_router
-from routes.jadwal_routes import router as jadwal_router
-from routes.admin_routes import router as admin_router
-# Import models untuk registrasi
+
+# Import ALL models BEFORE routes (ensure FK references resolve)
 from models.warga import Warga
 from models.tps import TPS
 from models.tps_kelurahan import TPSKelurahan
@@ -34,8 +28,20 @@ from models.laporan import LaporanWarga
 from models.setoran import SetoranSampah
 from models.jadwal import JadwalPengambilan
 from models.pengambilan import PengambilanSampah
+from models.scan_history import ScanHistory
 
-load_dotenv()
+# Now import routes
+from routes.qr_routes import router as qr_router
+from routes.pengambilan_routes import router as pengambilan_router
+from auth.routes import router as auth_router
+from auth.otp import generate_otp, save_otp
+from services.email_service import send_otp_email
+from routes.tps_routes import router as tps_router
+from routes.wilayah_routes import router as wilayah_router
+from routes.laporan_routes import router as laporan_router
+from routes.setoran_routes import router as setoran_router
+from routes.jadwal_routes import router as jadwal_router
+from routes.admin_routes import router as admin_router
 
 # Config
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")

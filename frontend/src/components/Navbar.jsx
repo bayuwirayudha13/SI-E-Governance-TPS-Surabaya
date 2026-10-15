@@ -157,6 +157,8 @@ export default function Navbar({ onOpenLoginModal, onOpenTpsModal: _onOpenTpsMod
           </button>
         </div>
       </div>
+
+
     </header>
   );
 }

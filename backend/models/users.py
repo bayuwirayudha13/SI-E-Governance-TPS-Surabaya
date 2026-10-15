@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Enum, DateTime, Boolean, func
+from sqlalchemy import Column, Integer, String, Enum, DateTime, Boolean
 from core.database import Base
+from core.timezone import get_wib_now
 
 class User(Base):
     __tablename__ = "users"
@@ -16,7 +17,7 @@ class User(Base):
     wilayah_kelurahan = Column(String(100), nullable=True)
     wilayah_kota = Column(String(50), nullable=True, default="Surabaya")
     foto_url = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, default=get_wib_now)
+    updated_at = Column(DateTime, default=get_wib_now, onupdate=get_wib_now)
 
 # Hapus model Admin & PetugasPengangkut karena sudah jadi satu di User
