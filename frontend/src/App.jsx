@@ -69,7 +69,10 @@ export default function App() {
   // Sync hash routing (support #auth, #masuk, #daftar, #admin, #superadmin, #warga)
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.toLowerCase();
+      let hash = window.location.hash.toLowerCase();
+      // Remove leading slash if present (e.g., #/warga -> #warga)
+      hash = hash.replace(/^#\//, '#');
+      
       if (hash === '#admin' || hash === '#superadmin') {
         setCurrentPage('admin');
       } else if (hash === '#warga' || hash === '#portal-warga' || hash === '#warga-dashboard' || hash === '#qr' || hash === '#qr-status' || hash === '#validasi' || hash === '#tracking') {

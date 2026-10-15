@@ -229,6 +229,8 @@ const DEFAULT_TUKAR_HISTORY = [
 export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
   const [dbUser, setDbUser] = useState(currentUser || null);
   const [userData, setUserData] = useState(null);
+  const [selectedKelurahan, setSelectedKelurahan] = useState(currentUser?.kelurahan || 'Kelurahan');
+  const [kelurahanTpsList, setKelurahanTpsList] = useState(() => getTpsByKelurahan(currentUser?.kelurahan || 'Kelurahan'));
   const [activeMenu, setActiveMenu] = useState(() => {
     const hash = window.location.hash.toLowerCase();
     if (hash === '#dashboard' || hash === '#warga') return 'dashboard';
@@ -246,6 +248,12 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
       try { setDbUser(JSON.parse(authUser)); } catch (e) { }
     }
   }, [currentUser]);
+
+  // Update TPS list when kelurahan changes
+  useEffect(() => {
+    const list = getTpsByKelurahan(selectedKelurahan);
+    setKelurahanTpsList(list.length > 0 ? list : TPS_SURABAYA_ALL.slice(0, 6));
+  }, [selectedKelurahan]);
 
   const activeUser = userData || dbUser || currentUser;
   const displayWargaName = activeUser?.nama_lengkap || activeUser?.nama || 'Warga';
@@ -799,7 +807,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
             </div>
             <div className="warga-two-col-grid">
               <div className="warga-panel-card">
-                <h3 className="warga-card-title">TPS Terdekat Saya — Kel. {selectedKelurahan}</h3>
+                <h3 className="warga-card-title">TPS Terdekat Saya — Kel. {selectedKelurahan || user?.kelurahan || 'Kelurahan'}</h3>
                 <div className="warga-tps-progress-list">
                   {kelurahanTpsList.slice(0, 3).map((tps) => {
                     const isCritical = tps.statusColor === 'red' || tps.capacity >= 90;
