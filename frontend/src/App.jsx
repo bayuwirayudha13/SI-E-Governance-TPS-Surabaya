@@ -72,7 +72,7 @@ export default function App() {
       const hash = window.location.hash.toLowerCase();
       if (hash === '#admin' || hash === '#superadmin') {
         setCurrentPage('admin');
-      } else if (hash === '#warga' || hash === '#portal-warga' || hash === '#warga-dashboard' || hash === '#qr' || hash === '#qr-status' || hash === '#validasi') {
+      } else if (hash === '#warga' || hash === '#portal-warga' || hash === '#warga-dashboard' || hash === '#qr' || hash === '#qr-status' || hash === '#validasi' || hash === '#tracking') {
         setCurrentPage('warga');
       } else if (
         hash === '#petugas' ||

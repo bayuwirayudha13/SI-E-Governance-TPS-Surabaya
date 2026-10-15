@@ -2,6 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import QRCode from 'qrcode';
 import './WargaPanel.css';
 import { api } from '../api/client';
+import KelurahanMap from './KelurahanMap';
+import {
+  TPS_SURABAYA_ALL,
+  KELURAHAN_SURABAYA_ALL,
+  KECAMATAN_SURABAYA_LIST,
+  getTpsByKelurahan,
+  getTpsByKecamatan
+} from '../data/tpsSurabayaData';
 
 // Real Scannable QR Code Component
 function RealQRCode({ text, size = 210, color = "#166534", onGenerated }) {
@@ -280,10 +288,46 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
   const [selectedPlastic, setSelectedPlastic] = useState(null);
   const [weightInput, setWeightInput] = useState('');
   const [depositSuccessMsg, setDepositSuccessMsg] = useState('');
-  const [selectedTpsId, setSelectedTpsId] = useState('mawar');
-  const [tpsList] = useState(TPS_LIST);
+  
+  // Kelurahan & Real TPS tracking state from Excel
+  const [selectedKelurahan, setSelectedKelurahan] = useState(() => {
+    return displayKelurahanRaw || 'Tembok Dukuh';
+  });
 
-  const selectedTps = tpsList.find((t) => t.id === selectedTpsId) || tpsList[0];
+  useEffect(() => {
+    if (displayKelurahanRaw) {
+      setSelectedKelurahan(displayKelurahanRaw);
+    }
+  }, [displayKelurahanRaw]);
+
+  // Real TPS serving the selected Kelurahan
+  const kelurahanTpsList = useMemo(() => {
+    const list = getTpsByKelurahan(selectedKelurahan);
+    if (list && list.length > 0) return list;
+    if (displayKecamatanRaw) {
+      const kecList = getTpsByKecamatan(displayKecamatanRaw);
+      if (kecList && kecList.length > 0) return kecList;
+    }
+    return TPS_SURABAYA_ALL.slice(0, 6);
+  }, [selectedKelurahan, displayKecamatanRaw]);
+
+  const [selectedTpsId, setSelectedTpsId] = useState('');
+
+  useEffect(() => {
+    if (kelurahanTpsList.length > 0) {
+      if (!selectedTpsId || !kelurahanTpsList.some((t) => t.id === selectedTpsId)) {
+        setSelectedTpsId(kelurahanTpsList[0].id);
+      }
+    }
+  }, [kelurahanTpsList, selectedTpsId]);
+
+  const selectedTps = useMemo(() => {
+    return (
+      kelurahanTpsList.find((t) => t.id === selectedTpsId) ||
+      kelurahanTpsList[0] ||
+      TPS_SURABAYA_ALL[0]
+    );
+  }, [kelurahanTpsList, selectedTpsId]);
 
   // =========================================================
   // RINCIAN PEMERIKSAAN & REAL QR CODE STATE
@@ -772,17 +816,36 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
             </div>
             <div className="warga-two-col-grid">
               <div className="warga-panel-card">
-                <h3 className="warga-card-title">TPS Terdekat Saya</h3>
+                <h3 className="warga-card-title">TPS Terdekat Saya — Kel. {selectedKelurahan}</h3>
                 <div className="warga-tps-progress-list">
-                  {tpsList.slice(0, 3).map(tps => (
-                    <div key={tps.id} className="warga-tps-item">
-                      <div className="warga-tps-item-head">
-                        <div className="warga-tps-name-row"><span className={`warga-dot ${tps.color}`}></span><span className="warga-tps-name">{tps.name}</span></div>
-                        <span className={`warga-tps-pct ${tps.color}`}>{tps.capacity}%</span>
+                  {kelurahanTpsList.slice(0, 3).map((tps) => {
+                    const isCritical = tps.statusColor === 'red' || tps.capacity >= 90;
+                    const isWarning = tps.statusColor === 'yellow' || (tps.capacity >= 75 && tps.capacity < 90);
+                    const colorClass = isCritical ? 'red' : isWarning ? 'yellow' : 'green';
+                    return (
+                      <div 
+                        key={tps.id} 
+                        className="warga-tps-item" 
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => {
+                          setSelectedTpsId(tps.id);
+                          setActiveMenu('tracking');
+                        }}
+                        title="Klik untuk melihat di peta"
+                      >
+                        <div className="warga-tps-item-head">
+                          <div className="warga-tps-name-row">
+                            <span className={`warga-dot ${colorClass}`}></span>
+                            <span className="warga-tps-name">{tps.nama}</span>
+                          </div>
+                          <span className={`warga-tps-pct ${colorClass}`}>{tps.capacity}%</span>
+                        </div>
+                        <div className="warga-bar-track">
+                          <div className={`warga-bar-fill ${colorClass}`} style={{ width: `${tps.capacity}%` }}></div>
+                        </div>
                       </div>
-                      <div className="warga-bar-track"><div className={`warga-bar-fill ${tps.color}`} style={{ width: `${tps.capacity}%` }}></div></div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <button type="button" className="warga-inline-link-btn" onClick={() => setActiveMenu('tracking')}>Lihat peta TPS &rarr;</button>
               </div>
@@ -1292,61 +1355,57 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
         )}
         {activeMenu === 'tracking' && (
           <div className="warga-content-body">
+            {/* Real TPS Chips of Selected Kelurahan */}
             <div className="warga-panel-card" style={{ padding: '16px 20px', marginBottom: '18px' }}>
-              <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#334155', marginBottom: '10px' }}>Pilih TPS terdekat dari lokasi kamu:</div>
-              <div className="warga-tps-chip-row">
-                {tpsList.map((tps) => (
-                  <button key={tps.id} type="button" className={`warga-tps-chip ${selectedTpsId === tps.id ? 'active' : ''}`} onClick={() => setSelectedTpsId(tps.id)}><span className="warga-chip-dot" style={{ backgroundColor: tps.dotColor }}></span><span>{tps.name} ({tps.capacity}%)</span></button>
-                ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#334155' }}>
+                  Pilih titik TPS yang melayani <strong>Kelurahan {selectedKelurahan}</strong>:
+                </div>
+                <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                  Menampilkan {kelurahanTpsList.length} TPS terverifikasi DLH
+                </span>
+              </div>
+              <div className="warga-tps-chip-row" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {kelurahanTpsList.map((tps) => {
+                  const isCritical = tps.statusColor === 'red' || tps.capacity >= 90;
+                  const isWarning = tps.statusColor === 'yellow' || (tps.capacity >= 75 && tps.capacity < 90);
+                  const colorClass = isCritical ? 'red' : isWarning ? 'yellow' : 'green';
+                  return (
+                    <button
+                      key={tps.id}
+                      type="button"
+                      className={`warga-tps-chip ${selectedTpsId === tps.id ? 'active' : ''}`}
+                      onClick={() => setSelectedTpsId(tps.id)}
+                    >
+                      <span
+                        className="warga-chip-dot"
+                        style={{ backgroundColor: tps.dotColor || (colorClass === 'red' ? '#ef4444' : colorClass === 'yellow' ? '#f59e0b' : '#16a34a') }}
+                      ></span>
+                      <span>{tps.nama} ({tps.capacity}%)</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
+
             <div className="warga-tracking-grid">
-              <div className="warga-panel-card" style={{ flex: 1.6 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                  <div><h3 className="warga-card-title">Peta TPS Kelurahan</h3><span style={{ fontSize: '0.8rem', color: '#64748b' }}>Real-time &bull; 6 titik TPS</span></div>
-                  <a href="https://maps.google.com" target="_blank" rel="noreferrer" style={{ fontSize: '0.82rem', color: '#0284c7', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}><span>🗺️</span><span>Buka Google Maps</span></a>
-                </div>
-                <div className="warga-map-viewport">
-                  <div className="warga-map-live-tag"><span className="warga-live-pulse-dot"></span><span>LIVE &bull; 5 mnt lalu</span></div>
-                  <svg viewBox="0 0 540 320" className="warga-svg-map">
-                    <rect width="540" height="320" fill="#f0fdf4" rx="10" />
-                    <ellipse cx="140" cy="90" rx="45" ry="25" fill="#dcfce7" opacity="0.8" />
-                    <ellipse cx="440" cy="110" rx="55" ry="30" fill="#dcfce7" opacity="0.8" />
-                    <ellipse cx="210" cy="245" rx="60" ry="28" fill="#dcfce7" opacity="0.7" />
-                    <ellipse cx="460" cy="270" rx="50" ry="22" fill="#bae6fd" opacity="0.8" />
-                    <line x1="40" y1="60" x2="500" y2="280" stroke="#cbd5e1" strokeWidth="6" strokeLinecap="round" />
-                    <line x1="160" y1="20" x2="380" y2="300" stroke="#cbd5e1" strokeWidth="5" strokeLinecap="round" />
-                    <line x1="30" y1="200" x2="520" y2="100" stroke="#cbd5e1" strokeWidth="5" strokeLinecap="round" />
-                    <line x1="70" y1="140" x2="480" y2="220" stroke="#cbd5e1" strokeWidth="4" strokeLinecap="round" />
-                    <line x1="320" y1="240" x2="260" y2="215" stroke="#16a34a" strokeWidth="2.5" strokeDasharray="5,4" />
-                    {tpsList.map((tps) => (
-                      <g key={tps.id} className="warga-map-pin-group" onClick={() => setSelectedTpsId(tps.id)} style={{ cursor: 'pointer' }}>
-                        {selectedTpsId === tps.id && <circle cx={tps.x} cy={tps.y} r="16" fill="none" stroke={tps.dotColor} strokeWidth="2" opacity="0.8" className="warga-svg-pulse-ring" />}
-                        <circle cx={tps.x} cy={tps.y} r="10" fill="#ffffff" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))" />
-                        <circle cx={tps.x} cy={tps.y} r="6" fill={tps.dotColor} />
-                      </g>
-                    ))}
-                  </svg>
-                  <div className="warga-map-legend-box">
-                    <div className="warga-legend-title">LEGENDA TPS</div>
-                    <div className="warga-legend-item">
-                      <span className="warga-dot green"></span>
-                      <span>Aman &lt; 75%</span>
-                    </div>
-                    <div className="warga-legend-item">
-                      <span className="warga-dot yellow"></span>
-                      <span>Hampir Penuh &gt; 75%</span>
-                    </div>
-                    <div className="warga-legend-item">
-                      <span className="warga-dot red"></span>
-                      <span>Overload &gt; 90%</span>
-                    </div>
-                    <div className="warga-legend-item" style={{ marginTop: '3px' }}>
-                      <span style={{ color: '#16a34a', fontWeight: 'bold' }}>- - &gt;</span>
-                      <span style={{ fontSize: '0.68rem', color: '#64748b' }}>Rute Pengalihan Otomatis</span>
-                    </div>
-                  </div>
-                </div>
+              {/* Left Column: Interactive Leaflet Kelurahan Map */}
+              <div className="warga-panel-card" style={{ flex: 1.6, padding: '16px' }}>
+                <KelurahanMap
+                  tpsList={kelurahanTpsList}
+                  selectedTpsId={selectedTpsId}
+                  onSelectTps={(tps) => setSelectedTpsId(tps.id)}
+                  selectedKelurahan={selectedKelurahan}
+                  onSelectKelurahan={(kel) => {
+                    setSelectedKelurahan(kel);
+                    const nextList = getTpsByKelurahan(kel);
+                    if (nextList.length > 0) setSelectedTpsId(nextList[0].id);
+                  }}
+                  allKelurahanList={KELURAHAN_SURABAYA_ALL}
+                  allKecamatanList={KECAMATAN_SURABAYA_LIST}
+                  userRegisteredKelurahan={displayKelurahanRaw}
+                  currentKecamatan={selectedTps?.kecamatan || displayKecamatanRaw}
+                />
               </div>
 
               {/* Right Column: 2 Stacked Status Detail Cards */}
@@ -1354,49 +1413,108 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                 {/* Card 1: Selected TPS Details & Progress */}
                 <div className="warga-panel-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>TPS Pilihan</span>
-                    <span className={`warga-status-tag ${selectedTps.color}`}>
-                      {selectedTps.color === 'green' && '✓ AMAN'}
-                      {selectedTps.color === 'yellow' && '⚠️ WASPADA'}
-                      {selectedTps.color === 'red' && '⛔ OVERLOAD'}
+                    <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
+                      TPS Terpilih &bull; Kel. {selectedKelurahan}
+                    </span>
+                    <span className={`warga-status-tag ${selectedTps.statusColor || 'green'}`}>
+                      {selectedTps.statusText ? selectedTps.statusText.toUpperCase() : (selectedTps.status || 'AMAN')}
                     </span>
                   </div>
 
-                  <h4 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', marginBottom: '12px' }}>
-                    {selectedTps.name}
+                  <h4 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>
+                    {selectedTps.nama}
                   </h4>
+                  <div style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '12px' }}>
+                    📍 {selectedTps.lokasi}
+                  </div>
 
                   <div className="warga-bar-track" style={{ height: '8px', marginBottom: '8px' }}>
                     <div
-                      className={`warga-bar-fill ${selectedTps.color}`}
+                      className={`warga-bar-fill ${selectedTps.statusColor || 'green'}`}
                       style={{ width: `${selectedTps.capacity}%` }}
                     ></div>
                   </div>
 
-                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569' }}>
-                    {selectedTps.capacity}% terisi
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 600, color: '#475569', marginBottom: '14px' }}>
+                    <span>Kapasitas Terisi</span>
+                    <span>{selectedTps.capacity}%</span>
+                  </div>
+
+                  {/* Real TPS specs from Excel */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', padding: '10px 12px', background: '#f8fafc', borderRadius: '10px', fontSize: '0.78rem', marginBottom: '14px', border: '1px solid #e2e8f0' }}>
+                    <div><span style={{ color: '#64748b' }}>Jenis:</span> <strong>{selectedTps.jenisTps || 'Compactor'}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Daya Tampung:</span> <strong>{selectedTps.dayaTampungM3} m³</strong></div>
+                    <div style={{ gridColumn: 'span 2' }}><span style={{ color: '#64748b' }}>Kontainer:</span> <strong>{selectedTps.jumlahContainer}</strong></div>
+                    <div style={{ gridColumn: 'span 2' }}><span style={{ color: '#64748b' }}>Status Operasional:</span> <strong style={{ color: selectedTps.status === 'Aktif' ? '#16a34a' : '#ef4444' }}>{selectedTps.status || 'Aktif'}</strong></div>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${selectedTps.lat},${selectedTps.lng}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        background: '#0284c7',
+                        color: '#ffffff',
+                        fontWeight: 600,
+                        fontSize: '0.82rem',
+                        textDecoration: 'none'
+                      }}
+                    >
+                      <span>🧭</span>
+                      <span>Rute Google Maps</span>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => alert(`Laporan kondisi TPS ${selectedTps.nama} telah diteruskan ke Satgas Pengawas DLH Surabaya.`)}
+                      style={{
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        background: '#f1f5f9',
+                        color: '#334155',
+                        border: '1px solid #cbd5e1',
+                        fontWeight: 600,
+                        fontSize: '0.82rem',
+                        cursor: 'pointer'
+                      }}
+                      title="Lapor kendala ke DLH Surabaya"
+                    >
+                      ⚠️ Lapor
+                    </button>
                   </div>
                 </div>
 
                 {/* Card 2: Recommendation Info Banner */}
-                <div className={`warga-recommendation-card ${selectedTps.color}`}>
+                <div className={`warga-recommendation-card ${selectedTps.statusColor || 'green'}`}>
                   <div className="warga-rec-icon-box">
-                    {selectedTps.color === 'green' && '✅'}
-                    {selectedTps.color === 'yellow' && '⚠️'}
-                    {selectedTps.color === 'red' && '⛔'}
+                    {selectedTps.statusColor === 'green' && '✅'}
+                    {selectedTps.statusColor === 'yellow' && '⚠️'}
+                    {selectedTps.statusColor === 'red' && '⛔'}
+                    {selectedTps.statusColor === 'gray' && 'ℹ️'}
                   </div>
                   <h5 className="warga-rec-title">
-                    {selectedTps.color === 'green' && 'TPS ini masih aman!'}
-                    {selectedTps.color === 'yellow' && 'Kapasitas Mendekati Batas!'}
-                    {selectedTps.color === 'red' && 'TPS Sedang Overload!'}
+                    {selectedTps.statusColor === 'green' && 'TPS ini aman untuk disetor!'}
+                    {selectedTps.statusColor === 'yellow' && 'Kapasitas Mendekati Batas!'}
+                    {selectedTps.statusColor === 'red' && 'TPS Sedang Overload!'}
+                    {selectedTps.statusColor === 'gray' && 'TPS Sedang Tidak Aktif'}
                   </h5>
                   <p className="warga-rec-desc">
-                    {selectedTps.color === 'green' &&
-                      `Kamu bisa langsung menyetorkan sampah terpilah ke ${selectedTps.name}.`}
-                    {selectedTps.color === 'yellow' &&
-                      `Disarankan menyetor sebelum pukul 12:00 atau beralih ke TPS Mawar terdekat.`}
-                    {selectedTps.color === 'red' &&
-                      `Sistem secara otomatis mengalihkan rute Anda ke TPS Flamboyan / TPS Mawar terdekat.`}
+                    {selectedTps.statusColor === 'green' &&
+                      `Kapasitas penampungan di ${selectedTps.nama} masih dalam kondisi aman. Anda dapat menyetorkan sampah langsung hari ini.`}
+                    {selectedTps.statusColor === 'yellow' &&
+                      `Kapasitas sudah mencapai ${selectedTps.capacity}%. Disarankan menyetorkan sampah sebelum jam sibuk pukul 12:00 WIB.`}
+                    {selectedTps.statusColor === 'red' &&
+                      `Rute dialihkan otomatis: TPS ini overload (${selectedTps.capacity}%). Disarankan beralih ke TPS lain di Kelurahan ${selectedKelurahan} yang masih aman.`}
+                    {selectedTps.statusColor === 'gray' &&
+                      `TPS ini sedang dalam status tidak aktif atau pemeliharaan oleh DLH Surabaya.`}
                   </p>
                 </div>
               </div>

@@ -906,6 +906,7 @@
 .warga-status-tag.green { background: #dcfce7; color: #15803d; }
 .warga-status-tag.yellow { background: #fef3c7; color: #b45309; }
 .warga-status-tag.red { background: #fee2e2; color: #b91c1c; }
+.warga-status-tag.gray { background: #f1f5f9; color: #64748b; }
 
 .warga-recommendation-card {
   border-radius: 14px;
@@ -930,6 +931,11 @@
 .warga-recommendation-card.red {
   background: #fef2f2;
   border-color: #fecaca;
+}
+
+.warga-recommendation-card.gray {
+  background: #f8fafc;
+  border-color: #e2e8f0;
 }
 
 .warga-rec-icon-box {
