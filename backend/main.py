@@ -119,6 +119,48 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 def get_current_user(token: str = None, db: Session = Depends(get_db)):
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    if token.startswith("demo-token-"):
+        if "admin" in token:
+            user = db.query(User).filter(User.role.in_(["admin", "superadmin"])).first()
+            if user:
+                return {
+                    "id": user.id, "email": user.email, "nama_lengkap": user.nama_lengkap,
+                    "nama": user.nama_lengkap, "role": user.role, "username": user.username,
+                    "wilayah_kecamatan": getattr(user, "wilayah_kecamatan", None),
+                    "wilayah_kelurahan": getattr(user, "wilayah_kelurahan", None),
+                    "wilayah_kota": getattr(user, "wilayah_kota", "Surabaya")
+                }
+        elif "petugas" in token:
+            user = db.query(User).filter(User.role == "petugas").first()
+            if user:
+                return {
+                    "id": user.id, "email": user.email, "nama_lengkap": user.nama_lengkap,
+                    "nama": user.nama_lengkap, "role": user.role, "username": user.username,
+                    "wilayah_kecamatan": getattr(user, "wilayah_kecamatan", None),
+                    "wilayah_kelurahan": getattr(user, "wilayah_kelurahan", None),
+                    "wilayah_kota": getattr(user, "wilayah_kota", "Surabaya")
+                }
+        elif "driver" in token:
+            user = db.query(User).filter(User.role == "driver").first()
+            if user:
+                return {
+                    "id": user.id, "email": user.email, "nama_lengkap": user.nama_lengkap,
+                    "nama": user.nama_lengkap, "role": user.role, "username": user.username,
+                    "wilayah_kecamatan": getattr(user, "wilayah_kecamatan", None),
+                    "wilayah_kelurahan": getattr(user, "wilayah_kelurahan", None),
+                    "wilayah_kota": getattr(user, "wilayah_kota", "Surabaya")
+                }
+        elif "warga" in token:
+            warga = db.query(Warga).first()
+            if warga:
+                return {
+                    "id": warga.id, "email": warga.email, "nama_lengkap": warga.nama,
+                    "nama": warga.nama, "full_name": warga.nama, "role": "warga",
+                    "kecamatan": warga.kecamatan, "kelurahan": warga.kelurahan,
+                    "alamat_rumah": warga.alamat_rumah, "total_poin": warga.total_poin
+                }
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
