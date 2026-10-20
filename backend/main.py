@@ -23,7 +23,7 @@ from models.tps import TPS
 from models.tps_kelurahan import TPSKelurahan
 from models.wilayah import Kecamatan, Kelurahan
 from models.users import User
-from models.chat import ChatMessage
+from models.chat import ChatMessage, ChatConversation
 from models.laporan import LaporanWarga
 from models.setoran import SetoranSampah
 from models.jadwal import JadwalPengambilan
@@ -42,6 +42,8 @@ from routes.laporan_routes import router as laporan_router
 from routes.setoran_routes import router as setoran_router
 from routes.jadwal_routes import router as jadwal_router
 from routes.admin_routes import router as admin_router
+from routes.chat_routes import router as chat_router
+from routes.chat_ws import router as chat_ws_router
 
 # Config
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
@@ -397,6 +399,8 @@ app.include_router(laporan_router, prefix="/api")
 app.include_router(setoran_router, prefix="/api")
 app.include_router(jadwal_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
+app.include_router(chat_ws_router)
 
 if __name__ == "__main__":
     import uvicorn
