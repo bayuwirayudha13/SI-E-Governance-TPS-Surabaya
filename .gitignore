@@ -21,3 +21,5 @@ backend/.env
 scratch/
 .system_generated/
 *.log
+backend/venv/
+node_modules/
