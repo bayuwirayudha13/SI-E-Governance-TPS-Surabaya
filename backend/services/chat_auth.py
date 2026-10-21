@@ -15,7 +15,7 @@ def decode_token(token: str) -> dict:
         if "admin" in token:
             return {"sub": "admin@sipetasan.com", "role": "admin"}
         elif "warga" in token:
-            return {"sub": "warga@sipetasan.com", "role": "warga"}
+            return {"sub": "bayuwirayudha84@gmail.com", "role": "warga"}
         elif "superadmin" in token:
             return {"sub": "superadmin@sipetasan.com", "role": "superadmin"}
 

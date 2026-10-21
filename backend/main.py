@@ -66,21 +66,6 @@ app.add_middleware(
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-app.include_router(auth_router, prefix="/api")
-app.include_router(qr_router, prefix="/api")
-app.include_router(pengambilan_router, prefix="/api")
-app.include_router(tps_router, prefix="/api")
-app.include_router(wilayah_router, prefix="/api")
-app.include_router(laporan_router, prefix="/api")
-app.include_router(setoran_router, prefix="/api")
-app.include_router(jadwal_router, prefix="/api")
-app.include_router(admin_router, prefix="/api")
-
-# Mount frontend dist folder
-frontend_dist_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
-if os.path.exists(frontend_dist_path):
-    app.mount("/", StaticFiles(directory=frontend_dist_path, html=True), name="frontend")
-
 # Database
 Base.metadata.create_all(bind=engine)
 
@@ -245,6 +230,11 @@ app.include_router(jadwal_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(chat_ws_router)
+
+# Mount frontend dist folder AFTER all API routes
+frontend_dist_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if os.path.exists(frontend_dist_path):
+    app.mount("/", StaticFiles(directory=frontend_dist_path, html=True), name="frontend")
 
 if __name__ == "__main__":
     import uvicorn

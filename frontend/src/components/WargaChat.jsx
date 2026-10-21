@@ -23,11 +23,11 @@ export default function WargaChat() {
         setError(null);
         
         // Create or get conversation
-        const convRes = await api.post('/chat/conversations', {});
+        const convRes = await api.post('/api/chat/conversations', {});
         setConversation(convRes.data);
         
         // Load message history
-        const msgsRes = await api.get(`/chat/conversations/${convRes.data.id}/messages?skip=0&limit=50`);
+        const msgsRes = await api.get(`/api/chat/conversations/${convRes.data.id}/messages?skip=0&limit=50`);
         setMessages(msgsRes.data || []);
       } catch (err) {
         console.error('Load conversation error:', err);
@@ -45,14 +45,14 @@ export default function WargaChat() {
     if (!conversation) return;
     
     const connectWs = () => {
-      const token = localStorage.getItem('access_token');
+      const token = sessionStorage.getItem('access_token');
       if (!token) {
         setError('Token tidak ditemukan');
         return;
       }
       
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws/chat/${conversation.id}?token=${token}`;
+      const wsUrl = `${protocol}//localhost:8000/ws/chat/${conversation.id}?token=${token}`;
       
       try {
         ws.current = new WebSocket(wsUrl);
@@ -114,6 +114,24 @@ export default function WargaChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const sendMessageText = (text) => {
+    if (!text || wsStatus !== 'connected' || sending) return;
+    try {
+      setSending(true);
+      const msg = {
+        type: 'message',
+        message: text.trim()
+      };
+      ws.current.send(JSON.stringify(msg));
+      setMessageText('');
+    } catch (err) {
+      console.error('Send message error:', err);
+      setError('Gagal mengirim pesan');
+    } finally {
+      setSending(false);
+    }
+  };
+
   const sendMessage = async (e) => {
     e.preventDefault();
     
@@ -127,25 +145,7 @@ export default function WargaChat() {
       return;
     }
     
-    if (wsStatus !== 'connected') {
-      setError('Koneksi belum siap');
-      return;
-    }
-    
-    try {
-      setSending(true);
-      const msg = {
-        type: 'message',
-        message: messageText.trim()
-      };
-      ws.current.send(JSON.stringify(msg));
-      setMessageText('');
-    } catch (err) {
-      console.error('Send message error:', err);
-      setError('Gagal mengirim pesan');
-    } finally {
-      setSending(false);
-    }
+    sendMessageText(messageText);
   };
 
   if (loading) {
@@ -207,21 +207,30 @@ export default function WargaChat() {
       </div>
 
       <form onSubmit={sendMessage} className="warga-chat-input-form">
-        <input
-          type="text"
-          className="warga-chat-input"
-          placeholder="Ketik pesan..."
-          value={messageText}
-          onChange={(e) => setMessageText(e.target.value)}
-          disabled={wsStatus !== 'connected' || sending}
-        />
-        <button
-          type="submit"
-          className="warga-chat-send-btn"
-          disabled={!messageText.trim() || wsStatus !== 'connected' || sending}
-        >
-          {sending ? '⏳' : '➤'}
-        </button>
+        <div className="warga-chat-templates">
+          <button type="button" onClick={() => sendMessageText("Jadwal pengambilan sampah hari ini?")} className="template-btn">📅 Jadwal Hari Ini</button>
+          <button type="button" onClick={() => sendMessageText("Kapan petugas lewat di wilayah saya?")} className="template-btn">🗺️ Wilayah Saya</button>
+          <button type="button" onClick={() => sendMessageText("Sampah belum diangkut 2 hari")} className="template-btn">⚠️ Belum Diangkut</button>
+          <button type="button" onClick={() => sendMessageText("Ada sampah menumpuk di titik pengumpulan")} className="template-btn">🗑️ Menumpuk</button>
+          <button type="button" onClick={() => sendMessageText("Ingin bicara langsung dengan petugas")} className="template-btn">👤 Bicara Petugas</button>
+        </div>
+        <div className="warga-chat-input-wrapper">
+          <input
+            type="text"
+            className="warga-chat-input"
+            placeholder="Ketik pesan..."
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+            disabled={wsStatus !== 'connected' || sending}
+          />
+          <button
+            type="submit"
+            className="warga-chat-send-btn"
+            disabled={!messageText.trim() || wsStatus !== 'connected' || sending}
+          >
+            {sending ? '⏳' : '➤'}
+          </button>
+        </div>
       </form>
     </div>
   );

@@ -32,6 +32,8 @@ class ConversationResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+    first_admin_response_sent: bool = False
+    assigned_petugas_id: Optional[int] = None
     warga_name: Optional[str] = None
     warga_email: Optional[str] = None
     last_message: Optional[str] = None

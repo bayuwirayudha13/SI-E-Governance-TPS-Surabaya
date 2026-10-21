@@ -16,6 +16,7 @@ import AdminPanel from './components/AdminPanelNew';
 import SuperadminPanel from './components/SuperadminPanel';
 import WargaPanel from './components/WargaPanel';
 import PetugasPanel from './components/PetugasPanel';
+import MultiRoleSwitcher from './components/MultiRoleSwitcher';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/MainLayout';
 import { authService } from './api/client';
@@ -48,7 +49,7 @@ export default function App() {
   // Sync hash routing (support #auth, #masuk, #daftar, #admin, #warga, #petugas)
   // Restore session on mount
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     const user = authService.getCurrentUser();
     
     if (token && user) {
@@ -66,14 +67,16 @@ export default function App() {
     }
   }, []);
 
-  // Sync hash routing (support #auth, #masuk, #daftar, #admin, #superadmin, #warga)
+  // Sync hash routing (support #auth, #masuk, #daftar, #admin, #superadmin, #warga, #multi)
   useEffect(() => {
     const handleHashChange = () => {
       let hash = window.location.hash.toLowerCase();
       // Remove leading slash if present (e.g., #/warga -> #warga)
       hash = hash.replace(/^#\//, '#');
       
-      if (hash === '#admin' || hash === '#superadmin') {
+      if (hash === '#multi') {
+        setCurrentPage('multi');
+      } else if (hash === '#admin' || hash === '#superadmin') {
         setCurrentPage('admin');
       } else if (hash === '#warga' || hash === '#portal-warga' || hash === '#warga-dashboard' || hash === '#qr' || hash === '#qr-status' || hash === '#validasi' || hash === '#tracking') {
         setCurrentPage('warga');
@@ -99,7 +102,7 @@ export default function App() {
         setCurrentPage('auth');
         setAuthTab('ganti-password');
       } else if (hash === '#beranda' || hash === '') {
-        if (currentPage !== 'admin' && currentPage !== 'warga' && currentPage !== 'petugas') {
+        if (currentPage !== 'admin' && currentPage !== 'warga' && currentPage !== 'petugas' && currentPage !== 'multi') {
           setCurrentPage('landing');
         }
       }
@@ -125,10 +128,10 @@ export default function App() {
   };
 
   const handleLoginSuccess = (user) => {
-    localStorage.setItem('auth_user', JSON.stringify(user));
+    sessionStorage.setItem('auth_user', JSON.stringify(user));
     setCurrentUser(user); 
-    localStorage.setItem('user_role', user.role || 'warga');
-    localStorage.setItem('user_email', user.email || '');
+    sessionStorage.setItem('user_role', user.role || 'warga');
+    sessionStorage.setItem('user_email', user.email || '');
     if (user.role === 'superadmin') {
       setCurrentPage('admin');
       window.location.hash = 'superadmin';
@@ -151,6 +154,11 @@ export default function App() {
     window.location.hash = 'beranda';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // If user navigates to Multi-Role Switcher
+  if (currentPage === 'multi') {
+    return <MultiRoleSwitcher />;
+  }
 
   // If user is inside Admin Panel (Protected by RBAC: admin & superadmin)
   if (currentPage === 'admin') {

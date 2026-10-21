@@ -3,8 +3,9 @@
 Test chat endpoints tanpa server running.
 Simulates API calls directly.
 """
+import os
 import sys
-sys.path.insert(0, '/home/bayu/Documents/SI-E-Governance-TPS-Surabaya/backend')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi.testclient import TestClient
 from main import app
@@ -19,7 +20,7 @@ print(f"   Data: {resp.json()}")
 
 # Test 2: Create conversation (warga)
 print("\n2. Create/get warga conversation:")
-token = "demo-token-warga-test"
+token = "demo-token-warga"
 headers = {"Authorization": f"Bearer {token}"}
 resp = client.post("/api/chat/conversations", headers=headers)
 print(f"   Status: {resp.status_code}")
@@ -61,4 +62,4 @@ print("\n5. Unauthorized (no token):")
 resp = client.get("/api/chat/conversations/1/messages")
 print(f"   Status: {resp.status_code} (expected 401)")
 
-print("\n✓ All endpoint tests completed")
+print("\n[OK] All endpoint tests completed")

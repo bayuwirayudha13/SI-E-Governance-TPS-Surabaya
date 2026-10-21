@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import AdminChat from './AdminChat';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -7,10 +8,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
   const [currentUser, setCurrentUser] = useState(userFromProp);
   const [wargas, setWargas] = useState([]);
   const [jadwals, setJadwals] = useState([]);
-  const [chatMessages, setChatMessages] = useState([]);
   const [showAddJadwalModal, setShowAddJadwalModal] = useState(false);
-  const [chatInput, setChatInput] = useState('');
-  const [selectedWarga, setSelectedWarga] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -18,9 +16,9 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
   const [newJadwal, setNewJadwal] = useState({ hari: '', waktu_mulai: '', waktu_selesai: '', area: '', petugas: '', tipe: 'Rutin' });
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    const userData = localStorage.getItem('user_role');
-    const authUser = localStorage.getItem('auth_user');
+    const token = sessionStorage.getItem('access_token');
+    const userData = sessionStorage.getItem('user_role');
+    const authUser = sessionStorage.getItem('auth_user');
     
     if (token) {
       if (authUser) {
@@ -28,7 +26,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
       } else {
         setCurrentUser({
           role: userData,
-          email: localStorage.getItem('user_email') || 'admin@sipetasan.com',
+          email: sessionStorage.getItem('user_email') || 'admin@sipetasan.com',
           nama_lengkap: 'Admin'
         });
       }
@@ -41,9 +39,6 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
     }
     if (activeMenu === 'jadwal' || activeMenu === 'dashboard') {
       loadJadwals();
-    }
-    if (activeMenu === 'chat') {
-      loadChatMessages();
     }
     if (activeMenu === 'pengambilan') {
       loadRiwayat();
@@ -66,7 +61,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
     }
   };
 
-  const token = localStorage.getItem('access_token');
+  const token = sessionStorage.getItem('access_token');
 
   const loadWargas = async () => {
     try {
@@ -91,48 +86,6 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
       }
     } catch (err) {
       console.error('Load jadwals error:', err);
-    }
-  };
-
-  const loadChatMessages = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/chat/messages`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setChatMessages(data);
-      }
-    } catch (err) {
-      console.error('Load chat error:', err);
-    }
-  };
-
-  const handleSendChat = async (e) => {
-    e.preventDefault();
-    if (!chatInput.trim() || !selectedWarga) return;
-
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/chat/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          receiver_id: selectedWarga.id,
-          message: chatInput
-        })
-      });
-      if (!response.ok) throw new Error('Gagal mengirim chat');
-      setSuccess('Chat berhasil dikirim');
-      setChatInput('');
-      loadChatMessages();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -474,78 +427,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
 
         {/* CHAT */}
         {activeMenu === 'chat' && (
-          <div className="admin-content-view">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
-              {/* Left: Warga List */}
-              <div className="admin-card">
-                <h3 className="admin-card-title">Daftar Warga</h3>
-                <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
-                  {wargas.map(w => (
-                    <div
-                      key={w.id}
-                      onClick={() => setSelectedWarga(w)}
-                      className={`recent-user-item ${selectedWarga?.id === w.id ? 'selected' : ''}`}
-                      style={{
-                        padding: '12px',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        background: selectedWarga?.id === w.id ? '#e0f2fe' : 'transparent',
-                        marginBottom: '8px'
-                      }}
-                    >
-                      <div className="recent-user-avatar">{w.nama?.charAt(0) || 'W'}</div>
-                      <div className="recent-user-info">
-                        <div className="recent-user-name">{w.nama}</div>
-                        <div className="recent-user-email" style={{ fontSize: '0.75rem' }}>{w.email}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Right: Chat Area */}
-              <div className="admin-card">
-                {selectedWarga ? (
-                  <>
-                    <h3 className="admin-card-title">Chat dengan {selectedWarga.nama}</h3>
-                    <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', minHeight: '400px', maxHeight: '400px', overflowY: 'auto', marginBottom: '16px' }}>
-                      {chatMessages.filter(m => m.receiver_id === selectedWarga.id).map(msg => (
-                        <div key={msg.id} style={{ marginBottom: '12px', padding: '8px', background: '#fff', borderRadius: '6px' }}>
-                          <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>{msg.sender_name}</div>
-                          <div style={{ fontSize: '0.9rem', color: '#1e293b' }}>{msg.message}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
-                            {new Date(msg.timestamp).toLocaleString('id-ID')}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <form onSubmit={handleSendChat} style={{ display: 'flex', gap: '8px' }}>
-                      <input
-                        type="text"
-                        placeholder="Ketik pesan..."
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        className="settings-input"
-                        style={{ flex: 1 }}
-                      />
-                      <button
-                        type="submit"
-                        className="btn-add-primary"
-                        disabled={isLoading || !chatInput.trim()}
-                      >
-                        Kirim
-                      </button>
-                    </form>
-                  </>
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                    Pilih warga untuk memulai chat
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <AdminChat />
         )}
         {activeMenu === 'pengambilan' && (
           <div className="admin-content-view">

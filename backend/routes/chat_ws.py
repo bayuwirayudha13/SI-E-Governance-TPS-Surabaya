@@ -135,6 +135,10 @@ async def websocket_chat_endpoint(
                     # Update conversation timestamp
                     conv.updated_at = get_wib_now()
                     
+                    # Mark first response as sent if admin sends message
+                    if user["role"] in ["admin", "superadmin", "petugas"] and not conv.first_admin_response_sent:
+                        conv.first_admin_response_sent = True
+                    
                     db.commit()
                     db.refresh(new_message)
                     
@@ -151,6 +155,38 @@ async def websocket_chat_endpoint(
                             "timestamp": new_message.timestamp.isoformat()
                         }
                     })
+                    
+                    # Cek Bot Otomatis / Pengalihan Keluhan jika dikirim oleh Warga
+                    if user["role"] == "warga":
+                        from services.chatbot_service import handle_bot_or_routing
+                        bot_reply_text = handle_bot_or_routing(db, user["id"], msg_text)
+                        if bot_reply_text:
+                            bot_message = ChatMessage(
+                                conversation_id=conversation_id,
+                                sender_id=1,  # Admin/System ID
+                                sender_role="admin",
+                                sender_name="SI-PETASAN Bot",
+                                message=bot_reply_text,
+                                timestamp=get_wib_now()
+                            )
+                            db.add(bot_message)
+                            conv.updated_at = get_wib_now()
+                            db.commit()
+                            db.refresh(bot_message)
+                            
+                            # Broadcast bot reply
+                            await manager.send_to_conversation(conversation_id, {
+                                "type": "message",
+                                "data": {
+                                    "id": bot_message.id,
+                                    "conversation_id": bot_message.conversation_id,
+                                    "sender_id": bot_message.sender_id,
+                                    "sender_role": bot_message.sender_role,
+                                    "sender_name": bot_message.sender_name,
+                                    "message": bot_message.message,
+                                    "timestamp": bot_message.timestamp.isoformat()
+                                }
+                            })
                     
             except WebSocketDisconnect:
                 break

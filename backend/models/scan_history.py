@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.orm import relationship
 from core.database import Base
 from datetime import datetime
@@ -6,9 +7,9 @@ from datetime import datetime
 class ScanHistory(Base):
     __tablename__ = "scan_history"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    petugas_id = Column(Integer, nullable=True)
-    warga_id = Column(Integer, nullable=True)
+    id = Column(INTEGER(unsigned=True), primary_key=True, index=True, autoincrement=True)
+    petugas_id = Column(INTEGER(unsigned=True), nullable=True)
+    warga_id = Column(INTEGER(unsigned=True), nullable=True)
     qr_token = Column(Text, nullable=False)
     nama_warga = Column(String(100), nullable=True)
     alamat_warga = Column(String(255), nullable=True)

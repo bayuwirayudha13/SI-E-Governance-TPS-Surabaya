@@ -9,7 +9,7 @@ from models.users import User
 
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 jam untuk dev/testing agar token tidak gampang expired
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

@@ -26,7 +26,7 @@ export default function WargaPanelAPI({ onLogout, wargaId = 12 }) {
 
   // Load warga data on mount
   useEffect(() => {
-    const storedUserId = localStorage.getItem('user_id');
+    const storedUserId = sessionStorage.getItem('user_id');
     const actualWargaId = storedUserId || wargaId;
     
     loadWargaData();
@@ -36,7 +36,7 @@ export default function WargaPanelAPI({ onLogout, wargaId = 12 }) {
 
   const loadWargaData = async () => {
     try {
-      const token = localStorage.getItem('access_token');
+      const token = sessionStorage.getItem('access_token');
       if (!token) return;
       
       const response = await fetch('http://localhost:8000/api/auth/me', {

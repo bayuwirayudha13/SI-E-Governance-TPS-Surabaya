@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DECIMAL, Date, Text, Enum, DateTime
+from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.orm import relationship
 from core.database import Base
 from core.timezone import get_wib_now
@@ -6,7 +7,7 @@ from core.timezone import get_wib_now
 class TPS(Base):
     __tablename__ = "tps"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id = Column(INTEGER(unsigned=True), primary_key=True, index=True, autoincrement=True)
     nama = Column(String(150), nullable=False)
     nama_lama = Column(String(150), nullable=True)
     lokasi = Column(String(255), nullable=True)

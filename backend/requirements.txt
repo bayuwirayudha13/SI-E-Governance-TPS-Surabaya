@@ -13,3 +13,4 @@ email-validator
 qrcode[pil]==8.2
 Pillow==11.3.0
 python-multipart==0.0.20
+tzdata==2026.5

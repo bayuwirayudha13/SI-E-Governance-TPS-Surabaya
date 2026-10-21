@@ -47,9 +47,9 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
 
   // Load current user
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    const userData = localStorage.getItem('user_role');
-    const authUser = localStorage.getItem('auth_user');
+    const token = sessionStorage.getItem('access_token');
+    const userData = sessionStorage.getItem('user_role');
+    const authUser = sessionStorage.getItem('auth_user');
 
     if (token) {
       if (authUser) {
@@ -57,7 +57,7 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
       } else {
         setCurrentUser({
           role: userData,
-          email: localStorage.getItem('user_email') || 'superadmin@sipetasan.com',
+          email: sessionStorage.getItem('user_email') || 'superadmin@sipetasan.com',
           nama_lengkap: 'Super Admin'
         });
       }
@@ -113,7 +113,7 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
     return targetIndex < todayIndex;
   };
 
-  const getToken = () => localStorage.getItem('access_token');
+  const getToken = () => sessionStorage.getItem('access_token');
 
   const loadUsers = async () => {
     try {

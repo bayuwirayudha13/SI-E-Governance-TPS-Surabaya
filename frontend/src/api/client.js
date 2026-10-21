@@ -16,11 +16,11 @@ export const api = axios.create({
 
 /**
  * Request Interceptor:
- * Automatically attaches JWT Bearer token from localStorage
+ * Automatically attaches JWT Bearer token from sessionStorage
  */
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -39,12 +39,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
-      // If 401 Unauthorized, clear stored token and notify
+      // If 401 Unauthorized, log but don't dispatch logout event
+      // This prevents accidental logouts from notification requests
       if (error.response.status === 401) {
-        console.warn('[API] Sesi login telah berakhir atau token tidak valid.');
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('auth_user');
-        window.dispatchEvent(new Event('auth:unauthorized'));
+        console.warn('[API] Request unauthorized (401) - token may have expired');
       }
     }
     return Promise.reject(error);
@@ -55,11 +53,11 @@ api.interceptors.response.use(
  * Centralized Authentication & Storage Helper Service
  */
 export const authService = {
-  getToken: () => localStorage.getItem('access_token'),
+  getToken: () => sessionStorage.getItem('access_token'),
   
   getCurrentUser: () => {
     try {
-      const user = localStorage.getItem('auth_user');
+      const user = sessionStorage.getItem('auth_user');
       return user ? JSON.parse(user) : null;
     } catch {
       return null;
@@ -67,20 +65,20 @@ export const authService = {
   },
 
   setSession: (token, user) => {
-    if (token) localStorage.setItem('access_token', token);
-    if (user) localStorage.setItem('auth_user', JSON.stringify(user));
+    if (token) sessionStorage.setItem('access_token', token);
+    if (user) sessionStorage.setItem('auth_user', JSON.stringify(user));
     window.dispatchEvent(new Event('auth:change'));
   },
 
   clearSession: () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('auth_user');
-    localStorage.removeItem('user_id');
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('auth_user');
+    sessionStorage.removeItem('user_id');
     window.dispatchEvent(new Event('auth:change'));
   },
 
   isAuthenticated: () => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     const user = authService.getCurrentUser();
     return Boolean(token || user);
   },
@@ -123,7 +121,7 @@ export const authService = {
     } catch (err) {
       // Fallback demo warga if backend offline and credentials match demo
       if (password === 'password123' || password === 'warga123') {
-        const demoWarga = { role: 'warga', email: cleanEmail, name: 'Pak Jaka Susanto', id: 1 };
+        const demoWarga = { role: 'warga', email: 'bayuwirayudha84@gmail.com', name: 'Budi Susanto', id: 19 };
         authService.setSession('demo-token-warga', demoWarga);
         return { access_token: 'demo-token-warga', user: demoWarga };
       }
@@ -140,7 +138,7 @@ export const authService = {
         // merge ke auth_user biar PetugasPanel langsung baca wilayah terbaru
         const cur = authService.getCurrentUser() || {};
         const merged = { ...cur, ...u, wilayah_kecamatan: u.wilayah_kecamatan ?? cur.wilayah_kecamatan, wilayah_kelurahan: u.wilayah_kelurahan ?? cur.wilayah_kelurahan, wilayah_kota: u.wilayah_kota ?? cur.wilayah_kota };
-        localStorage.setItem('auth_user', JSON.stringify(merged));
+        sessionStorage.setItem('auth_user', JSON.stringify(merged));
         window.dispatchEvent(new Event('auth:change'));
       }
       return u;
