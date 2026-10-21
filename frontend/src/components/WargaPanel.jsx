@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import QRCode from 'qrcode';
 import './WargaPanel.css';
 import { api } from '../api/client';
-import { fetchPublicTps } from '../services/api';
+import { fetchPublicTps } from '../api/tps';
 import KelurahanMap from './KelurahanMap';
 import WargaChat from './WargaChat';
 import {
@@ -263,37 +263,6 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
     }
   }, [currentUser]);
 
-  // Update TPS list when kelurahan changes
-  useEffect(() => {
-    async function loadTps() {
-      const data = await fetchPublicTps();
-      if (data && data.length > 0) {
-        const mappedData = data.map(item => ({
-          id: item.id,
-          nama: item.nama,
-          lat: parseFloat(item.latitude),
-          lng: parseFloat(item.longitude),
-          lokasi: item.lokasi || item.nama,
-          kecamatan: item.kecamatan,
-          wilayahKota: item.wilayah_kota,
-          jenisTps: item.jenis_tps || 'TPS',
-          jumlahContainer: item.jumlah_container || '-',
-          dayaTampungM3: item.daya_tampung_m3 || 0,
-          capacity: 50,
-          statusText: item.status === 'Aktif' ? 'AMAN' : 'TIDAK AKTIF',
-          statusColor: item.status === 'Aktif' ? 'green' : 'red',
-          jamOperasional: '06:00 - 18:00'
-        }));
-        const filtered = mappedData.filter(t => t.kecamatan === selectedKelurahan || t.wilayahKota === selectedKelurahan);
-        setKelurahanTpsList(filtered.length > 0 ? filtered : mappedData.slice(0, 6));
-      } else {
-        const list = getTpsByKelurahan(selectedKelurahan);
-        setKelurahanTpsList(list.length > 0 ? list : TPS_SURABAYA_ALL.slice(0, 6));
-      }
-    }
-    loadTps();
-  }, [selectedKelurahan]);
-
   const activeUser = userData || dbUser || currentUser;
   const displayWargaName = activeUser?.nama_lengkap || activeUser?.nama || 'Warga';
   const displayWargaEmail = activeUser?.email || 'warga@sipetasan.com';
@@ -346,16 +315,55 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
     }
   }, [displayKelurahanRaw]);
 
-  // Real TPS serving the selected Kelurahan
-  const kelurahanTpsList = useMemo(() => {
-    const list = getTpsByKelurahan(selectedKelurahan);
-    if (list && list.length > 0) return list;
-    if (displayKecamatanRaw) {
-      const kecList = getTpsByKecamatan(displayKecamatanRaw);
-      if (kecList && kecList.length > 0) return kecList;
+  const [allTps, setAllTps] = useState([]);
+  const [tpsLoading, setTpsLoading] = useState(false);
+
+  // Load TPS from API
+  useEffect(() => {
+    async function loadTps() {
+      setTpsLoading(true);
+      try {
+        const data = await fetchPublicTps();
+        if (data && data.length > 0) {
+          setAllTps(data);
+        } else {
+          // Fallback to static data if API fails or returns empty
+          setAllTps(TPS_SURABAYA_ALL);
+        }
+      } catch (error) {
+        console.error('Error loading TPS in WargaPanel:', error);
+        setAllTps(TPS_SURABAYA_ALL);
+      } finally {
+        setTpsLoading(false);
+      }
     }
-    return TPS_SURABAYA_ALL.slice(0, 6);
-  }, [selectedKelurahan, displayKecamatanRaw]);
+    loadTps();
+  }, []);
+
+  // Real TPS serving the selected Kelurahan or Kecamatan
+  const kelurahanTpsList = useMemo(() => {
+    if (!allTps || allTps.length === 0) return [];
+    
+    // Prioritize matching kecamatan first so all TPS in Sukolilo show up
+    if (displayKecamatanRaw) {
+      const matchKec = allTps.filter(tps => 
+        tps.kecamatan?.toLowerCase() === displayKecamatanRaw.toLowerCase()
+      );
+      if (matchKec.length > 0) return matchKec;
+    }
+
+    // Filter by selected kelurahan
+    const filtered = allTps.filter(tps => {
+      const matchKel = tps.kelurahanList?.some(k => k.toLowerCase() === selectedKelurahan.toLowerCase()) ||
+                      tps.lokasi?.toLowerCase().includes(selectedKelurahan.toLowerCase()) ||
+                      tps.nama?.toLowerCase().includes(selectedKelurahan.toLowerCase());
+      return matchKel;
+    });
+
+    if (filtered.length > 0) return filtered;
+
+    return allTps.slice(0, 6);
+  }, [allTps, selectedKelurahan, displayKecamatanRaw]);
 
   const [selectedTpsId, setSelectedTpsId] = useState('');
 
@@ -874,6 +882,10 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
               <button type="button" className={`warga-nav-btn ${activeMenu === 'tracking' ? 'active' : ''}`} onClick={() => setActiveMenu('tracking')}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
                 {!isSidebarCollapsed && <span>Tracking TPS</span>}
+              </button>
+              <button type="button" className={`warga-nav-btn ${activeMenu === 'chat' ? 'active' : ''}`} onClick={() => setActiveMenu('chat')}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                {!isSidebarCollapsed && <span>Chat Admin</span>}
               </button>
             </nav>
           </div>
@@ -1620,7 +1632,12 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                   selectedKelurahan={selectedKelurahan}
                   onSelectKelurahan={(kel) => {
                     setSelectedKelurahan(kel);
-                    const nextList = getTpsByKelurahan(kel);
+                    // Next kelurahanTpsList will recompute from allTps
+                    const nextList = allTps.filter(tps => 
+                      tps.kelurahanList?.some(k => k.toLowerCase() === kel.toLowerCase()) ||
+                      tps.lokasi?.toLowerCase().includes(kel.toLowerCase()) ||
+                      tps.nama?.toLowerCase().includes(kel.toLowerCase())
+                    );
                     if (nextList.length > 0) setSelectedTpsId(nextList[0].id);
                   }}
                   allKelurahanList={KELURAHAN_SURABAYA_ALL}

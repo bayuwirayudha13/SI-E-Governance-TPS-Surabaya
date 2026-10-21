@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { tpsList as mockTpsList } from '../data/mockData';
-import { fetchPublicTps } from '../services/api';
+import { fetchPublicTps } from '../api/tps';
 
 // Stable module-level constants
 const SURABAYA_CENTER = [-7.2650, 112.7450];
@@ -26,29 +26,30 @@ export default function HeroMap({ onOpenTpsModal }) {
   const markersLayerRef = useRef(null);
 
   const [mapType, setMapType] = useState('osm'); // 'osm' | 'satellite'
-  const [filterStatus, setFilterStatus] = useState('Semua'); // 'Semua' | 'Aman' | 'Waspada' | 'Kritis'
+  const [filterStatus, setFilterStatus] = useState('Semua'); // 'Semua' | 'Aman' | 'Waspada' | 'Overload'
   const [selectedTps, setSelectedTps] = useState(null);
   const [tpsList, setTpsList] = useState(mockTpsList);
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState(null);
 
+  // Load TPS from API on mount
   useEffect(() => {
     async function loadPublicTps() {
-      const data = await fetchPublicTps();
-      if (data && data.length > 0) {
-        const mappedData = data.map(item => ({
-          id: item.id,
-          nama: item.nama,
-          lat: parseFloat(item.latitude),
-          lng: parseFloat(item.longitude),
-          status: item.status === 'Aktif' ? 'Aman' : 'Kritis',
-          textStatus: item.status === 'Aktif' ? 'Aman' : 'Kritis',
-          kecamatan: item.kecamatan,
-          kelurahan: item.wilayah_kota,
-          jamOperasional: '06:00 - 18:00',
-          kapasitasM3: item.daya_tampung_m3 || 0,
-          kapasitasPersen: 50,
-          terakhirUpdate: item.tanggal_update || 'Baru saja'
-        }));
-        setTpsList(mappedData);
+      setIsLoading(true);
+      setApiError(null);
+      try {
+        const data = await fetchPublicTps();
+        if (data && data.length > 0) {
+          setTpsList(data);
+        } else if (data === null) {
+          console.warn('Failed to load from API, using mock data');
+          setApiError('API tidak tersedia, menampilkan data lokal');
+        }
+      } catch (error) {
+        console.error('Error loading TPS:', error);
+        setApiError('Gagal memuat data TPS');
+      } finally {
+        setIsLoading(false);
       }
     }
     loadPublicTps();
@@ -166,19 +167,20 @@ export default function HeroMap({ onOpenTpsModal }) {
 
     const filtered = tpsList.filter((tps) => {
       if (filterStatus === 'Semua') return true;
-      if (filterStatus === 'Aman') return tps.status === 'Aman' || tps.status === 'Hijau';
-      if (filterStatus === 'Waspada') return tps.status === 'Waspada' || tps.status === 'Kuning';
-      if (filterStatus === 'Kritis') return tps.status === 'Kritis' || tps.status === 'Merah';
+      if (filterStatus === 'Aman') return tps.statusColor === 'green' || tps.capacity < 75;
+      if (filterStatus === 'Waspada') return tps.statusColor === 'yellow' || (tps.capacity >= 75 && tps.capacity < 90);
+      if (filterStatus === 'Kritis') return tps.statusColor === 'red' || tps.capacity >= 90;
       return true;
     });
 
     filtered.forEach((tps) => {
       if (!tps.lat || !tps.lng) return;
 
-      const isCritical = tps.status === 'Merah';
-      const isWarning = tps.status === 'Kuning';
-      const badgeClass = isCritical ? 'red' : isWarning ? 'yellow' : 'green';
-      const pinColor = isCritical ? '#ef4444' : isWarning ? '#f59e0b' : '#10b981';
+      const isCritical = tps.statusColor === 'red' || tps.capacity >= 90;
+      const isWarning = tps.statusColor === 'yellow' || (tps.capacity >= 75 && tps.capacity < 90);
+      const isInactive = tps.status === 'Tidak Aktif';
+      const badgeClass = isInactive ? 'gray' : isCritical ? 'red' : isWarning ? 'yellow' : 'green';
+      const pinColor = isInactive ? '#94a3b8' : isCritical ? '#ef4444' : isWarning ? '#f59e0b' : '#10b981';
 
       // Custom pulsing HTML marker
       const customIcon = L.divIcon({
@@ -189,8 +191,8 @@ export default function HeroMap({ onOpenTpsModal }) {
         html: `
           <div class="osm-marker-pin" style="--marker-color: ${pinColor}">
             <div class="osm-marker-pulse"></div>
-            <div class="osm-marker-dot">
-              <span>${tps.kapasitasPersen}%</span>
+            <div class="osm-marker-dot" style="background: ${pinColor}; width: 28px; height: 28px;">
+              <span>${isInactive ? 'OFF' : `${tps.capacity || tps.kapasitasPersen}%`}</span>
             </div>
           </div>
         `
@@ -203,16 +205,16 @@ export default function HeroMap({ onOpenTpsModal }) {
         <div class="osm-popup-container">
           <div class="osm-popup-title-row">
             <h4 class="osm-popup-title">${tps.nama}</h4>
-            <span class="map-tooltip-badge ${badgeClass}">${tps.kapasitasPersen}% &bull; ${tps.statusText ? tps.statusText.split(' ')[0] : tps.status}</span>
+            <span class="map-tooltip-badge ${badgeClass}">${tps.capacity || tps.kapasitasPersen}% &bull; ${tps.statusText || (isInactive ? 'Nonaktif' : badgeClass.charAt(0).toUpperCase() + badgeClass.slice(1))}</span>
           </div>
           <div class="osm-popup-details">
-            <p><strong>📍 Lokasi:</strong> Kec. ${tps.kecamatan}, Kel. ${tps.kelurahan}</p>
+            <p><strong>📍 Lokasi:</strong> ${tps.lokasi || (tps.kecamatan ? `Kec. ${tps.kecamatan}` : '-')}${tps.kelurahan ? `, Kel. ${tps.kelurahan}` : ''}</p>
             <p><strong>⏰ Jam Operasional:</strong> ${tps.jamOperasional}</p>
-            <p><strong>📦 Daya Tampung:</strong> ${tps.kapasitasM3 || '-'} m&sup3;</p>
+            <p><strong>📦 Daya Tampung:</strong> ${tps.dayaTampungM3 || tps.kapasitasM3 || '-'} m&sup3;</p>
             <p><strong>⏱️ Terakhir Diperbarui:</strong> ${tps.terakhirUpdate}</p>
           </div>
           <div class="osm-popup-bar-track">
-            <div class="osm-popup-bar-fill ${badgeClass}" style="width: ${tps.kapasitasPersen}%;"></div>
+            <div class="osm-popup-bar-fill ${badgeClass}" style="width: ${tps.capacity || tps.kapasitasPersen}%;"></div>
           </div>
           <button 
             type="button" 
@@ -377,20 +379,20 @@ export default function HeroMap({ onOpenTpsModal }) {
         {selectedTps ? (
           <div className="hero-map-bottom-keterangan">
             <div className="hero-map-keterangan-left">
-              <span className={`status-dot ${selectedTps.status === 'Merah' ? 'red' : selectedTps.status === 'Kuning' ? 'yellow' : 'green'}`}></span>
+              <span className={`status-dot ${selectedTps.statusColor === 'red' ? 'red' : selectedTps.statusColor === 'yellow' ? 'yellow' : 'green'}`}></span>
               <div className="hero-map-keterangan-text">
                 <div className="hero-map-keterangan-title">
                   <strong>{selectedTps.nama}</strong>
-                  <span className={`map-tooltip-badge ${selectedTps.status === 'Merah' ? 'red' : selectedTps.status === 'Kuning' ? 'yellow' : 'green'}`} style={{ margin: 0, padding: '2px 8px', fontSize: '0.72rem' }}>
-                    {selectedTps.kapasitasPersen}% &bull; {selectedTps.statusText ? selectedTps.statusText.split(' ')[0] : selectedTps.status}
+                  <span className={`map-tooltip-badge ${selectedTps.statusColor || 'green'}`} style={{ margin: 0, padding: '2px 8px', fontSize: '0.72rem' }}>
+                    {selectedTps.capacity || selectedTps.kapasitasPersen}% &bull; {selectedTps.statusText || 'Aman'}
                   </span>
                 </div>
                 <div className="hero-map-keterangan-sub">
-                  <span>📍 Kec. {selectedTps.kecamatan}, Kel. {selectedTps.kelurahan}</span>
+                  <span>📍 ${selectedTps.lokasi || (selectedTps.kecamatan ? `Kec. ${selectedTps.kecamatan}` : '-')}</span>
                   <span>&bull;</span>
                   <span>⏰ {selectedTps.jamOperasional}</span>
                   <span>&bull;</span>
-                  <span>📦 Daya Tampung: {selectedTps.kapasitasM3 || '-'} m&sup3;</span>
+                  <span>📦 Daya Tampung: {selectedTps.dayaTampungM3 || selectedTps.kapasitasM3 || '-'} m&sup3;</span>
                 </div>
               </div>
             </div>

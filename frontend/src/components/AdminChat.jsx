@@ -502,7 +502,7 @@ export default function AdminChat() {
                   
                   return (
                     <div key={msg.id} className={`admin-message-bubble ${isAdmin ? 'admin' : 'warga'}`}>
-                      <div className="message-sender">{msg.sender_name}</div>
+                      <div className="message-sender">{isAdmin ? 'Admin' : msg.sender_name}</div>
                       <div className="message-text">{msg.message}</div>
                       <div className="message-time">{time}</div>
                     </div>

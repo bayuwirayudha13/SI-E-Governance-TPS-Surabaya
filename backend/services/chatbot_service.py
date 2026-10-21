@@ -75,12 +75,9 @@ def handle_bot_or_routing(db: Session, warga_id: int, message_text: str) -> str:
 
         # 3. Cek keluhan (belum diangkut, menumpuk, rusak, bocor, bau)
         if any(keyword in text_lower for keyword in ["belum diangkut", "menumpuk", "rusak", "bocor", "bau", "penuh"]):
-            assigned = assign_petugas_by_wilayah(db, warga_id, warga_kelurahan, warga_kecamatan, conversation_type="keluhan")
+            assign_petugas_by_wilayah(db, warga_id, warga_kelurahan, warga_kecamatan, conversation_type="keluhan")
             
-            if assigned:
-                return f"🤖 Laporan keluhan Anda telah dicatat dan **diteruskan ke {assigned['role_label']} {assigned['name']} ({assigned['wilayah']})**. Petugas terkait akan segera merespons. Terima kasih."
-            else:
-                return f"🤖 Laporan keluhan Anda telah dicatat dan **diteruskan ke Admin**. Admin akan segera merespons laporan Anda. Terima kasih."
+            return "🤖 **Laporan keluhan Anda telah dicatat**. Tim kami akan segera menindaklanjuti. Terima kasih."
 
         # 4. Cek permintaan chat langsung / petugas
         if any(keyword in text_lower for keyword in ["bicara", "langsung", "berbicara", "admin", "petugas", "tolong", "darurat"]):
