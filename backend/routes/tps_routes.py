@@ -7,8 +7,19 @@ from core.security import get_current_user, require_admin, require_superadmin
 from models.tps import TPS
 from models.users import User
 from schemas.tps_schema import TPSCreate, TPSUpdate, TPSResponse
+from services.tps_service import get_active_public_tps
 
 router = APIRouter(prefix="/tps", tags=["TPS Management"])
+
+@router.get("/public", response_model=List[TPSResponse])
+def get_public_tps(db: Session = Depends(get_db)):
+    """
+    Get active TPS with valid coordinates for public map.
+    No authentication required.
+    Only returns TPS dengan status 'Aktif' and valid latitude/longitude.
+    """
+    tps_list = get_active_public_tps(db)
+    return tps_list
 
 @router.get("/", response_model=List[TPSResponse])
 def list_tps(

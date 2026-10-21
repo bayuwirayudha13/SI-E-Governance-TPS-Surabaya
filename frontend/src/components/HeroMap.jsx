@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { tpsList } from '../data/mockData';
+import { tpsList as mockTpsList } from '../data/mockData';
+import { fetchPublicTps } from '../services/api';
 
 // Stable module-level constants
 const SURABAYA_CENTER = [-7.2650, 112.7450];
@@ -27,6 +28,31 @@ export default function HeroMap({ onOpenTpsModal }) {
   const [mapType, setMapType] = useState('osm'); // 'osm' | 'satellite'
   const [filterStatus, setFilterStatus] = useState('Semua'); // 'Semua' | 'Aman' | 'Waspada' | 'Kritis'
   const [selectedTps, setSelectedTps] = useState(null);
+  const [tpsList, setTpsList] = useState(mockTpsList);
+
+  useEffect(() => {
+    async function loadPublicTps() {
+      const data = await fetchPublicTps();
+      if (data && data.length > 0) {
+        const mappedData = data.map(item => ({
+          id: item.id,
+          nama: item.nama,
+          lat: parseFloat(item.latitude),
+          lng: parseFloat(item.longitude),
+          status: item.status === 'Aktif' ? 'Aman' : 'Kritis',
+          textStatus: item.status === 'Aktif' ? 'Aman' : 'Kritis',
+          kecamatan: item.kecamatan,
+          kelurahan: item.wilayah_kota,
+          jamOperasional: '06:00 - 18:00',
+          kapasitasM3: item.daya_tampung_m3 || 0,
+          kapasitasPersen: 50,
+          terakhirUpdate: item.tanggal_update || 'Baru saja'
+        }));
+        setTpsList(mappedData);
+      }
+    }
+    loadPublicTps();
+  }, []);
 
   // Initialize Map
   useEffect(() => {
@@ -140,9 +166,9 @@ export default function HeroMap({ onOpenTpsModal }) {
 
     const filtered = tpsList.filter((tps) => {
       if (filterStatus === 'Semua') return true;
-      if (filterStatus === 'Aman') return tps.status === 'Hijau';
-      if (filterStatus === 'Waspada') return tps.status === 'Kuning';
-      if (filterStatus === 'Kritis') return tps.status === 'Merah';
+      if (filterStatus === 'Aman') return tps.status === 'Aman' || tps.status === 'Hijau';
+      if (filterStatus === 'Waspada') return tps.status === 'Waspada' || tps.status === 'Kuning';
+      if (filterStatus === 'Kritis') return tps.status === 'Kritis' || tps.status === 'Merah';
       return true;
     });
 

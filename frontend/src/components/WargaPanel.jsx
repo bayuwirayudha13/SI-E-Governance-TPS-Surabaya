@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import QRCode from 'qrcode';
 import './WargaPanel.css';
 import { api } from '../api/client';
+import { fetchPublicTps } from '../services/api';
 import KelurahanMap from './KelurahanMap';
 import WargaChat from './WargaChat';
 import {
@@ -252,8 +253,33 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
 
   // Update TPS list when kelurahan changes
   useEffect(() => {
-    const list = getTpsByKelurahan(selectedKelurahan);
-    setKelurahanTpsList(list.length > 0 ? list : TPS_SURABAYA_ALL.slice(0, 6));
+    async function loadTps() {
+      const data = await fetchPublicTps();
+      if (data && data.length > 0) {
+        const mappedData = data.map(item => ({
+          id: item.id,
+          nama: item.nama,
+          lat: parseFloat(item.latitude),
+          lng: parseFloat(item.longitude),
+          lokasi: item.lokasi || item.nama,
+          kecamatan: item.kecamatan,
+          wilayahKota: item.wilayah_kota,
+          jenisTps: item.jenis_tps || 'TPS',
+          jumlahContainer: item.jumlah_container || '-',
+          dayaTampungM3: item.daya_tampung_m3 || 0,
+          capacity: 50,
+          statusText: item.status === 'Aktif' ? 'AMAN' : 'TIDAK AKTIF',
+          statusColor: item.status === 'Aktif' ? 'green' : 'red',
+          jamOperasional: '06:00 - 18:00'
+        }));
+        const filtered = mappedData.filter(t => t.kecamatan === selectedKelurahan || t.wilayahKota === selectedKelurahan);
+        setKelurahanTpsList(filtered.length > 0 ? filtered : mappedData.slice(0, 6));
+      } else {
+        const list = getTpsByKelurahan(selectedKelurahan);
+        setKelurahanTpsList(list.length > 0 ? list : TPS_SURABAYA_ALL.slice(0, 6));
+      }
+    }
+    loadTps();
   }, [selectedKelurahan]);
 
   const activeUser = userData || dbUser || currentUser;

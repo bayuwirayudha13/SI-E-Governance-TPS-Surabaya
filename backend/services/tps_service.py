@@ -50,3 +50,13 @@ def delete_tps(db: Session, tps_id: int) -> bool:
     db.delete(db_tps)
     db.commit()
     return True
+
+def get_active_public_tps(db: Session) -> List[TPS]:
+    """Get active TPS with valid coordinates for public map"""
+    return db.query(TPS).filter(
+        TPS.status == 'Aktif',
+        TPS.latitude.isnot(None),
+        TPS.longitude.isnot(None),
+        TPS.latitude.between(-8.0, -7.0),  # Surabaya latitude range
+        TPS.longitude.between(112.0, 113.0)  # Surabaya longitude range
+    ).all()
