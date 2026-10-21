@@ -108,15 +108,44 @@
   height: 100vh;
   box-sizing: border-box;
   z-index: 40;
+  transition: none;
 }
 
-/* Logo Brand */
+/* Logo Brand Row */
+.petugas-logo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .petugas-logo-badge {
   display: flex;
   align-items: center;
   gap: 12px;
   text-decoration: none;
   cursor: pointer;
+  min-width: 0;
+}
+
+.petugas-sidebar-toggle {
+  background: #f1f5f9;
+  border: 1px solid var(--petugas-border);
+  color: var(--petugas-text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.petugas-sidebar-toggle:hover {
+  background: #e2e8f0;
+  color: var(--petugas-text-dark);
 }
 
 .petugas-logo-icon {
@@ -182,7 +211,7 @@
   font-size: 0.88rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
   text-align: left;
 }
 
@@ -281,6 +310,68 @@
   background: #fee2e2;
   color: #b91c1c;
 }
+
+/* Collapsed Petugas Sidebar */
+.petugas-sidebar.collapsed {
+  width: 76px;
+  padding: 24px 10px;
+  align-items: center;
+}
+
+.petugas-sidebar.collapsed .petugas-logo-row {
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.petugas-sidebar.collapsed .petugas-logo-badge {
+  justify-content: center;
+}
+
+.petugas-sidebar.collapsed .petugas-sidebar-toggle {
+  width: 32px;
+  height: 32px;
+}
+
+.petugas-sidebar.collapsed .petugas-nav-menu {
+  align-items: center;
+  width: 100%;
+}
+
+.petugas-sidebar.collapsed .petugas-nav-item {
+  justify-content: center;
+  padding: 12px 0;
+  width: 48px;
+  height: 44px;
+  border-radius: 10px;
+}
+
+.petugas-sidebar.collapsed .petugas-profile-container {
+  width: 100%;
+  align-items: center;
+}
+
+.petugas-sidebar.collapsed .petugas-profile-card {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.petugas-sidebar.collapsed .petugas-logout-btn {
+  width: 44px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
 
 /* ==========================================================================
    MAIN CONTENT AREA

@@ -13,6 +13,18 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sipetasan_sidebar_collapsed') === 'true';
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('sipetasan_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
+
   const [newJadwal, setNewJadwal] = useState({ hari: '', waktu_mulai: '', waktu_selesai: '', area: '', petugas: '', tipe: 'Rutin' });
 
   useEffect(() => {
@@ -148,22 +160,44 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
   return (
     <div className="admin-container">
       {/* SIDEBAR */}
-      <aside className="admin-sidebar">
+      <aside className={`admin-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="admin-logo-badge">
-          <div className="admin-logo-icon">A</div>
-          <div>
-            <div className="admin-brand-name">SI-PETASAN</div>
-            <div className="admin-brand-tag">Admin Panel</div>
+          <div className="admin-logo-left">
+            <div className="admin-logo-icon" title="SI-PETASAN">A</div>
+            {!isSidebarCollapsed && (
+              <div className="admin-brand-info">
+                <div className="admin-brand-name">SI-PETASAN</div>
+                <div className="admin-brand-tag">Admin Panel</div>
+              </div>
+            )}
           </div>
+          <button
+            type="button"
+            className="admin-sidebar-toggle"
+            onClick={toggleSidebar}
+            title={isSidebarCollapsed ? "Buka Sidebar" : "Sembunyikan Sidebar"}
+            aria-label="Toggle Sidebar"
+          >
+            {isSidebarCollapsed ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            )}
+          </button>
         </div>
 
         <div className="admin-nav-section">
-          <div className="admin-nav-label">MENU ADMIN</div>
+          {!isSidebarCollapsed && <div className="admin-nav-label">MENU ADMIN</div>}
           <nav className="admin-nav-menu">
             <button
               type="button"
               className={`admin-nav-item ${activeMenu === 'dashboard' ? 'active' : ''}`}
               onClick={() => setActiveMenu('dashboard')}
+              title="Dashboard"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="3" width="7" height="7"></rect>
@@ -171,25 +205,27 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
                 <rect x="14" y="14" width="7" height="7"></rect>
                 <rect x="3" y="14" width="7" height="7"></rect>
               </svg>
-              <span>Dashboard</span>
+              {!isSidebarCollapsed && <span>Dashboard</span>}
             </button>
 
             <button
               type="button"
               className={`admin-nav-item ${activeMenu === 'warga' ? 'active' : ''}`}
               onClick={() => setActiveMenu('warga')}
+              title="Kelola Warga"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                 <circle cx="9" cy="7" r="4"></circle>
               </svg>
-              <span>Kelola Warga</span>
+              {!isSidebarCollapsed && <span>Kelola Warga</span>}
             </button>
 
             <button
               type="button"
               className={`admin-nav-item ${activeMenu === 'jadwal' ? 'active' : ''}`}
               onClick={() => setActiveMenu('jadwal')}
+              title="Jadwal Pengambilan"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -197,50 +233,59 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
                 <line x1="8" y1="2" x2="8" y2="6"></line>
                 <line x1="3" y1="10" x2="21" y2="10"></line>
               </svg>
-              <span>Jadwal Pengambilan</span>
+              {!isSidebarCollapsed && <span>Jadwal Pengambilan</span>}
             </button>
 
             <button
               type="button"
               className={`admin-nav-item ${activeMenu === 'chat' ? 'active' : ''}`}
               onClick={() => setActiveMenu('chat')}
+              title="Chat ke Warga"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
               </svg>
-              <span>Chat ke Warga</span>
+              {!isSidebarCollapsed && <span>Chat ke Warga</span>}
             </button>
 
             <button
               type="button"
               className={`admin-nav-item ${activeMenu === 'pengambilan' ? 'active' : ''}`}
               onClick={() => setActiveMenu('pengambilan')}
+              title="Riwayat Pengambilan"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="3" width="18" height="18" rx="2"></rect>
                 <circle cx="9" cy="9" r="2"></circle>
                 <path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
               </svg>
-              <span>Riwayat Pengambilan</span>
+              {!isSidebarCollapsed && <span>Riwayat Pengambilan</span>}
             </button>
           </nav>
         </div>
 
         {/* Bottom profile */}
         <div className="admin-bottom-profile">
-          <div className="admin-profile-card">
+          <div className="admin-profile-card" title={`${currentUser?.nama_lengkap || currentUser?.nama || 'Admin'} (${currentUser?.role || 'Admin'})`}>
             <div className="admin-profile-avatar">
               {(currentUser?.nama_lengkap || currentUser?.nama || 'A').charAt(0).toUpperCase()}
             </div>
-            <div>
-              <div className="admin-profile-name">{currentUser?.nama_lengkap || currentUser?.nama || 'Admin'}</div>
-              <div className="admin-profile-role" style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'capitalize' }}>
-                {currentUser?.role || 'Admin'}
+            {!isSidebarCollapsed && (
+              <div className="admin-profile-info">
+                <div className="admin-profile-name">{currentUser?.nama_lengkap || currentUser?.nama || 'Admin'}</div>
+                <div className="admin-profile-role" style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'capitalize' }}>
+                  {currentUser?.role || 'Admin'}
+                </div>
               </div>
-            </div>
+            )}
           </div>
-          <button type="button" className="admin-logout-btn" onClick={onLogout}>
-            &larr; Keluar
+          <button type="button" className="admin-logout-btn" onClick={onLogout} title="Keluar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            {!isSidebarCollapsed && <span>Keluar</span>}
           </button>
         </div>
       </aside>

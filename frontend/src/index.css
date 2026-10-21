@@ -2458,14 +2458,43 @@ img {
   justify-content: space-between;
   padding: 24px 16px;
   flex-shrink: 0;
+  transition: none;
 }
 
 .admin-logo-badge {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 8px 24px;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 20px;
   border-bottom: 1px solid #e2e8f0;
+}
+
+.admin-logo-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-sidebar-toggle {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.admin-sidebar-toggle:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 .admin-logo-icon {
@@ -2528,7 +2557,7 @@ img {
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .admin-nav-item:hover {
@@ -2599,6 +2628,77 @@ img {
 .admin-logout-btn:hover {
   color: #ef4444;
 }
+
+/* Collapsed Admin Sidebar */
+.admin-sidebar.collapsed {
+  width: 76px;
+  padding: 24px 10px;
+  align-items: center;
+}
+
+.admin-sidebar.collapsed .admin-logo-badge {
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0 0 16px;
+}
+
+.admin-sidebar.collapsed .admin-logo-left {
+  justify-content: center;
+}
+
+.admin-sidebar.collapsed .admin-sidebar-toggle {
+  width: 32px;
+  height: 32px;
+}
+
+.admin-sidebar.collapsed .admin-nav-menu {
+  align-items: center;
+  width: 100%;
+}
+
+.admin-sidebar.collapsed .admin-nav-item {
+  justify-content: center;
+  padding: 12px 0;
+  width: 48px;
+  height: 44px;
+  border-radius: 10px;
+}
+
+.admin-sidebar.collapsed .admin-bottom-profile {
+  width: 100%;
+  align-items: center;
+  padding-top: 16px;
+}
+
+.admin-sidebar.collapsed .admin-profile-card {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  margin: 0 auto;
+}
+
+.admin-sidebar.collapsed .admin-logout-btn {
+  width: 44px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  margin: 8px auto 0;
+}
+
+.admin-sidebar.collapsed .admin-logout-btn:hover {
+  background: #fee2e2;
+}
+
 
 /* Main Area */
 .admin-main {

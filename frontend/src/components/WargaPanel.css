@@ -25,13 +25,42 @@
   height: 100vh;
   box-sizing: border-box;
   z-index: 20;
+  transition: none;
 }
 
 .warga-logo-badge {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 28px;
+}
+
+.warga-logo-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.warga-sidebar-toggle {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.warga-sidebar-toggle:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 .warga-logo-icon {
@@ -94,7 +123,7 @@
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: background 0.15s ease, color 0.15s ease;
   text-align: left;
 }
 
@@ -169,6 +198,74 @@
 .warga-logout-link:hover {
   color: #ef4444;
 }
+
+/* Collapsed Warga Sidebar */
+.warga-sidebar.collapsed {
+  width: 76px;
+  padding: 24px 10px;
+  align-items: center;
+}
+
+.warga-sidebar.collapsed .warga-logo-badge {
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.warga-sidebar.collapsed .warga-logo-left {
+  justify-content: center;
+}
+
+.warga-sidebar.collapsed .warga-sidebar-toggle {
+  width: 32px;
+  height: 32px;
+}
+
+.warga-sidebar.collapsed .warga-nav-list {
+  align-items: center;
+  width: 100%;
+}
+
+.warga-sidebar.collapsed .warga-nav-btn {
+  justify-content: center;
+  padding: 12px 0;
+  width: 48px;
+  height: 44px;
+  border-radius: 10px;
+}
+
+.warga-sidebar.collapsed .warga-sidebar-footer {
+  width: 100%;
+  align-items: center;
+  padding-top: 16px;
+}
+
+.warga-sidebar.collapsed .warga-profile-pill {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.warga-sidebar.collapsed .warga-logout-link {
+  width: 44px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.warga-sidebar.collapsed .warga-logout-link:hover {
+  background: #fee2e2;
+}
+
 
 /* Main Content Area */
 .warga-main-content {
