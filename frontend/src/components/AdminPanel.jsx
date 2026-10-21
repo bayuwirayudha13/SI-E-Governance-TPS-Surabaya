@@ -4,6 +4,18 @@ export default function AdminPanel({ onLogout }) {
   const [activeMenu, setActiveMenu] = useState('dashboard'); // 'dashboard' | 'pengguna' | 'petugas' | 'tps' | 'pengaturan'
   const [filterRole, setFilterRole] = useState('Semua'); // 'Semua' | 'Warga' | 'Petugas' | 'Menunggu'
 
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sipetasan_sidebar_collapsed') === 'true';
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('sipetasan_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
+
   // Users initial state from mockups
   const [users, setUsers] = useState([
     { id: 1, name: 'Pak Jaka Susanto', email: 'jaka@sukamaju.id', role: 'Warga', noKK: '3578821234567890', joined: '12 Jan 2025', status: 'Aktif', avatar: 'P' },
@@ -101,24 +113,46 @@ export default function AdminPanel({ onLogout }) {
   return (
     <div className="admin-container">
       {/* ===================== SIDEBAR ===================== */}
-      <aside className="admin-sidebar">
+      <aside className={`admin-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         {/* Top Header Logo */}
         <div className="admin-logo-badge">
-          <div className="admin-logo-icon">A</div>
-          <div>
-            <div className="admin-brand-name">SI-PETASAN</div>
-            <div className="admin-brand-tag">Admin Panel</div>
+          <div className="admin-logo-left">
+            <div className="admin-logo-icon" title="SI-PETASAN">A</div>
+            {!isSidebarCollapsed && (
+              <div className="admin-brand-info">
+                <div className="admin-brand-name">SI-PETASAN</div>
+                <div className="admin-brand-tag">Admin Panel</div>
+              </div>
+            )}
           </div>
+          <button
+            type="button"
+            className="admin-sidebar-toggle"
+            onClick={toggleSidebar}
+            title={isSidebarCollapsed ? "Buka Sidebar" : "Sembunyikan Sidebar"}
+            aria-label="Toggle Sidebar"
+          >
+            {isSidebarCollapsed ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            )}
+          </button>
         </div>
 
         {/* Menu Section */}
         <div className="admin-nav-section">
-          <div className="admin-nav-label">MENU ADMIN</div>
+          {!isSidebarCollapsed && <div className="admin-nav-label">MENU ADMIN</div>}
           <nav className="admin-nav-menu">
             <button
               type="button"
               className={`admin-nav-item ${activeMenu === 'dashboard' ? 'active' : ''}`}
               onClick={() => setActiveMenu('dashboard')}
+              title="Dashboard Admin"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="3" width="7" height="7"></rect>
@@ -126,24 +160,26 @@ export default function AdminPanel({ onLogout }) {
                 <rect x="14" y="14" width="7" height="7"></rect>
                 <rect x="3" y="14" width="7" height="7"></rect>
               </svg>
-              <span>Dashboard Admin</span>
+              {!isSidebarCollapsed && <span>Dashboard Admin</span>}
             </button>
 
             <button
               type="button"
               className={`admin-nav-item ${activeMenu === 'pengguna' ? 'active' : ''}`}
               onClick={() => setActiveMenu('pengguna')}
+              title="Kelola Pengguna"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
               </svg>
-              <span>Kelola Pengguna</span>
+              {!isSidebarCollapsed && <span>Kelola Pengguna</span>}
             </button>
 
             <button
               type="button"
               className={`admin-nav-item ${activeMenu === 'petugas' ? 'active' : ''}`}
               onClick={() => setActiveMenu('petugas')}
+              title="Akun Petugas"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="1" y="3" width="15" height="13"></rect>
@@ -151,47 +187,56 @@ export default function AdminPanel({ onLogout }) {
                 <circle cx="5.5" cy="18.5" r="2.5"></circle>
                 <circle cx="18.5" cy="18.5" r="2.5"></circle>
               </svg>
-              <span>Akun Petugas</span>
+              {!isSidebarCollapsed && <span>Akun Petugas</span>}
             </button>
 
             <button
               type="button"
               className={`admin-nav-item ${activeMenu === 'tps' ? 'active' : ''}`}
               onClick={() => setActiveMenu('tps')}
+              title="Kelola TPS"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
                 <line x1="8" y1="2" x2="8" y2="18"></line>
                 <line x1="16" y1="6" x2="16" y2="22"></line>
               </svg>
-              <span>Kelola TPS</span>
+              {!isSidebarCollapsed && <span>Kelola TPS</span>}
             </button>
 
             <button
               type="button"
               className={`admin-nav-item ${activeMenu === 'pengaturan' ? 'active' : ''}`}
               onClick={() => setActiveMenu('pengaturan')}
+              title="Pengaturan Sistem"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 20h9"></path>
                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
               </svg>
-              <span>Pengaturan Sistem</span>
+              {!isSidebarCollapsed && <span>Pengaturan Sistem</span>}
             </button>
           </nav>
         </div>
 
         {/* Bottom Profile & Logout */}
         <div className="admin-bottom-profile">
-          <div className="admin-profile-card">
+          <div className="admin-profile-card" title="Admin (admin123@gmail.com)">
             <div className="admin-profile-avatar">A</div>
-            <div>
-              <div className="admin-profile-name">Admin</div>
-              <div className="admin-profile-email">admin123@gmail.com</div>
-            </div>
+            {!isSidebarCollapsed && (
+              <div className="admin-profile-info">
+                <div className="admin-profile-name">Admin</div>
+                <div className="admin-profile-email">admin123@gmail.com</div>
+              </div>
+            )}
           </div>
-          <button type="button" className="admin-logout-btn" onClick={onLogout}>
-            &larr; Keluar
+          <button type="button" className="admin-logout-btn" onClick={onLogout} title="Keluar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            {!isSidebarCollapsed && <span>Keluar</span>}
           </button>
         </div>
       </aside>

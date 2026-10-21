@@ -231,8 +231,6 @@ const DEFAULT_TUKAR_HISTORY = [
 export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
   const [dbUser, setDbUser] = useState(currentUser || null);
   const [userData, setUserData] = useState(null);
-  const [selectedKelurahan, setSelectedKelurahan] = useState(currentUser?.kelurahan || 'Kelurahan');
-  const [kelurahanTpsList, setKelurahanTpsList] = useState(() => getTpsByKelurahan(currentUser?.kelurahan || 'Kelurahan'));
   const [activeMenu, setActiveMenu] = useState(() => {
     const hash = window.location.hash.toLowerCase();
     if (hash === '#dashboard' || hash === '#warga') return 'dashboard';
@@ -241,8 +239,22 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
     if (hash === '#tukar' || hash === '#tukar-reward' || hash === '#reward') return 'tukar-reward';
     if (hash === '#panduan') return 'panduan';
     if (hash === '#tracking') return 'tracking';
+    if (hash === '#riwayat-pengambilan') return 'riwayat-pengambilan';
     return 'qr-status';
   });
+
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sipetasan_sidebar_collapsed') === 'true';
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('sipetasan_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
+
 
   useEffect(() => {
     const authUser = sessionStorage.getItem('auth_user');
@@ -323,10 +335,50 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
   const [selectedPlastic, setSelectedPlastic] = useState(null);
   const [weightInput, setWeightInput] = useState('');
   const [depositSuccessMsg, setDepositSuccessMsg] = useState('');
-  const [selectedTpsId, setSelectedTpsId] = useState('mawar');
-  const [tpsList] = useState(TPS_LIST);
+  // Kelurahan & Real TPS tracking state from Excel
+  const [selectedKelurahan, setSelectedKelurahan] = useState(() => {
+    return displayKelurahanRaw || 'Tembok Dukuh';
+  });
 
-  const selectedTps = tpsList.find((t) => t.id === selectedTpsId) || tpsList[0];
+  useEffect(() => {
+    if (displayKelurahanRaw) {
+      setSelectedKelurahan(displayKelurahanRaw);
+    }
+  }, [displayKelurahanRaw]);
+
+  // Real TPS serving the selected Kelurahan
+  const kelurahanTpsList = useMemo(() => {
+    const list = getTpsByKelurahan(selectedKelurahan);
+    if (list && list.length > 0) return list;
+    if (displayKecamatanRaw) {
+      const kecList = getTpsByKecamatan(displayKecamatanRaw);
+      if (kecList && kecList.length > 0) return kecList;
+    }
+    return TPS_SURABAYA_ALL.slice(0, 6);
+  }, [selectedKelurahan, displayKecamatanRaw]);
+
+  const [selectedTpsId, setSelectedTpsId] = useState('');
+
+  useEffect(() => {
+    if (kelurahanTpsList.length > 0) {
+      if (!selectedTpsId || !kelurahanTpsList.some((t) => t.id === selectedTpsId)) {
+        setSelectedTpsId(kelurahanTpsList[0].id);
+      }
+    }
+  }, [kelurahanTpsList, selectedTpsId]);
+
+  const selectedTps = useMemo(() => {
+    return (
+      kelurahanTpsList.find((t) => t.id === selectedTpsId) ||
+      kelurahanTpsList[0] ||
+      TPS_SURABAYA_ALL[0]
+    );
+  }, [kelurahanTpsList, selectedTpsId]);
+
+  // Riwayat Pengambilan Sampah state
+  const [scanHistory, setScanHistory] = useState([]);
+  const [showScanFotoModal, setShowScanFotoModal] = useState(false);
+  const [selectedScanFoto, setSelectedScanFoto] = useState('');
 
   // =========================================================
   // RINCIAN PEMERIKSAAN & REAL QR CODE STATE
@@ -721,68 +773,129 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
 
   return (
     <div className="warga-container">
-      <aside className="warga-sidebar">
+      <aside className={`warga-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div>
           <div className="warga-logo-badge">
-            <div className="warga-logo-icon">SI</div>
-            <div>
-              <div className="warga-brand-name">SI-PETASAN</div>
-              <div className="warga-brand-sub">
-                {displayKelurahanRaw ? `KELURAHAN ${displayKelurahanRaw.toUpperCase()}` : 'KELURAHAN SUKAMAJU'}
-              </div>
+            <div className="warga-logo-left">
+              <div className="warga-logo-icon" title="SI-PETASAN">SI</div>
+              {!isSidebarCollapsed && (
+                <div className="warga-brand-info">
+                  <div className="warga-brand-name">SI-PETASAN</div>
+                  <div className="warga-brand-sub">
+                    {displayKelurahanRaw ? `KELURAHAN ${displayKelurahanRaw.toUpperCase()}` : 'KELURAHAN SUKAMAJU'}
+                  </div>
+                </div>
+              )}
             </div>
+            <button
+              type="button"
+              className="warga-sidebar-toggle"
+              onClick={toggleSidebar}
+              title={isSidebarCollapsed ? "Buka Sidebar" : "Sembunyikan Sidebar"}
+              aria-label="Toggle Sidebar"
+            >
+              {isSidebarCollapsed ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              )}
+            </button>
           </div>
           <div className="warga-menu-section">
-            <div className="warga-menu-label">MENU WARGA</div>
+            {!isSidebarCollapsed && <div className="warga-menu-label">MENU WARGA</div>}
             <nav className="warga-nav-list">
-              <button type="button" className={`warga-nav-btn ${activeMenu === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveMenu('dashboard')}>
+              <button
+                type="button"
+                className={`warga-nav-btn ${activeMenu === 'dashboard' ? 'active' : ''}`}
+                onClick={() => setActiveMenu('dashboard')}
+                title="Dashboard"
+              >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                <span>Dashboard</span>
+                {!isSidebarCollapsed && <span>Dashboard</span>}
               </button>
-              <button type="button" className={`warga-nav-btn ${activeMenu === 'jadwal' ? 'active' : ''}`} onClick={() => setActiveMenu('jadwal')}>
+              <button
+                type="button"
+                className={`warga-nav-btn ${activeMenu === 'jadwal' ? 'active' : ''}`}
+                onClick={() => setActiveMenu('jadwal')}
+                title="Jadwal Pengambilan"
+              >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
-                <span>Jadwal Pengambilan</span>
+                {!isSidebarCollapsed && <span>Jadwal Pengambilan</span>}
               </button>
-              <button type="button" className={`warga-nav-btn ${activeMenu === 'setor' ? 'active' : ''}`} onClick={() => setActiveMenu('setor')}>
+              <button
+                type="button"
+                className={`warga-nav-btn ${activeMenu === 'setor' ? 'active' : ''}`}
+                onClick={() => setActiveMenu('setor')}
+                title="Setor & Reward"
+              >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                <span>Setor &amp; Reward</span>
+                {!isSidebarCollapsed && <span>Setor &amp; Reward</span>}
               </button>
-              <button type="button" className={`warga-nav-btn ${activeMenu === 'tukar-reward' ? 'active' : ''}`} onClick={() => setActiveMenu('tukar-reward')}>
+              <button
+                type="button"
+                className={`warga-nav-btn ${activeMenu === 'tukar-reward' ? 'active' : ''}`}
+                onClick={() => setActiveMenu('tukar-reward')}
+                title="Tukar Reward"
+              >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>
-                <span>Tukar Reward</span>
+                {!isSidebarCollapsed && <span>Tukar Reward</span>}
               </button>
-              <button type="button" className={`warga-nav-btn ${activeMenu === 'riwayat-pengambilan' ? 'active' : ''}`} onClick={() => setActiveMenu('riwayat-pengambilan')}>
+              <button
+                type="button"
+                className={`warga-nav-btn ${activeMenu === 'riwayat-pengambilan' ? 'active' : ''}`}
+                onClick={() => setActiveMenu('riwayat-pengambilan')}
+                title="Riwayat Pengambilan"
+              >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 11H5m14 0a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2m14 0V9a2 2 0 0 0-2-2M5 11V9a2 2 0 0 1 2-2m0 0V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"></path></svg>
-                <span>Riwayat Pengambilan</span>
+                {!isSidebarCollapsed && <span>Riwayat Pengambilan</span>}
               </button>
-              <button type="button" className={`warga-nav-btn ${activeMenu === 'qr-status' ? 'active' : ''}`} onClick={() => setActiveMenu('qr-status')}>
+              <button
+                type="button"
+                className={`warga-nav-btn ${activeMenu === 'qr-status' ? 'active' : ''}`}
+                onClick={() => setActiveMenu('qr-status')}
+                title="QR & Status Validasi"
+              >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="3" height="3" fill="currentColor"></rect><rect x="14" y="7" width="3" height="3" fill="currentColor"></rect><rect x="7" y="14" width="3" height="3" fill="currentColor"></rect><rect x="14" y="14" width="3" height="3" fill="currentColor"></rect></svg>
-                <span>QR &amp; Status Validasi</span>
+                {!isSidebarCollapsed && <span>QR &amp; Status Validasi</span>}
               </button>
-              <button type="button" className={`warga-nav-btn ${activeMenu === 'panduan' ? 'active' : ''}`} onClick={() => setActiveMenu('panduan')}>
+              <button
+                type="button"
+                className={`warga-nav-btn ${activeMenu === 'panduan' ? 'active' : ''}`}
+                onClick={() => setActiveMenu('panduan')}
+                title="Panduan Pemilahan"
+              >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path></svg>
-                <span>Panduan Pemilahan</span>
-              </button>
-              <button type="button" className={`warga-nav-btn ${activeMenu === 'chat' ? 'active' : ''}`} onClick={() => setActiveMenu('chat')}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                <span>Chat Admin</span>
+                {!isSidebarCollapsed && <span>Panduan Pemilahan</span>}
               </button>
               <button type="button" className={`warga-nav-btn ${activeMenu === 'tracking' ? 'active' : ''}`} onClick={() => setActiveMenu('tracking')}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
-                <span>Tracking TPS</span>
+                {!isSidebarCollapsed && <span>Tracking TPS</span>}
               </button>
             </nav>
           </div>
         </div>
         <div className="warga-sidebar-footer">
-          <div className="warga-profile-pill">
+          <div className="warga-profile-pill" title={`${displayWargaName} (${displayWargaEmail})`}>
             <div className="warga-avatar-sm">{displayAvatar}</div>
-            <div>
-              <div className="warga-profile-name">{displayWargaName}</div>
-              <div className="warga-profile-sub" style={{ fontSize: '0.75rem', opacity: 0.8 }}>{displayWargaEmail}</div>
-            </div>
+            {!isSidebarCollapsed && (
+              <div className="warga-profile-info">
+                <div className="warga-profile-name">{displayWargaName}</div>
+                <div className="warga-profile-sub" style={{ fontSize: '0.75rem', opacity: 0.8 }}>{displayWargaEmail}</div>
+              </div>
+            )}
           </div>
-          <button type="button" className="warga-logout-link" onClick={onLogout}>&larr; Keluar</button>
+          <button type="button" className="warga-logout-link" onClick={onLogout} title="Keluar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            {!isSidebarCollapsed && <span>Keluar</span>}
+          </button>
         </div>
       </aside>
       <main className="warga-main-content">

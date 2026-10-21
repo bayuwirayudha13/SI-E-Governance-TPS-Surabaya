@@ -11,7 +11,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
     const h = () => setAuthUser(authService.getCurrentUser());
     window.addEventListener('auth:change', h);
     // sinkron dari backend saat mount (biar hijau langsung akurat kalau superadmin baru ganti wilayah)
-    authService.getProfile().then((u) => { if (u) setAuthUser((prev) => ({ ...prev, ...u })); }).catch(() => {});
+    authService.getProfile().then((u) => { if (u) setAuthUser((prev) => ({ ...prev, ...u })); }).catch(() => { });
     return () => window.removeEventListener('auth:change', h);
   }, []);
   const displayOfficerName = authUser?.nama_lengkap || authUser?.nama || authUser?.full_name || currentUserProp?.nama_lengkap || officerName;
@@ -27,6 +27,18 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
   const [activeMenu, setActiveMenu] = useState('scan');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(false);
+
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sipetasan_sidebar_collapsed') === 'true';
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('sipetasan_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
 
   // Listen to hash changes if needed
   useEffect(() => {
@@ -52,19 +64,19 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
   }, []);
 
   const formatDate = (date) => {
-    return date.toLocaleDateString('id-ID', { 
-      weekday: 'long', 
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric' 
+    return date.toLocaleDateString('id-ID', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
     });
   };
 
   const formatTime = (date) => {
-    return date.toLocaleTimeString('id-ID', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit' 
+    return date.toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
     });
   };
 
@@ -91,10 +103,10 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
       try {
         const res = await api.get('/api/setoran/');
         const data = res.data || [];
-        
+
         const waiting = data.filter(s => s.status === 'Menunggu Penjemputan');
         const done = data.filter(s => s.status === 'Sudah Divalidasi');
-        
+
         // Format queue list
         setQueueList(waiting.map((s, idx) => ({
           id: s.id,
@@ -189,12 +201,13 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
     fetchData();
   }, []);
 
-  // Scan & Camera State (matching Image 1)
+  // Scan & Camera State (matching Image 1 & 2)
+  const [scanStep, setScanStep] = useState('scanner'); // 'scanner' | 'verified' | 'confirm'
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [scannedWarga, setScannedWarga] = useState(null);
   const [scannedToken, setScannedToken] = useState('');
   const [manualQrInput, setManualQrInput] = useState('');
-  const [weightInput, setWeightInput] = useState('2.5');
+  const [weightInput, setWeightInput] = useState('3.5');
   const [selectedCondition, setSelectedCondition] = useState('Bersih');
   const [officerNote, setOfficerNote] = useState('');
   const [toastMessage, setToastMessage] = useState('');
@@ -241,8 +254,8 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
       el.style.display = 'block';
       // bersihkan instance lama jika ada
       if (html5QrRef.current) {
-        try { await html5QrRef.current.stop(); } catch {}
-        try { await html5QrRef.current.clear(); } catch {}
+        try { await html5QrRef.current.stop(); } catch { }
+        try { await html5QrRef.current.clear(); } catch { }
         html5QrRef.current = null;
       }
       const qr = new Html5Qrcode('reader', { verbose: false });
@@ -255,8 +268,8 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
           console.log('[QR DECODED]', token);
           setScannedToken(token);
           await validateQrToken(token);
-          try { await qr.stop(); } catch {}
-          try { await qr.clear(); } catch {}
+          try { await qr.stop(); } catch { }
+          try { await qr.clear(); } catch { }
           html5QrRef.current = null;
           setIsCameraActive(false);
         },
@@ -274,8 +287,8 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
       setScanError(msg);
       setIsCameraActive(false);
       if (html5QrRef.current) {
-        try { await html5QrRef.current.stop(); } catch {}
-        try { await html5QrRef.current.clear(); } catch {}
+        try { await html5QrRef.current.stop(); } catch { }
+        try { await html5QrRef.current.clear(); } catch { }
         html5QrRef.current = null;
       }
       if (streamRef.current) {
@@ -298,7 +311,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
       setScannedToken(token);
       await validateQrToken(token);
       // scanFile tidak perlu stop kamera, tapi clear
-      try { await qr.clear(); } catch {}
+      try { await qr.clear(); } catch { }
       showToast('QR dari gambar berhasil dibaca!');
     } catch (err) {
       console.error('[SCAN FILE ERROR]', err);
@@ -364,13 +377,20 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
     const alamatRumah = clientParsed.alamat_rumah || clientParsed.alamat_raw || 'Jl. Mawar No. 12';
     const namaWarga = clientParsed.nama || (cleanToken.startsWith('SP-2025-') ? `Warga ID ${cleanToken}` : 'Budi Santoso');
 
+    const kode = clientParsed.kode || (cleanToken.startsWith('SP-2025-') ? cleanToken : 'SP-2025-0042');
+    const jenisSampah = clientParsed.jenis_sampah || 'PETE, HDPE';
+    const beratLaporan = clientParsed.berat ? clientParsed.berat.replace(/[^0-9.]/g, '') : '3.5';
+
     let wargaFinal = {
       id: 42,
+      kode,
       name: namaWarga,
+      displayName: namaWarga,
       kelurahan,
       alamatRumah,
-      displayName: `Warga ${kelurahan}`,
-      address: alamatRumah.includes(kelurahan) ? alamatRumah : `${kelurahan} • ${alamatRumah}`,
+      address: alamatRumah.startsWith('RT') ? alamatRumah : `RT 03 · ${alamatRumah}`,
+      jenis_sampah: jenisSampah,
+      berat_laporan: beratLaporan || '3.5',
     };
 
     try {
@@ -380,12 +400,15 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
         const kel = w.kelurahan || kelurahan;
         const alamat = w.alamat_rumah || alamatRumah;
         wargaFinal = {
+          ...wargaFinal,
           id: w.id || 42,
-          name: w.nama || namaWarga,
+          name: w.nama || wargaFinal.name,
+          displayName: w.nama || wargaFinal.displayName,
           kelurahan: kel,
           alamatRumah: alamat,
-          displayName: `Warga ${kel}`,
-          address: alamat.includes(kel) ? alamat : `${kel} • ${alamat}`,
+          address: alamat.startsWith('RT') ? alamat : `RT 03 · ${alamat}`,
+          jenis_sampah: w.jenis_sampah || jenisSampah,
+          berat_laporan: w.berat ? String(w.berat).replace(/[^0-9.]/g, '') : beratLaporan,
         };
       }
     } catch (err) {
@@ -393,6 +416,11 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
     }
 
     setScannedWarga(wargaFinal);
+    setScannedToken(wargaFinal.kode);
+    setWeightInput(wargaFinal.berat_laporan || '3.5');
+    setSelectedCondition('Bersih');
+    setScanStep('verified');
+    stopCamera();
     showToast(`QR ${wargaFinal.displayName} berhasil dipindai!`);
   };
 
@@ -408,8 +436,8 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
 
   const stopCamera = async () => {
     if (html5QrRef.current) {
-      try { await html5QrRef.current.stop(); } catch {}
-      try { await html5QrRef.current.clear(); } catch {}
+      try { await html5QrRef.current.stop(); } catch { }
+      try { await html5QrRef.current.clear(); } catch { }
       html5QrRef.current = null;
     }
     if (streamRef.current) {
@@ -428,25 +456,31 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
       setoran_id: 8,
       number: '08',
       name: 'Warga Sukamaju',
-      address: 'RT 03 - Jl. Mawar',
-      category: 'Botol Plastik (PET)',
-      estimatedKg: 2.5
+      address: 'RT 03 · Jl. Mawar',
+      category: 'PETE, HDPE',
+      estimatedKg: 3.5,
+      kode: 'SP-2025-0042'
     };
-    // Normalisasi agar demo juga dinamik: Warga {kelurahan} + alamat
-    const kelFromName = raw.kelurahan || (raw.name.includes('Warga ') ? raw.name.replace('Warga ', '').trim() : 'Sukamaju');
-    const alamatFromRaw = raw.alamatRumah || raw.address || 'Jl. Mawar';
+    const kelFromName = raw.kelurahan || wilayahKelurahan || 'Sukamaju';
+    const alamatFromRaw = raw.alamatRumah || raw.address || 'RT 03 · Jl. Mawar';
     const currentActive = {
       ...raw,
-      name: raw.name.includes('Warga ') && raw.name !== `Warga ${kelFromName}` ? raw.name : (raw.name || `Warga ${kelFromName}`),
+      id: raw.id || 8,
+      kode: raw.kode || 'SP-2025-0042',
+      name: raw.name || 'Warga Sukamaju',
+      displayName: raw.name || 'Warga Sukamaju',
       kelurahan: kelFromName,
       alamatRumah: alamatFromRaw,
-      displayName: `Warga ${kelFromName}`,
-      address: alamatFromRaw.includes(kelFromName) ? alamatFromRaw : `${kelFromName} • ${alamatFromRaw}`,
+      address: alamatFromRaw.startsWith('RT') ? alamatFromRaw : `RT 03 · ${alamatFromRaw}`,
+      jenis_sampah: raw.category || 'PETE, HDPE',
+      berat_laporan: String(raw.estimatedKg || 3.5),
     };
     setScannedWarga(currentActive);
-    setWeightInput(String(currentActive.estimatedKg || 2.5));
+    setWeightInput(currentActive.berat_laporan);
     setSelectedCondition('Bersih');
-    setScannedToken('demo-token');
+    setScannedToken(currentActive.kode);
+    setScanStep('verified');
+    stopCamera();
     showToast(`Mode Demo: ${currentActive.displayName} terdeteksi!`);
   };
 
@@ -461,17 +495,17 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
   // Confirm Pickup action
   const handleConfirmPickup = async () => {
     if (!scannedWarga) return;
-    
-    const beratVal = parseFloat(weightInput) || 2.5;
+
+    const beratVal = parseFloat(weightInput) || 3.5;
 
     try {
       const fd = new FormData();
-      fd.append('qr_token', scannedToken || 'demo-token');
+      fd.append('qr_token', scannedToken || scannedWarga.kode || 'SP-2025-0042');
       if (scannedWarga) {
         fd.append('nama', scannedWarga.name || scannedWarga.displayName || 'Warga');
-        fd.append('alamat', scannedWarga.address || scannedWarga.alamatRumah || 'Jl. Mawar');
+        fd.append('alamat', scannedWarga.address || scannedWarga.alamatRumah || 'RT 03 · Jl. Mawar');
         fd.append('kelurahan', scannedWarga.kelurahan || 'Sukamaju');
-        fd.append('jenis_sampah', selectedCondition || 'Bersih');
+        fd.append('jenis_sampah', scannedWarga.jenis_sampah ? `${scannedWarga.jenis_sampah} (${selectedCondition})` : selectedCondition);
         fd.append('berat', `${beratVal.toFixed(1)} kg`);
       }
       if (fotoFile) {
@@ -480,20 +514,20 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
       if (officerNote) {
         fd.append('catatan', officerNote);
       }
-      
-      await api.post('/api/petugas/pengambilan', fd, { 
-        headers: { 'Content-Type': 'multipart/form-data' } 
+
+      await api.post('/api/petugas/pengambilan', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
       if (scannedWarga.setoran_id) {
         try {
           await api.patch(`/api/setoran/${scannedWarga.setoran_id}/status`, {
             status: 'Sudah Divalidasi',
             perkiraan_berat_kg: beratVal
           });
-        } catch {}
+        } catch { }
       }
-      showToast(`Pengambilan dari ${scannedWarga.name} berhasil dicatat!`);
+      showToast(`Pengambilan dari ${scannedWarga.name || 'Warga'} berhasil dicatat!`);
     } catch (err) {
       setScanError(err.response?.data?.detail || 'Gagal mencatat pengambilan');
       return;
@@ -515,6 +549,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
     });
     setScannedWarga(null);
     setScannedToken('');
+    setScanStep('scanner');
     setFotoFile(null);
     setUploadPreview('');
     setScanError('');
@@ -524,6 +559,9 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
 
   const handleCancelScan = () => {
     setScannedWarga(null);
+    setScannedToken('');
+    setScanStep('scanner');
+    setScanError('');
   };
 
   // Helper title & subtitle for the top bar — hijau dinamik dari wilayah petugas
@@ -533,7 +571,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
       case 'tugas':
         return { title: 'Tugas Hari Ini', sub: wilayahSub };
       case 'scan':
-        return { title: 'Scan QR Warga', sub: wilayahSub };
+        return { title: 'Scan QR Warga', sub: `Rute A · B 1234 XY · Kelurahan ${wilayahKelurahan || 'Sukamaju'}` };
       case 'riwayat':
         return { title: 'Riwayat Pengambilan', sub: wilayahSub };
       default:
@@ -558,28 +596,49 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
       {/* =========================================================
           SIDEBAR
           ========================================================= */}
-      <aside className="petugas-sidebar">
+      <aside className={`petugas-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div>
           {/* Brand Logo & Title */}
-          <div className="petugas-logo-badge" onClick={() => setActiveMenu('tugas')}>
-            <div className="petugas-logo-icon">
-              {/* Truck SVG Icon matching the mockups */}
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="1" y="3" width="15" height="13" rx="1" />
-                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-                <circle cx="5.5" cy="18.5" r="2.5" />
-                <circle cx="18.5" cy="18.5" r="2.5" />
-              </svg>
+          <div className="petugas-logo-row">
+            <div className="petugas-logo-badge" onClick={() => setActiveMenu('tugas')} title="SI-PETASAN">
+              <div className="petugas-logo-icon">
+                {/* Truck SVG Icon matching the mockups */}
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="3" width="15" height="13" rx="1" />
+                  <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                  <circle cx="5.5" cy="18.5" r="2.5" />
+                  <circle cx="18.5" cy="18.5" r="2.5" />
+                </svg>
+              </div>
+              {!isSidebarCollapsed && (
+                <div className="petugas-brand-info">
+                  <div className="petugas-brand-name">SI-PETASAN</div>
+                  <div className="petugas-brand-tag">PETUGAS PENGANGKUT</div>
+                </div>
+              )}
             </div>
-            <div>
-              <div className="petugas-brand-name">SI-PETASAN</div>
-              <div className="petugas-brand-tag">PETUGAS PENGANGKUT</div>
-            </div>
+            <button
+              type="button"
+              className="petugas-sidebar-toggle"
+              onClick={toggleSidebar}
+              title={isSidebarCollapsed ? "Buka Sidebar" : "Sembunyikan Sidebar"}
+              aria-label="Toggle Sidebar"
+            >
+              {isSidebarCollapsed ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              )}
+            </button>
           </div>
 
           {/* Navigation Section */}
           <div className="petugas-nav-section">
-            <div className="petugas-nav-label">MENU LAPANGAN</div>
+            {!isSidebarCollapsed && <div className="petugas-nav-label">MENU LAPANGAN</div>}
             <nav className="petugas-nav-menu">
               {/* 1. Tugas Hari Ini */}
               <button
@@ -589,6 +648,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                   setActiveMenu('tugas');
                   window.location.hash = 'tugas';
                 }}
+                title="Tugas Hari Ini"
               >
                 <div className="petugas-nav-icon">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -596,7 +656,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                     <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
                   </svg>
                 </div>
-                <span>Tugas Hari Ini</span>
+                {!isSidebarCollapsed && <span>Tugas Hari Ini</span>}
               </button>
 
               {/* 2. Scan QR Warga */}
@@ -607,6 +667,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                   setActiveMenu('scan');
                   window.location.hash = 'scan';
                 }}
+                title="Scan QR Warga"
               >
                 <div className="petugas-nav-icon">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -620,7 +681,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                     <rect x="14" y="14" width="3" height="3" />
                   </svg>
                 </div>
-                <span>Scan QR Warga</span>
+                {!isSidebarCollapsed && <span>Scan QR Warga</span>}
               </button>
 
               {/* 3. Riwayat Pengambilan */}
@@ -631,6 +692,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                   setActiveMenu('riwayat');
                   window.location.hash = 'riwayat';
                 }}
+                title="Riwayat Pengambilan"
               >
                 <div className="petugas-nav-icon">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -640,7 +702,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                     <rect x="3" y="14" width="7" height="7" rx="1" />
                   </svg>
                 </div>
-                <span>Riwayat Pengambilan</span>
+                {!isSidebarCollapsed && <span>Riwayat Pengambilan</span>}
               </button>
             </nav>
           </div>
@@ -648,24 +710,27 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
 
         {/* Bottom Profile Card */}
         <div className="petugas-profile-container">
-          <div className="petugas-profile-card">
+          <div className="petugas-profile-card" title={`${displayOfficerName} (${displayOfficerRole})`}>
             <div className="petugas-avatar-circle">
               {displayOfficerName ? displayOfficerName.charAt(0).toUpperCase() : 'H'}
             </div>
-            <div className="petugas-profile-info">
-              <span className="petugas-profile-name">{displayOfficerName}</span>
-              <span className="petugas-profile-role">{displayOfficerRole}</span>
-            </div>
+            {!isSidebarCollapsed && (
+              <div className="petugas-profile-info">
+                <span className="petugas-profile-name">{displayOfficerName}</span>
+                <span className="petugas-profile-role">{displayOfficerRole}</span>
+              </div>
+            )}
           </div>
           <button
             type="button"
             className="petugas-logout-btn"
             onClick={onLogout}
+            title="Keluar"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
-            <span>Keluar</span>
+            {!isSidebarCollapsed && <span>Keluar</span>}
           </button>
         </div>
       </aside>
@@ -888,232 +953,736 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
         {/* =========================================================
             TAB 2: SCAN QR WARGA (MATCHING IMAGE 1)
             ========================================================= */}
+        {/* =========================================================
+            TAB 2: SCAN QR WARGA (FLOW SESUAI SCREENSHOT)
+            ========================================================= */}
         {activeMenu === 'scan' && (
           <div>
-            {/* Date Time Header */}
-            <div className="petugas-datetime-header">
-              <p>{formatDate(currentTime)}</p>
-              <h3>{formatTime(currentTime)} WIB</h3>
-            </div>
+            {/* Step 2: Page 'QR Berhasil Dipindai' (Screenshot 1) */}
+            {scanStep === 'verified' && scannedWarga && (
+              <div style={{ maxWidth: '640px', margin: '24px auto 48px', width: '100%' }}>
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '20px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 4px 25px rgba(0, 0, 0, 0.04)',
+                  padding: '36px 32px'
+                }}>
+                  {/* Top Circular QR Badge */}
+                  <div style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '50%',
+                    background: '#15803d',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 14px',
+                    color: '#ffffff'
+                  }}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+                      <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+                      <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+                      <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+                      <rect x="7" y="7" width="3" height="3" fill="currentColor" />
+                      <rect x="14" y="7" width="3" height="3" fill="currentColor" />
+                      <rect x="7" y="14" width="3" height="3" fill="currentColor" />
+                      <rect x="14" y="14" width="3" height="3" fill="currentColor" />
+                    </svg>
+                  </div>
 
-            <div className="petugas-scan-layout">
-            {/* Left Card: Scan QR Saat Pengambilan */}
-            <div className="petugas-card">
-              <div className="petugas-card-header">
-                <div>
-                  <h2 className="petugas-card-title">Scan QR Saat Pengambilan</h2>
-                  <p className="petugas-card-desc">Pindai QR warga agar laporan terbuka otomatis tanpa mencari nama.</p>
-                </div>
-              </div>
-              <div className="petugas-card-body">
-                {/* Viewfinder Screen */}
-                <div className="petugas-camera-screen">
-                  <video ref={videoRef} className="petugas-camera-video" playsInline muted style={{ display: 'none' }} />
-                  <div id="reader" style={{ width: '100%', display: isCameraActive ? 'block' : 'none' }} />
+                  <div style={{
+                    textAlign: 'center',
+                    color: '#16a34a',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    marginBottom: '6px'
+                  }}>
+                    PEMINDAIAN BERHASIL
+                  </div>
 
-                  {/* Animated laser line */}
-                  {isCameraActive && <div className="petugas-scan-laser" />}
+                  <h2 style={{
+                    textAlign: 'center',
+                    fontSize: '1.5rem',
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    margin: '0 0 8px',
+                    letterSpacing: '-0.01em'
+                  }}>
+                    QR Berhasil Dipindai
+                  </h2>
 
-                  {/* Viewfinder Graphics & Instructions */}
-                  <div className="petugas-camera-overlay">
-                    <div className="petugas-scan-frame-icon">
-                      {/* Viewfinder QR outline */}
-                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 8V5a1 1 0 0 1 1-1h3" />
-                        <path d="M16 4h3a1 1 0 0 1 1 1v3" />
-                        <path d="M20 16v3a1 1 0 0 1-1 1h-3" />
-                        <path d="M8 20H5a1 1 0 0 1-1-1v-3" />
-                        <rect x="8" y="8" width="8" height="8" rx="1" />
+                  <p style={{
+                    textAlign: 'center',
+                    fontSize: '0.86rem',
+                    color: '#64748b',
+                    margin: '0 0 28px'
+                  }}>
+                    Data setoran warga ditemukan dan siap untuk diverifikasi.
+                  </p>
+
+                  {/* Warga Info Pill */}
+                  <div style={{
+                    background: '#ffffff',
+                    border: '1px solid #eef2f6',
+                    borderRadius: '14px',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '16px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '10px',
+                        background: '#ccfbf1',
+                        color: '#0f766e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.15rem',
+                        fontWeight: 800
+                      }}>
+                        W
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: '2px' }}>
+                          {scannedWarga.displayName || scannedWarga.name || 'Warga Sukamaju'}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                          {scannedWarga.address || 'RT 03 · Jl. Mawar'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      background: '#e6f4ea',
+                      color: '#0a5c36',
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid #bbf7d0'
+                    }}>
+                      {scannedWarga.kode || scannedToken || 'SP-2025-0042'}
+                    </div>
+                  </div>
+
+                  {/* 2 Stat Cards: Berat yang dilaporkan & Jenis sampah */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '14px',
+                    marginBottom: '18px'
+                  }}>
+                    <div style={{
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '16px'
+                    }}>
+                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '6px' }}>
+                        Berat yang dilaporkan
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                        <span style={{ fontSize: '1.45rem', fontWeight: 800, color: '#047857' }}>
+                          {scannedWarga.berat_laporan || weightInput || '3.5'}
+                        </span>
+                        <span style={{ fontSize: '0.92rem', fontWeight: 600, color: '#64748b' }}>
+                          kg
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '16px'
+                    }}>
+                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '6px' }}>
+                        Jenis sampah
+                      </div>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                        {scannedWarga.jenis_sampah || 'PETE, HDPE'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Verified Notice Box */}
+                  <div style={{
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: '12px',
+                    padding: '14px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    marginBottom: '26px'
+                  }}>
+                    <div style={{ color: '#16a34a', display: 'flex', alignItems: 'center' }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+                        <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
                       </svg>
                     </div>
-                    <div className="petugas-camera-heading">Arahkan kamera ke QR warga</div>
-                    <p className="petugas-camera-sub">Data setoran akan muncul otomatis tanpa pencarian.</p>
+                    <div>
+                      <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#14532d', marginBottom: '2px' }}>
+                        Data setoran terverifikasi oleh sistem
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#166534' }}>
+                        Lanjutkan dengan menimbang sampah dan memeriksa kondisinya.
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-                {/* Fallback: Upload gambar QR + Manual input (kamera sering gagal di laptop/permission) */}
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'stretch', flexWrap: 'wrap' }}>
-                  <label style={{ padding: '10px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontWeight: 700, fontSize: '0.84rem', color: '#0a5c36', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                    📷 Upload Gambar QR
-                    <input type="file" accept="image/*" onChange={handleFileQrScan} style={{ display: 'none' }} />
-                  </label>
-                  <span style={{ fontSize: '0.82rem', color: '#64748b', alignSelf: 'center' }}>atau</span>
-                  <div style={{ flex: 1, minWidth: '180px', display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      placeholder="Tempel teks QR (SP-2025-0042)..."
-                      value={manualQrInput}
-                      onChange={(e) => setManualQrInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleManualScan(); }}
-                      style={{ flex: 1, padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontSize: '0.86rem', outline: 'none' }}
-                    />
+                  {/* Buttons: Scan Ulang & Lanjutkan Verifikasi */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1.35fr',
+                    gap: '12px'
+                  }}>
                     <button
                       type="button"
-                      onClick={handleManualScan}
-                      style={{ padding: '0 16px', background: '#0a5c36', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}
+                      onClick={handleCancelScan}
+                      style={{
+                        background: '#ffffff',
+                        border: '1.5px solid #cbd5e1',
+                        borderRadius: '10px',
+                        padding: '12px 18px',
+                        fontWeight: 700,
+                        fontSize: '0.9rem',
+                        color: '#0f172a',
+                        cursor: 'pointer',
+                        textAlign: 'center'
+                      }}
                     >
-                      Scan
+                      Scan Ulang
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setScanStep('confirm')}
+                      style={{
+                        background: '#0a5c36',
+                        border: 'none',
+                        borderRadius: '10px',
+                        padding: '12px 18px',
+                        fontWeight: 700,
+                        fontSize: '0.9rem',
+                        color: '#ffffff',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 2px 8px rgba(10, 92, 54, 0.2)'
+                      }}
+                    >
+                      <span>Lanjutkan Verifikasi</span>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                        <polyline points="12 5 19 12 12 19" />
+                      </svg>
                     </button>
                   </div>
                 </div>
-                {scanError && <div style={{ color: '#b91c1c', fontSize: '0.84rem', marginBottom: '10px', background: '#fee2e2', padding: '8px 10px', borderRadius: '6px' }}>{scanError}</div>}
-
-                {/* Scan Action Buttons */}
-                <div className="petugas-scan-actions">
-                  <button
-                    type="button"
-                    className="petugas-btn-primary"
-                    onClick={isCameraActive ? stopCamera : startCamera}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                      <circle cx="12" cy="13" r="4" />
-                    </svg>
-                    <span>{isCameraActive ? 'Hentikan Kamera' : 'Mulai Scan Kamera'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="petugas-btn-secondary"
-                    onClick={handleTriggerDemo}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polygon points="5 3 19 12 5 21 5 3" />
-                    </svg>
-                    <span>Gunakan Kode Setoran Aktif untuk Demo</span>
-                  </button>
-                </div>
               </div>
-            </div>
+            )}
 
-            {/* Right Card: Konfirmasi Pengambilan */}
-            <div className="petugas-card">
-              <div className="petugas-card-header">
-                <div>
-                  <h2 className="petugas-card-title">Konfirmasi Pengambilan</h2>
-                  <p className="petugas-card-desc">Isi kondisi aktual di lokasi warga.</p>
-                </div>
-              </div>
-              <div className="petugas-card-body">
-                {!scannedWarga ? (
-                  /* Empty state (matching Image 1) */
-                  <div className="petugas-empty-state">
-                    <div className="petugas-empty-icon">
-                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 7V5a2 2 0 0 1 2-2h2" />
-                        <path d="M17 3h2a2 2 0 0 1 2 2v2" />
-                        <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
-                        <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
-                        <circle cx="12" cy="12" r="1.5" />
-                      </svg>
+            {/* Step 3: Page 'Konfirmasi Pengambilan' (Matches User Screenshot) */}
+            {scanStep === 'confirm' && scannedWarga && (
+              <div style={{ maxWidth: '580px', margin: '20px auto 48px', width: '100%' }}>
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '20px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 4px 25px rgba(0, 0, 0, 0.05)',
+                  padding: '28px 24px'
+                }}>
+                  {/* Warga Info Header Card */}
+                  <div style={{
+                    background: '#f8fafc',
+                    borderRadius: '16px',
+                    padding: '16px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '22px',
+                    border: '1px solid #f1f5f9'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '2px' }}>
+                        {scannedWarga.displayName || scannedWarga.name || 'Bayu'}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                        {scannedWarga.kelurahan || scannedWarga.address || 'Dupak'}
+                      </div>
                     </div>
-                    <span className="petugas-empty-text">Belum ada QR dipindai</span>
+                    <div style={{
+                      background: '#dcfce7',
+                      color: '#15803d',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      padding: '6px 14px',
+                      borderRadius: '9999px'
+                    }}>
+                      Siap Diproses
+                    </div>
                   </div>
-                ) : (
-                  /* Confirmation Form when QR has been scanned */
-                  <div className="petugas-confirm-form">
-                    <div className="petugas-warga-summary">
-                      <div className="petugas-warga-left">
-                        <span className="petugas-warga-name">{scannedWarga.displayName || (scannedWarga.kelurahan ? `Warga ${scannedWarga.kelurahan}` : scannedWarga.name)}</span>
-                        <span className="petugas-warga-addr">{scannedWarga.alamatRumah || scannedWarga.address}</span>
+
+                  {/* BERAT AKTUAL TIMBANGAN */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      color: '#334155',
+                      letterSpacing: '0.5px',
+                      textTransform: 'uppercase',
+                      marginBottom: '8px',
+                      display: 'block'
+                    }}>
+                      BERAT AKTUAL TIMBANGAN
+                    </label>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: '10px',
+                      background: '#ffffff',
+                      overflow: 'hidden'
+                    }}>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0.1"
+                        value={weightInput}
+                        onChange={(e) => setWeightInput(e.target.value)}
+                        style={{
+                          flex: 1,
+                          padding: '12px 16px',
+                          border: 'none',
+                          fontSize: '1.15rem',
+                          fontWeight: 800,
+                          color: '#0f172a',
+                          outline: 'none',
+                          background: 'transparent'
+                        }}
+                      />
+                      <div style={{
+                        padding: '12px 20px',
+                        color: '#64748b',
+                        fontWeight: 600,
+                        fontSize: '0.95rem',
+                        background: '#f8fafc',
+                        borderLeft: '1px solid #e2e8f0'
+                      }}>
+                        kg
                       </div>
-                      <span className="petugas-status-tag ready">Siap Diproses</span>
                     </div>
+                  </div>
 
-                    {/* Weight Input */}
-                    <div className="petugas-form-group">
-                      <label className="petugas-form-label">Berat Aktual Timbangan</label>
-                      <div className="petugas-input-weight">
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0.1"
-                          value={weightInput}
-                          onChange={(e) => setWeightInput(e.target.value)}
-                          placeholder="0.0"
-                        />
-                        <span>kg</span>
-                      </div>
+                  {/* KONDISI SAMPAH */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      color: '#334155',
+                      letterSpacing: '0.5px',
+                      textTransform: 'uppercase',
+                      marginBottom: '8px',
+                      display: 'block'
+                    }}>
+                      KONDISI SAMPAH
+                    </label>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: '10px'
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCondition('Bersih')}
+                        style={{
+                          background: selectedCondition === 'Bersih' ? '#f0fdf4' : '#ffffff',
+                          border: selectedCondition === 'Bersih' ? '1.5px solid #22c55e' : '1.5px solid #e2e8f0',
+                          color: selectedCondition === 'Bersih' ? '#15803d' : '#334155',
+                          fontWeight: selectedCondition === 'Bersih' ? 700 : 600,
+                          borderRadius: '10px',
+                          padding: '12px 6px',
+                          cursor: 'pointer',
+                          fontSize: '0.88rem',
+                          textAlign: 'center',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        Bersih
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCondition('Perlu Pemilahan')}
+                        style={{
+                          background: selectedCondition === 'Perlu Pemilahan' ? '#f0fdf4' : '#ffffff',
+                          border: selectedCondition === 'Perlu Pemilahan' ? '1.5px solid #22c55e' : '1.5px solid #e2e8f0',
+                          color: selectedCondition === 'Perlu Pemilahan' ? '#15803d' : '#334155',
+                          fontWeight: selectedCondition === 'Perlu Pemilahan' ? 700 : 600,
+                          borderRadius: '10px',
+                          padding: '8px 6px',
+                          cursor: 'pointer',
+                          fontSize: '0.84rem',
+                          textAlign: 'center',
+                          lineHeight: 1.25,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div>Perlu</div>
+                        <div>Pemilahan</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCondition('Campuran')}
+                        style={{
+                          background: selectedCondition === 'Campuran' ? '#f0fdf4' : '#ffffff',
+                          border: selectedCondition === 'Campuran' ? '1.5px solid #22c55e' : '1.5px solid #e2e8f0',
+                          color: selectedCondition === 'Campuran' ? '#15803d' : '#334155',
+                          fontWeight: selectedCondition === 'Campuran' ? 700 : 600,
+                          borderRadius: '10px',
+                          padding: '12px 6px',
+                          cursor: 'pointer',
+                          fontSize: '0.88rem',
+                          textAlign: 'center',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        Campuran
+                      </button>
                     </div>
+                  </div>
 
-                    {/* Waste Condition Selection */}
-                    <div className="petugas-form-group">
-                      <label className="petugas-form-label">Kondisi Sampah</label>
-                      <div className="petugas-condition-options">
-                        {['Bersih', 'Perlu Pemilahan', 'Campuran'].map((cond) => (
-                          <button
-                            key={cond}
-                            type="button"
-                            className={`petugas-condition-btn ${selectedCondition === cond ? 'selected' : ''}`}
-                            onClick={() => setSelectedCondition(cond)}
-                          >
-                            {cond}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                  {/* ESTIMASI REWARD POIN WARGA */}
+                  <div style={{
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: '12px',
+                    padding: '14px 18px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '22px'
+                  }}>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#065f46' }}>
+                      Estimasi Reward Poin Warga:
+                    </span>
+                    <span style={{ fontSize: '1rem', fontWeight: 800, color: '#047857' }}>
+                      +{Math.round((parseFloat(weightInput) || 0) * 45)} Poin
+                    </span>
+                  </div>
 
-                    {/* Estimated Citizen Reward Points */}
-                    <div className="petugas-points-reward-box">
-                      <span>Estimasi Reward Poin Warga:</span>
-                      <span className="petugas-points-value">
-                        +{Math.round((parseFloat(weightInput) || 0) * 45)} Poin
-                      </span>
-                    </div>
-
-                    {/* Officer Note */}
-                    <div className="petugas-form-group">
-                      <label className="petugas-form-label">Foto Bukti Sampah (Wajib)</label>
+                  {/* FOTO BUKTI SAMPAH (WAJIB) */}
+                  <div style={{ marginBottom: '22px' }}>
+                    <label style={{
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      color: '#334155',
+                      letterSpacing: '0.5px',
+                      textTransform: 'uppercase',
+                      marginBottom: '8px',
+                      display: 'block'
+                    }}>
+                      FOTO BUKTI SAMPAH (WAJIB)
+                    </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <input
                         type="file"
-                        accept="image/jpeg,image/png,image/webp"
+                        accept="image/*"
                         onChange={handleFotoChange}
-                        style={{ marginBottom: '8px' }}
+                        style={{
+                          fontSize: '0.88rem',
+                          color: '#475569',
+                          cursor: 'pointer'
+                        }}
                       />
                       {uploadPreview && (
-                        <div style={{ marginTop: '8px' }}>
-                          <img src={uploadPreview} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '6px' }} />
+                        <div style={{ position: 'relative', width: 'fit-content', marginTop: '6px' }}>
+                          <img
+                            src={uploadPreview}
+                            alt="Bukti Sampah"
+                            style={{ width: '120px', height: '90px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => { setFotoFile(null); setUploadPreview(''); }}
+                            style={{
+                              position: 'absolute',
+                              top: '-6px',
+                              right: '-6px',
+                              background: '#ef4444',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: '20px',
+                              height: '20px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Hapus foto"
+                          >
+                            ×
+                          </button>
                         </div>
                       )}
                     </div>
+                  </div>
 
-                    <div className="petugas-form-group">
-                      <label className="petugas-form-label">Catatan Tambahan (Opsional)</label>
-                      <textarea
-                        className="petugas-confirm-textarea"
-                        placeholder="Contoh: Lokasi agak sulit dijangkau, warga sangat kooperatif..."
-                        value={officerNote}
-                        onChange={(e) => setOfficerNote(e.target.value)}
-                        rows="3"
-                      />
-                    </div>
+                  {/* CATATAN TAMBAHAN (OPSIONAL) */}
+                  <div style={{ marginBottom: '22px' }}>
+                    <label style={{
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      color: '#334155',
+                      letterSpacing: '0.5px',
+                      textTransform: 'uppercase',
+                      marginBottom: '8px',
+                      display: 'block'
+                    }}>
+                      CATATAN TAMBAHAN (OPSIONAL)
+                    </label>
+                    <textarea
+                      value={officerNote}
+                      onChange={(e) => setOfficerNote(e.target.value)}
+                      placeholder="Contoh: Lokasi agak sulit dijangkau, warga sangat kooperatif..."
+                      style={{
+                        width: '100%',
+                        minHeight: '76px',
+                        padding: '12px 14px',
+                        border: '1.5px solid #e2e8f0',
+                        borderRadius: '10px',
+                        fontSize: '0.88rem',
+                        color: '#0f172a',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        resize: 'vertical',
+                        fontFamily: 'inherit'
+                      }}
+                    />
+                  </div>
 
-                    {scanError && <div style={{ color: '#b91c1c', fontSize: '0.85rem', marginBottom: '8px' }}>{scanError}</div>}
-
-                    {/* Action buttons */}
-                    <button
-                      type="button"
-                      className="petugas-btn-primary"
-                      onClick={handleConfirmPickup}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  {/* Toast badge pill as shown in screenshot */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                    <div style={{
+                      background: '#0f172a',
+                      color: '#ffffff',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 4px 12px rgba(15, 23, 42, 0.25)'
+                    }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
-                      <span>Konfirmasi Pengambilan</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className="petugas-btn-cancel"
-                      onClick={handleCancelScan}
-                    >
-                      Batal / Pindai Ulang
-                    </button>
+                      <span>QR warga {scannedWarga.displayName || scannedWarga.name || 'Bayu'} terdeteksi!</span>
+                    </div>
                   </div>
-                )}
+
+                  {scanError && (
+                    <div style={{ color: '#b91c1c', fontSize: '0.84rem', marginBottom: '14px', background: '#fee2e2', padding: '10px 14px', borderRadius: '8px' }}>
+                      {scanError}
+                    </div>
+                  )}
+
+                  {/* Submit Button */}
+                  <button
+                    type="button"
+                    onClick={handleConfirmPickup}
+                    style={{
+                      width: '100%',
+                      background: '#0a5c36',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '14px 20px',
+                      fontWeight: 700,
+                      fontSize: '0.96rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 14px rgba(10, 92, 54, 0.22)',
+                      transition: 'background 0.15s ease'
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span>Konfirmasi Pengambilan</span>
+                  </button>
+
+                  {/* Back button */}
+                  <button
+                    type="button"
+                    onClick={() => setScanStep('verified')}
+                    style={{
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#64748b',
+                      fontWeight: 600,
+                      fontSize: '0.82rem',
+                      marginTop: '12px',
+                      cursor: 'pointer',
+                      textAlign: 'center'
+                    }}
+                  >
+                    ← Kembali ke Verifikasi QR
+                  </button>
+                </div>
               </div>
-            </div>
-            </div>
+            )}
+
+            {/* Step 1: Scanner Interface (Saat belum ada QR dipindai atau scan ulang) */}
+            {(scanStep === 'scanner' || !scannedWarga) && (
+              <div>
+                <div className="petugas-datetime-header">
+                  <p>{formatDate(currentTime)}</p>
+                  <h3>{formatTime(currentTime)} WIB</h3>
+                </div>
+
+                <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+                  <div className="petugas-card">
+                    <div className="petugas-card-header">
+                      <div>
+                        <h2 className="petugas-card-title">Scan QR Saat Pengambilan</h2>
+                        <p className="petugas-card-desc">Pindai QR warga agar laporan terbuka otomatis tanpa mencari nama.</p>
+                      </div>
+                    </div>
+                    <div className="petugas-card-body">
+                      {/* Viewfinder Screen */}
+                      <div className="petugas-camera-screen">
+                        <video ref={videoRef} className="petugas-camera-video" playsInline muted style={{ display: 'none' }} />
+                        <div id="reader" style={{ width: '100%', display: isCameraActive ? 'block' : 'none' }} />
+
+                        {/* Animated laser line */}
+                        {isCameraActive && <div className="petugas-scan-laser" />}
+
+                        {/* Viewfinder Graphics & Instructions */}
+                        <div className="petugas-camera-overlay">
+                          <div className="petugas-scan-frame-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M4 8V5a1 1 0 0 1 1-1h3" />
+                              <path d="M16 4h3a1 1 0 0 1 1 1v3" />
+                              <path d="M20 16v3a1 1 0 0 1-1 1h-3" />
+                              <path d="M8 20H5a1 1 0 0 1-1-1v-3" />
+                              <rect x="8" y="8" width="8" height="8" rx="1" />
+                            </svg>
+                          </div>
+                          <div className="petugas-camera-heading">Arahkan kamera ke QR warga</div>
+                          <p className="petugas-camera-sub">Data setoran akan muncul otomatis tanpa pencarian.</p>
+                        </div>
+                      </div>
+
+                      {/* Fallback: Upload gambar QR + Manual input */}
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'stretch', flexWrap: 'wrap' }}>
+                        <label style={{ padding: '10px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontWeight: 700, fontSize: '0.84rem', color: '#0a5c36', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          📁 Upload Gambar QR
+                          <input id="qr-file-input" type="file" accept="image/*" onChange={handleFileQrScan} style={{ display: 'none' }} />
+                        </label>
+                        <label style={{ padding: '10px 14px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', fontWeight: 700, fontSize: '0.84rem', color: '#047857', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          📸 Jepret Foto QR (HP)
+                          <input type="file" accept="image/*" capture="environment" onChange={handleFileQrScan} style={{ display: 'none' }} />
+                        </label>
+                        <span style={{ fontSize: '0.82rem', color: '#64748b', alignSelf: 'center' }}>atau</span>
+                        <div style={{ flex: 1, minWidth: '180px', display: 'flex', gap: '8px' }}>
+                          <input
+                            type="text"
+                            placeholder="Tempel teks QR (SP-2025-0042)..."
+                            value={manualQrInput}
+                            onChange={(e) => setManualQrInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleManualScan(); }}
+                            style={{ flex: 1, padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontSize: '0.86rem', outline: 'none' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleManualScan}
+                            style={{ padding: '0 16px', background: '#0a5c36', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}
+                          >
+                            Scan
+                          </button>
+                        </div>
+                      </div>
+
+                      {scanError === 'blocked_http_ip' ? (
+                        <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '10px', padding: '14px 16px', marginBottom: '14px', color: '#92400e', fontSize: '0.86rem', lineHeight: 1.5 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#b45309', marginBottom: '6px' }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            Sensor Kamera Diblokir Browser di URL HTTP IP ({window.location.hostname})
+                          </div>
+                          <p style={{ margin: '0 0 12px 0' }}>
+                            Browser (Chrome/Brave/Edge) <strong>menonaktifkan API kamera</strong> secara otomatis jika web dibuka melalui IP jaringan lokal (<code>{window.location.host}</code>) tanpa HTTPS demi keamanan browser. Kemarin kamera bisa karena dibuka via <code>localhost</code>.
+                          </p>
+                          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={handleSwitchToLocalhost}
+                              style={{ background: '#0a5c36', color: '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '8px', fontWeight: 700, fontSize: '0.84rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 6px rgba(10,92,54,0.25)' }}
+                            >
+                              🚀 Buka di Localhost (Kamera Langsung Aktif)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { const el = document.getElementById('qr-file-input'); if (el) el.click(); }}
+                              style={{ background: '#ffffff', color: '#0a5c36', border: '1.5px solid #0a5c36', padding: '8px 14px', borderRadius: '8px', fontWeight: 600, fontSize: '0.84rem', cursor: 'pointer' }}
+                            >
+                              📁 Pilih Gambar QR
+                            </button>
+                          </div>
+                        </div>
+                      ) : scanError ? (
+                        <div style={{ color: '#b91c1c', fontSize: '0.84rem', marginBottom: '10px', background: '#fee2e2', padding: '8px 10px', borderRadius: '6px' }}>{scanError}</div>
+                      ) : null}
+
+                      {/* Scan Action Buttons */}
+                      <div className="petugas-scan-actions">
+                        <button
+                          type="button"
+                          className="petugas-btn-primary"
+                          onClick={isCameraActive ? stopCamera : startCamera}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                            <circle cx="12" cy="13" r="4" />
+                          </svg>
+                          <span>{isCameraActive ? 'Hentikan Kamera' : 'Mulai Scan Kamera'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="petugas-btn-secondary"
+                          onClick={handleTriggerDemo}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polygon points="5 3 19 12 5 21 5 3" />
+                          </svg>
+                          <span>Gunakan Kode Setoran Aktif untuk Demo</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1129,81 +1698,80 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
             </div>
 
             <div className="petugas-table-card">
-            <h2 className="petugas-table-header-title">Riwayat Scan QR Pengambilan</h2>
-            <div className="petugas-table-container">
-              <table className="petugas-table">
-                <thead>
-                  <tr>
-                    <th>WAKTU</th>
-                    <th>WARGA</th>
-                    <th>ALAMAT</th>
-                    <th>JENIS SAMPAH</th>
-                    <th>BERAT</th>
-                    <th>FOTO</th>
-                    <th>STATUS</th>
-                    <th>AKSI</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historyList.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.waktu}</td>
-                      <td className="petugas-warga-cell">{row.warga}</td>
-                      <td style={{ fontSize: '0.82rem', color: '#475569' }}>{row.alamat || row.kelurahan}</td>
-                      <td>{row.kondisi}</td>
-                      <td>{row.berat}</td>
-                      <td>
-                        {row.foto_bukti_url ? (
+              <h2 className="petugas-table-header-title">Riwayat Scan QR Pengambilan</h2>
+              <div className="petugas-table-container">
+                <table className="petugas-table">
+                  <thead>
+                    <tr>
+                      <th>WAKTU</th>
+                      <th>WARGA</th>
+                      <th>ALAMAT</th>
+                      <th>JENIS SAMPAH</th>
+                      <th>BERAT</th>
+                      <th>FOTO</th>
+                      <th>STATUS</th>
+                      <th>AKSI</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyList.map((row) => (
+                      <tr key={row.id}>
+                        <td>{row.waktu}</td>
+                        <td className="petugas-warga-cell">{row.warga}</td>
+                        <td style={{ fontSize: '0.82rem', color: '#475569' }}>{row.alamat || row.kelurahan}</td>
+                        <td>{row.kondisi}</td>
+                        <td>{row.berat}</td>
+                        <td>
+                          {row.foto_bukti_url ? (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedHistoryItem(row)}
+                              style={{
+                                background: '#3b82f6',
+                                color: '#fff',
+                                border: 'none',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                fontSize: '0.78rem',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Lihat Foto
+                            </button>
+                          ) : (
+                            <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>Tidak ada</span>
+                          )}
+                        </td>
+                        <td>
+                          <span
+                            className={`petugas-table-badge ${row.status === 'Selesai' ? 'completed' : 'pending'
+                              }`}
+                          >
+                            {row.status}
+                          </span>
+                        </td>
+                        <td>
                           <button
                             type="button"
                             onClick={() => setSelectedHistoryItem(row)}
                             style={{
-                              background: '#3b82f6',
+                              background: '#10b981',
                               color: '#fff',
                               border: 'none',
-                              padding: '4px 10px',
+                              padding: '4px 12px',
                               borderRadius: '6px',
                               fontSize: '0.78rem',
                               cursor: 'pointer'
                             }}
                           >
-                            Lihat Foto
+                            Lihat Detail
                           </button>
-                        ) : (
-                          <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>Tidak ada</span>
-                        )}
-                      </td>
-                      <td>
-                        <span
-                          className={`petugas-table-badge ${
-                            row.status === 'Selesai' ? 'completed' : 'pending'
-                          }`}
-                        >
-                          {row.status}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedHistoryItem(row)}
-                          style={{
-                            background: '#10b981',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '4px 12px',
-                            borderRadius: '6px',
-                            fontSize: '0.78rem',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Lihat Detail
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Modal Detail History dengan Foto */}
@@ -1236,7 +1804,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                   onClick={(e) => e.stopPropagation()}
                 >
                   <h3 style={{ marginBottom: '20px', fontSize: '1.2rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>Detail Pengambilan Sampah</h3>
-                  
+
                   <div style={{ marginBottom: '10px' }}>
                     <strong>ID:</strong> #{selectedHistoryItem.id}
                   </div>

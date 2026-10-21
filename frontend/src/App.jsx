@@ -51,7 +51,7 @@ export default function App() {
   useEffect(() => {
     const token = sessionStorage.getItem('access_token');
     const user = authService.getCurrentUser();
-    
+
     if (token && user) {
       setCurrentUser(user);
       if (user.role === 'superadmin' || user.role === 'admin') {
@@ -73,10 +73,8 @@ export default function App() {
       let hash = window.location.hash.toLowerCase();
       // Remove leading slash if present (e.g., #/warga -> #warga)
       hash = hash.replace(/^#\//, '#');
-      
-      if (hash === '#multi') {
-        setCurrentPage('multi');
-      } else if (hash === '#admin' || hash === '#superadmin') {
+
+      if (hash === '#admin' || hash === '#superadmin') {
         setCurrentPage('admin');
       } else if (hash === '#warga' || hash === '#portal-warga' || hash === '#warga-dashboard' || hash === '#qr' || hash === '#qr-status' || hash === '#validasi' || hash === '#tracking') {
         setCurrentPage('warga');
@@ -102,7 +100,7 @@ export default function App() {
         setCurrentPage('auth');
         setAuthTab('ganti-password');
       } else if (hash === '#beranda' || hash === '') {
-        if (currentPage !== 'admin' && currentPage !== 'warga' && currentPage !== 'petugas' && currentPage !== 'multi') {
+        if (currentPage !== 'admin' && currentPage !== 'warga' && currentPage !== 'petugas') {
           setCurrentPage('landing');
         }
       }
@@ -128,10 +126,10 @@ export default function App() {
   };
 
   const handleLoginSuccess = (user) => {
-    sessionStorage.setItem('auth_user', JSON.stringify(user));
-    setCurrentUser(user); 
-    sessionStorage.setItem('user_role', user.role || 'warga');
-    sessionStorage.setItem('user_email', user.email || '');
+    localStorage.setItem('auth_user', JSON.stringify(user));
+    setCurrentUser(user);
+    localStorage.setItem('user_role', user.role || 'warga');
+    localStorage.setItem('user_email', user.email || '');
     if (user.role === 'superadmin') {
       setCurrentPage('admin');
       window.location.hash = 'superadmin';
@@ -193,7 +191,7 @@ export default function App() {
   if (currentPage === 'warga') {
     return (
       <ProtectedRoute allowedRoles={['warga']}>
-        <WargaPanel 
+        <WargaPanel
           onLogout={handleLogout}
           wargaId={currentUser?.id}
           currentUser={currentUser}
@@ -205,8 +203,8 @@ export default function App() {
   // If user navigates to Auth Page (SampahPintar Login / Daftar)
   if (currentPage === 'auth') {
     return (
-      <AuthPage 
-        initialTab={authTab} 
+      <AuthPage
+        initialTab={authTab}
         onBackToHome={handleBackToHome}
         onLoginSuccess={handleLoginSuccess}
       />
@@ -228,7 +226,7 @@ export default function App() {
       <About />
 
       {/* 4. Fitur Utama Kami Section */}
-      <Features 
+      <Features
         onOpenRewardModal={() => setIsRewardModalOpen(true)}
         onOpenTpsModal={() => setIsTpsModalOpen(true)}
       />
@@ -237,30 +235,30 @@ export default function App() {
       <NewsSection onSelectArticle={(article) => setSelectedArticle(article)} />
 
       {/* 6. Jenis Sampah Section */}
-      <WasteTypes 
+      <WasteTypes
         onOpenRewardModal={() => setIsRewardModalOpen(true)}
         onSelectGuide={(guide) => setSelectedGuide(guide)}
       />
 
       {/* Modals */}
-      <ArticleModal 
-        article={selectedArticle} 
-        onClose={() => setSelectedArticle(null)} 
+      <ArticleModal
+        article={selectedArticle}
+        onClose={() => setSelectedArticle(null)}
       />
 
-      <RewardCalculatorModal 
-        isOpen={isRewardModalOpen} 
-        onClose={() => setIsRewardModalOpen(false)} 
+      <RewardCalculatorModal
+        isOpen={isRewardModalOpen}
+        onClose={() => setIsRewardModalOpen(false)}
       />
 
-      <TpsMapModal 
-        isOpen={isTpsModalOpen} 
-        onClose={() => setIsTpsModalOpen(false)} 
+      <TpsMapModal
+        isOpen={isTpsModalOpen}
+        onClose={() => setIsTpsModalOpen(false)}
       />
 
-      <WasteGuideModal 
-        wasteGuide={selectedGuide} 
-        onClose={() => setSelectedGuide(null)} 
+      <WasteGuideModal
+        wasteGuide={selectedGuide}
+        onClose={() => setSelectedGuide(null)}
       />
     </MainLayout>
   );
