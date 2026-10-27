@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// Base API URL with environment variable support
+// Base API URL
 const API_BASE_URL = 'http://localhost:8000';
 
 /**
@@ -14,9 +14,22 @@ export const api = axios.create({
   },
 });
 
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 /**
- * Request Interceptor:
- * Automatically attaches JWT Bearer token from sessionStorage
+ * Request Interceptor
  */
 api.interceptors.request.use(
   (config) => {
@@ -26,25 +39,71 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 /**
- * Response Interceptor:
- * Standardizes error responses and handles 401 Unauthorized
+ * Response Interceptor: 401 Handling with Refresh Token
  */
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response) {
-      // If 401 Unauthorized, log but don't dispatch logout event
-      // This prevents accidental logouts from notification requests
-      if (error.response.status === 401) {
-        console.warn('[API] Request unauthorized (401) - token may have expired');
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Handle 401 Unauthorized
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      
+      // Jika refresh token gagal (401 di endpoint /refresh), langsung logout
+      if (originalRequest.url.includes('/api/auth/refresh')) {
+        authService.clearSession();
+        window.location.href = '/login?expired=true';
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers['Authorization'] = 'Bearer ' + token;
+          return api(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = sessionStorage.getItem('refresh_token') || localStorage.getItem('refresh_token');
+      
+      if (!refreshToken || refreshToken.startsWith('demo-')) {
+        isRefreshing = false;
+        authService.clearSession();
+        return Promise.reject(error);
+      }
+
+      try {
+        const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
+          refresh_token: refreshToken
+        });
+
+        const { access_token, user } = response.data;
+        
+        authService.setSession(access_token, user, refreshToken);
+        
+        processQueue(null, access_token);
+        
+        originalRequest.headers['Authorization'] = 'Bearer ' + access_token;
+        return api(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        authService.clearSession();
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
+
     return Promise.reject(error);
   }
 );
@@ -54,6 +113,7 @@ api.interceptors.response.use(
  */
 export const authService = {
   getToken: () => sessionStorage.getItem('access_token') || localStorage.getItem('access_token'),
+  getRefreshToken: () => sessionStorage.getItem('refresh_token') || localStorage.getItem('refresh_token'),
   
   getCurrentUser: () => {
     try {
@@ -64,69 +124,69 @@ export const authService = {
     }
   },
 
-  setSession: (token, user) => {
+  setSession: (token, user, refreshToken = null, rememberMe = true) => {
     if (token) {
-      sessionStorage.setItem('access_token', token);
       localStorage.setItem('access_token', token);
+      sessionStorage.setItem('access_token', token);
     }
+    
+    if (refreshToken) {
+      localStorage.setItem('refresh_token', refreshToken);
+      sessionStorage.setItem('refresh_token', refreshToken);
+    }
+    
     if (user) {
-      sessionStorage.setItem('auth_user', JSON.stringify(user));
       localStorage.setItem('auth_user', JSON.stringify(user));
+      sessionStorage.setItem('auth_user', JSON.stringify(user));
       localStorage.setItem('user_role', user.role || 'warga');
       localStorage.setItem('user_email', user.email || '');
     }
+    
     window.dispatchEvent(new Event('auth:change'));
+    // WebSocket reconnection signal
+    window.dispatchEvent(new CustomEvent('auth:refreshed', { detail: { token } }));
   },
 
   clearSession: () => {
-    sessionStorage.removeItem('access_token');
-    sessionStorage.removeItem('auth_user');
-    sessionStorage.removeItem('user_id');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('auth_user');
-    localStorage.removeItem('user_id');
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('user_email');
+    const items = ['access_token', 'refresh_token', 'auth_user', 'user_id', 'user_role', 'user_email'];
+    items.forEach(item => {
+      localStorage.removeItem(item);
+      sessionStorage.removeItem(item);
+    });
     window.dispatchEvent(new Event('auth:change'));
   },
 
   isAuthenticated: () => {
-    const token = authService.getToken();
-    const user = authService.getCurrentUser();
-    return Boolean(token || user);
+    return !!authService.getToken();
   },
 
   getUserRole: () => {
-    const user = authService.getCurrentUser();
-    return user?.role || null;
+    return authService.getCurrentUser()?.role || null;
   },
 
-  // API Call: Login
-  login: async (email, password) => {
+  login: async (email, password, rememberMe = true) => {
     const cleanEmail = email.trim().toLowerCase();
 
-    // 1. Selalu utamakan login ke Backend API sesungguhnya
     try {
       const response = await api.post('/api/auth/login', { email: cleanEmail, password });
       const data = response.data;
+      
       if (data.access_token) {
-        authService.setSession(data.access_token, data.user || { role: 'warga', email: cleanEmail });
+        authService.setSession(data.access_token, data.user, data.refresh_token, rememberMe);
       }
       return data;
     } catch (err) {
-      // Jika backend merespon error validasi atau kredensial salah (400, 401, 403), jangan fallback demo
       if (err.response && (err.response.status === 400 || err.response.status === 401 || err.response.status === 403)) {
         throw err;
       }
 
-      // 2. Demo fallback HANYA jika backend offline/tidak terhubung
       if (
         cleanEmail === 'superadmin@sipetasan.com' ||
         cleanEmail === 'superadmin'
       ) {
         const demoSuper = { role: 'superadmin', email: 'superadmin@sipetasan.com', name: 'Super Admin DLH Surabaya' };
-        authService.setSession('demo-token-superadmin', demoSuper);
-        return { access_token: 'demo-token-superadmin', user: demoSuper };
+        authService.setSession('demo-token-superadmin', demoSuper, 'demo-refresh-superadmin', rememberMe);
+        return { access_token: 'demo-token-superadmin', user: demoSuper, refresh_token: 'demo-refresh-superadmin' };
       }
 
       if (
@@ -135,8 +195,8 @@ export const authService = {
         cleanEmail === 'admin'
       ) {
         const demoAdmin = { role: 'admin', email: 'admin@sipetasan.com', name: 'Dr. Ir. Hendro, M.T. (Admin DLH)' };
-        authService.setSession('demo-token-admin', demoAdmin);
-        return { access_token: 'demo-token-admin', user: demoAdmin };
+        authService.setSession('demo-token-admin', demoAdmin, 'demo-refresh-admin', rememberMe);
+        return { access_token: 'demo-token-admin', user: demoAdmin, refresh_token: 'demo-refresh-admin' };
       }
 
       if (
@@ -148,8 +208,8 @@ export const authService = {
         (cleanEmail === 'hendra' && password === 'petugas123')
       ) {
         const demoPetugas = { role: 'petugas', email: cleanEmail.includes('@') ? cleanEmail : 'petugas@sipetasan.com', name: 'Petugas TPS - Hendra' };
-        authService.setSession('demo-token-petugas', demoPetugas);
-        return { access_token: 'demo-token-petugas', user: demoPetugas };
+        authService.setSession('demo-token-petugas', demoPetugas, 'demo-refresh-petugas', rememberMe);
+        return { access_token: 'demo-token-petugas', user: demoPetugas, refresh_token: 'demo-refresh-petugas' };
       }
 
       if (
@@ -158,11 +218,10 @@ export const authService = {
         cleanEmail === 'driver123@gmail.com'
       ) {
         const demoDriver = { role: 'driver', email: 'driver@sipetasan.com', name: 'Bambang Supriyadi (Driver Armada TPS)' };
-        authService.setSession('demo-token-driver', demoDriver);
-        return { access_token: 'demo-token-driver', user: demoDriver };
+        authService.setSession('demo-token-driver', demoDriver, 'demo-refresh-driver', rememberMe);
+        return { access_token: 'demo-token-driver', user: demoDriver, refresh_token: 'demo-refresh-driver' };
       }
 
-      // Fallback demo warga if backend offline and credentials match demo
       if (
         cleanEmail === 'warga@sipetasan.com' ||
         cleanEmail === 'warga' ||
@@ -177,24 +236,35 @@ export const authService = {
           kecamatan: 'Bubutan',
           id: 19
         };
-        authService.setSession('demo-token-warga', demoWarga);
-        return { access_token: 'demo-token-warga', user: demoWarga };
+        authService.setSession('demo-token-warga', demoWarga, 'demo-refresh-warga', rememberMe);
+        return { access_token: 'demo-token-warga', user: demoWarga, refresh_token: 'demo-refresh-warga' };
       }
+
       throw err;
     }
   },
 
-  // API Call: Get Current Profile (sinkron wilayah petugas biar hijau live)
+  logout: async () => {
+    const refreshToken = authService.getRefreshToken();
+    try {
+      if (refreshToken && !refreshToken.startsWith('demo-')) {
+        await api.post('/api/auth/logout', { refresh_token: refreshToken });
+      }
+    } catch (e) {
+      console.error('Logout API error', e);
+    } finally {
+      authService.clearSession();
+    }
+  },
+
   getProfile: async () => {
     try {
       const response = await api.get('/api/auth/me');
       const u = response.data;
       if (u) {
-        // merge ke auth_user biar PetugasPanel langsung baca wilayah terbaru
         const cur = authService.getCurrentUser() || {};
-        const merged = { ...cur, ...u, wilayah_kecamatan: u.wilayah_kecamatan ?? cur.wilayah_kecamatan, wilayah_kelurahan: u.wilayah_kelurahan ?? cur.wilayah_kelurahan, wilayah_kota: u.wilayah_kota ?? cur.wilayah_kota };
-        sessionStorage.setItem('auth_user', JSON.stringify(merged));
-        window.dispatchEvent(new Event('auth:change'));
+        const merged = { ...cur, ...u };
+        authService.setSession(null, merged);
       }
       return u;
     } catch {

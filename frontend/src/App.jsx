@@ -177,8 +177,12 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => {
-    authService.clearSession();
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch {
+      authService.clearSession();
+    }
     setCurrentUser(null);
     setCurrentPage('landing');
     window.location.hash = 'beranda';

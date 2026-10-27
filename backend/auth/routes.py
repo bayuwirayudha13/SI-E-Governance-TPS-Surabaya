@@ -17,6 +17,13 @@ from auth.otp import (
     reset_otp_storage
 )
 
+from auth.token_service import (
+    create_access_token,
+    create_refresh_token,
+    refresh_access_token,
+    revoke_all_user_tokens
+)
+
 from services.email_service import (
     send_otp_email,
     send_reset_password_email
@@ -51,15 +58,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def create_access_token(data: dict, expires_delta: timedelta = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+# Removed - using token_service instead
 
 
 # Request models
@@ -158,13 +157,16 @@ def verify_otp_endpoint(
     )
 
     access_token = create_access_token(
-        data={"sub": user.email, "role": "warga"},
+        data={"sub": user.email, "role": "warga", "user_id": user.id},
         expires_delta=access_token_expires
     )
+    
+    refresh_token = create_refresh_token(user.id, "warga", db)
 
     return {
         "message": "OTP berhasil diverifikasi",
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": {
             "id": user.id,
@@ -376,11 +378,14 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
         if user and verify_password(request.password, user.hashed_password):
             access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
             access_token = create_access_token(
-                data={"sub": user.email, "role": user.role},
+                data={"sub": user.email, "role": user.role, "user_id": user.id},
                 expires_delta=access_token_expires
             )
+            refresh_token = create_refresh_token(user.id, user.role, db)
+            
             return {
                 "access_token": access_token,
+                "refresh_token": refresh_token,
                 "token_type": "bearer",
                 "user": {
                     "id": user.id,
@@ -401,11 +406,14 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
         if warga and verify_password(request.password, warga.password_hash):
             access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
             access_token = create_access_token(
-                data={"sub": warga.email, "role": "warga"},
+                data={"sub": warga.email, "role": "warga", "user_id": warga.id},
                 expires_delta=access_token_expires
             )
+            refresh_token = create_refresh_token(warga.id, "warga", db)
+            
             return {
                 "access_token": access_token,
+                "refresh_token": refresh_token,
                 "token_type": "bearer",
                 "user": {
                     "id": warga.id,
@@ -491,6 +499,38 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
         )
 
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+@router.post("/refresh")
+def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_db)):
+    """Refresh access token menggunakan refresh token"""
+    result = refresh_access_token(request.refresh_token, db)
+    if not result:
+        raise HTTPException(status_code=401, detail="Refresh token invalid or expired")
+    
+    access_token, user_data = result
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": user_data
+    }
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: str = None
+
+
 @router.post("/logout")
-def logout():
-    return {"message": "Logged out successfully"}
+def logout(request: LogoutRequest, db: Session = Depends(get_db)):
+    """Logout user dengan revoke token"""
+    # Verifikasi access token dari Authorization header (dapatkan dari dependency nanti)
+    # Untuk sekarang, hanya revoke berdasarkan refresh token jika ada
+    
+    if request.refresh_token:
+        from auth.token_service import revoke_refresh_token
+        revoke_refresh_token(request.refresh_token, db)
+    
+    return {"message": "Logged out successfully", "success": True}

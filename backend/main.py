@@ -29,6 +29,7 @@ from models.setoran import SetoranSampah
 from models.jadwal import JadwalPengambilan
 from models.pengambilan import PengambilanSampah
 from models.scan_history import ScanHistory
+from models.token import RefreshToken, TokenRevocation
 
 # Now import routes
 from routes.qr_routes import router as qr_router

@@ -53,6 +53,7 @@ export default function WargaChat() {
     const connectWs = () => {
       if (!isMounted) return;
       const token = authService.getToken();
+      // const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
       if (!token) {
         setError('Sesi login telah berakhir. Silakan login ulang.');
         return;
@@ -115,9 +116,21 @@ export default function WargaChat() {
     
     connectWs();
     
+    // Listen for token refresh events
+    const handleTokenRefresh = () => {
+      console.log('Token refreshed, reconnecting WebSocket...');
+      if (ws.current) {
+        ws.current.close();
+      }
+      setTimeout(() => connectWs(), 100);
+    };
+    
+    window.addEventListener('auth:refreshed', handleTokenRefresh);
+    
     return () => {
       isMounted = false;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      window.removeEventListener('auth:refreshed', handleTokenRefresh);
       if (ws.current) {
         ws.current.onclose = null;
         ws.current.close();
