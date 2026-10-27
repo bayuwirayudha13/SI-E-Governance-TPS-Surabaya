@@ -290,43 +290,22 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
     }
   }, [currentUser]);
 
-  // Update TPS list when kelurahan changes
-  useEffect(() => {
-    async function loadTps() {
-      const data = await fetchPublicTps();
-      if (data && data.length > 0) {
-        const mappedData = data.map(item => ({
-          id: item.id,
-          nama: item.nama,
-          lat: parseFloat(item.latitude),
-          lng: parseFloat(item.longitude),
-          lokasi: item.lokasi || item.nama,
-          kecamatan: item.kecamatan,
-          wilayahKota: item.wilayah_kota,
-          jenisTps: item.jenis_tps || 'TPS',
-          jumlahContainer: item.jumlah_container || '-',
-          dayaTampungM3: item.daya_tampung_m3 || 0,
-          capacity: 50,
-          statusText: item.status === 'Aktif' ? 'AMAN' : 'TIDAK AKTIF',
-          statusColor: item.status === 'Aktif' ? 'green' : 'red',
-          jamOperasional: '06:00 - 18:00'
-        }));
-        const filtered = mappedData.filter(t => t.kecamatan === selectedKelurahan || t.wilayahKota === selectedKelurahan);
-        setKelurahanTpsList(filtered.length > 0 ? filtered : mappedData.slice(0, 6));
-      } else {
-        const list = getTpsByKelurahan(selectedKelurahan);
-        setKelurahanTpsList(list.length > 0 ? list : TPS_SURABAYA_ALL.slice(0, 6));
-      }
-    }
-    loadTps();
-  }, [selectedKelurahan]);
-
   const activeUser = userData || dbUser || currentUser;
   const displayWargaName = activeUser?.nama_lengkap || activeUser?.nama || 'Warga';
   const displayWargaEmail = activeUser?.email || 'warga@sipetasan.com';
   const displayKecamatanRaw = activeUser?.kecamatan || '';
   const displayKelurahanRaw = activeUser?.kelurahan || '';
   const displayAvatar = displayWargaName.charAt(0).toUpperCase();
+
+  const [selectedKelurahan, setSelectedKelurahan] = useState(() => {
+    return displayKelurahanRaw || 'Tembok Dukuh';
+  });
+
+  useEffect(() => {
+    if (displayKelurahanRaw) {
+      setSelectedKelurahan(displayKelurahanRaw);
+    }
+  }, [displayKelurahanRaw]);
 
   const [currentDateFormatted, setCurrentDateFormatted] = useState('');
 
@@ -362,16 +341,6 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
   const [selectedPlastic, setSelectedPlastic] = useState(null);
   const [weightInput, setWeightInput] = useState('');
   const [depositSuccessMsg, setDepositSuccessMsg] = useState('');
-  // Kelurahan & Real TPS tracking state from Excel
-  const [selectedKelurahan, setSelectedKelurahan] = useState(() => {
-    return displayKelurahanRaw || 'Tembok Dukuh';
-  });
-
-  useEffect(() => {
-    if (displayKelurahanRaw) {
-      setSelectedKelurahan(displayKelurahanRaw);
-    }
-  }, [displayKelurahanRaw]);
 
   // Real TPS serving the selected Kelurahan
   const kelurahanTpsList = useMemo(() => {
@@ -1249,10 +1218,6 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
                 {!isSidebarCollapsed && <span>Tracking TPS</span>}
-              </button>
-              <button type="button" className={`warga-nav-btn ${activeMenu === 'chat' ? 'active' : ''}`} onClick={() => setActiveMenu('chat')}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                {!isSidebarCollapsed && <span>Chat Admin</span>}
               </button>
             </nav>
           </div>
