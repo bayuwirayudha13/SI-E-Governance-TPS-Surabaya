@@ -10,7 +10,7 @@ class ChatConversation(Base):
     warga_id = Column(INTEGER(unsigned=True), ForeignKey("warga.id"), nullable=False, index=True)
     status = Column(Enum("open", "closed"), default="open", nullable=False)
     first_admin_response_sent = Column(Boolean, default=False, nullable=False)
-    assigned_petugas_id = Column(INTEGER(unsigned=True), ForeignKey("users.id"), nullable=True)
+    assigned_petugas_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     conversation_type = Column(String(50), default="general", nullable=False)
     created_at = Column(DateTime, default=get_wib_now)
     updated_at = Column(DateTime, default=get_wib_now, onupdate=get_wib_now)

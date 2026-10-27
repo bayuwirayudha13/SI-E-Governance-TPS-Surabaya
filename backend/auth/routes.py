@@ -424,7 +424,13 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error login: {str(e)}")
+        err_msg = str(e)
+        if "Can't connect to MySQL" in err_msg or "2003" in err_msg or "refused" in err_msg.lower():
+            raise HTTPException(
+                status_code=503,
+                detail="Database MySQL belum aktif! Silakan buka XAMPP Control Panel lalu klik 'Start' pada MySQL."
+            )
+        raise HTTPException(status_code=500, detail=f"Error login: {err_msg}")
 
 
 @router.post("/register")

@@ -31,7 +31,11 @@ export default function WargaChat() {
         setMessages(msgsRes.data || []);
       } catch (err) {
         console.error('Load conversation error:', err);
-        setError(err.response?.data?.detail || 'Gagal memuat percakapan');
+        if (err.response?.status === 401) {
+          setError('Sesi login telah berakhir. Silakan login ulang.');
+        } else {
+          setError(err.response?.data?.detail || 'Gagal memuat percakapan');
+        }
       } finally {
         setLoading(false);
       }
@@ -43,11 +47,14 @@ export default function WargaChat() {
   // Connect WebSocket
   useEffect(() => {
     if (!conversation) return;
+    let isMounted = true;
+    let reconnectTimer = null;
     
     const connectWs = () => {
-      const token = sessionStorage.getItem('access_token');
+      if (!isMounted) return;
+      const token = authService.getToken();
       if (!token) {
-        setError('Token tidak ditemukan');
+        setError('Sesi login telah berakhir. Silakan login ulang.');
         return;
       }
       
@@ -58,12 +65,14 @@ export default function WargaChat() {
         ws.current = new WebSocket(wsUrl);
         
         ws.current.onopen = () => {
+          if (!isMounted) return;
           console.log('WebSocket connected');
           setWsStatus('connected');
           setError(null);
         };
         
         ws.current.onmessage = (event) => {
+          if (!isMounted) return;
           try {
             const data = JSON.parse(event.data);
             
@@ -83,18 +92,22 @@ export default function WargaChat() {
         };
         
         ws.current.onerror = (err) => {
+          if (!isMounted) return;
           console.error('WebSocket error:', err);
           setWsStatus('error');
-          setError('Koneksi gagal');
         };
         
         ws.current.onclose = () => {
+          if (!isMounted) return;
           console.log('WebSocket closed');
           setWsStatus('disconnected');
-          // Auto-reconnect after 3 seconds
-          setTimeout(() => connectWs(), 3000);
+          // Auto-reconnect after 3 seconds if still mounted
+          reconnectTimer = setTimeout(() => {
+            if (isMounted) connectWs();
+          }, 3000);
         };
       } catch (err) {
+        if (!isMounted) return;
         console.error('WebSocket create error:', err);
         setError('Gagal membuat koneksi');
       }
@@ -103,7 +116,10 @@ export default function WargaChat() {
     connectWs();
     
     return () => {
+      isMounted = false;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       if (ws.current) {
+        ws.current.onclose = null;
         ws.current.close();
       }
     };
@@ -173,9 +189,28 @@ export default function WargaChat() {
       </div>
 
       {error && (
-        <div className="warga-chat-error">
+        <div className="warga-chat-error" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
           <span>{error}</span>
-          <button type="button" onClick={() => setError(null)}>×</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {error.toLowerCase().includes('login') && (
+              <a
+                href="#auth"
+                style={{
+                  background: '#dc2626',
+                  color: '#fff',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Login Ulang
+              </a>
+            )}
+            <button type="button" onClick={() => setError(null)}>×</button>
+          </div>
         </div>
       )}
 

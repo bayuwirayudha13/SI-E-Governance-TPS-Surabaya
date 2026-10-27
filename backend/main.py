@@ -67,7 +67,13 @@ os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Database
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+    print("✓ Berhasil terhubung ke database MySQL (sipk_tps_baru).")
+except Exception as e:
+    print(f"\n⚠️  [DATABASE ERROR] Tidak dapat terhubung ke MySQL pada port 3306!")
+    print(f"⚠️  Detail error: {e}")
+    print(f"👉 Solusi: Buka XAMPP Control Panel (D:\\xampp\\xampp-control.exe) lalu klik START pada modul MySQL!\n")
 
 # Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -238,4 +244,4 @@ if os.path.exists(frontend_dist_path):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

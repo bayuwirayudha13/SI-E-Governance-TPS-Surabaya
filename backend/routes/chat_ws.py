@@ -24,6 +24,7 @@ async def websocket_chat_endpoint(
     Both warga and admin can connect.
     Token passed as query parameter: /ws/chat/{conversation_id}?token=...
     """
+    await websocket.accept()
     db = SessionLocal()
     
     try:
@@ -34,6 +35,7 @@ async def websocket_chat_endpoint(
             role = payload.get("role")
             
             if not email or not role:
+                await websocket.send_json({"type": "error", "message": "Token tidak valid"})
                 await websocket.close(code=1008, reason="Invalid token")
                 return
             
@@ -42,6 +44,7 @@ async def websocket_chat_endpoint(
                 from models.warga import Warga
                 warga = db.query(Warga).filter(Warga.email == email).first()
                 if not warga:
+                    await websocket.send_json({"type": "error", "message": "User warga tidak ditemukan"})
                     await websocket.close(code=1008, reason="User not found")
                     return
                 user = {
@@ -54,6 +57,7 @@ async def websocket_chat_endpoint(
                 from models.users import User
                 admin = db.query(User).filter(User.email == email).first()
                 if not admin:
+                    await websocket.send_json({"type": "error", "message": "User admin tidak ditemukan"})
                     await websocket.close(code=1008, reason="User not found")
                     return
                 user = {
@@ -63,11 +67,13 @@ async def websocket_chat_endpoint(
                     "name": admin.nama_lengkap
                 }
             else:
+                await websocket.send_json({"type": "error", "message": "Role tidak diizinkan"})
                 await websocket.close(code=1008, reason="Invalid role")
                 return
         
         except Exception as e:
             logger.error(f"Auth failed: {e}")
+            await websocket.send_json({"type": "error", "message": "Autentikasi gagal"})
             await websocket.close(code=1008, reason="Authentication failed")
             return
         
@@ -77,11 +83,13 @@ async def websocket_chat_endpoint(
         ).first()
         
         if not conv:
+            await websocket.send_json({"type": "error", "message": "Percakapan tidak ditemukan"})
             await websocket.close(code=1008, reason="Conversation not found")
             return
         
         # Warga can only access their own conversation
         if user["role"] == "warga" and conv.warga_id != user["id"]:
+            await websocket.send_json({"type": "error", "message": "Akses ditolak"})
             await websocket.close(code=1008, reason="Access denied")
             return
         

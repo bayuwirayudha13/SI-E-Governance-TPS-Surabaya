@@ -11,9 +11,14 @@ DATABASE_URL = os.getenv(
     "mysql+pymysql://root:@localhost:3306/sipk_tps_baru"
 )
 
+connect_args = {}
+if "mysql" in DATABASE_URL:
+    connect_args = {"connect_timeout": 5}
+
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True
+    pool_pre_ping=True,
+    connect_args=connect_args
 )
 
 SessionLocal = sessionmaker(

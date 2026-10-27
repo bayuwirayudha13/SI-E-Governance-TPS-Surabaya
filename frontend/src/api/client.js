@@ -20,7 +20,7 @@ export const api = axios.create({
  */
 api.interceptors.request.use(
   (config) => {
-    const token = sessionStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -53,11 +53,11 @@ api.interceptors.response.use(
  * Centralized Authentication & Storage Helper Service
  */
 export const authService = {
-  getToken: () => sessionStorage.getItem('access_token'),
+  getToken: () => sessionStorage.getItem('access_token') || localStorage.getItem('access_token'),
   
   getCurrentUser: () => {
     try {
-      const user = sessionStorage.getItem('auth_user');
+      const user = sessionStorage.getItem('auth_user') || localStorage.getItem('auth_user');
       return user ? JSON.parse(user) : null;
     } catch {
       return null;
@@ -65,8 +65,16 @@ export const authService = {
   },
 
   setSession: (token, user) => {
-    if (token) sessionStorage.setItem('access_token', token);
-    if (user) sessionStorage.setItem('auth_user', JSON.stringify(user));
+    if (token) {
+      sessionStorage.setItem('access_token', token);
+      localStorage.setItem('access_token', token);
+    }
+    if (user) {
+      sessionStorage.setItem('auth_user', JSON.stringify(user));
+      localStorage.setItem('auth_user', JSON.stringify(user));
+      localStorage.setItem('user_role', user.role || 'warga');
+      localStorage.setItem('user_email', user.email || '');
+    }
     window.dispatchEvent(new Event('auth:change'));
   },
 
@@ -74,11 +82,16 @@ export const authService = {
     sessionStorage.removeItem('access_token');
     sessionStorage.removeItem('auth_user');
     sessionStorage.removeItem('user_id');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('auth_user');
+    localStorage.removeItem('user_id');
+    localStorage.removeItem('user_role');
+    localStorage.removeItem('user_email');
     window.dispatchEvent(new Event('auth:change'));
   },
 
   isAuthenticated: () => {
-    const token = sessionStorage.getItem('access_token');
+    const token = authService.getToken();
     const user = authService.getCurrentUser();
     return Boolean(token || user);
   },
@@ -107,26 +120,63 @@ export const authService = {
       }
 
       // 2. Demo fallback HANYA jika backend offline/tidak terhubung
-      if (cleanEmail === 'admin123@gmail.com' && password === 'admin123') {
-        const demoAdmin = { role: 'admin', email: 'admin123@gmail.com', name: 'Dr. Ir. Hendro, M.T.' };
+      if (
+        cleanEmail === 'superadmin@sipetasan.com' ||
+        cleanEmail === 'superadmin'
+      ) {
+        const demoSuper = { role: 'superadmin', email: 'superadmin@sipetasan.com', name: 'Super Admin DLH Surabaya' };
+        authService.setSession('demo-token-superadmin', demoSuper);
+        return { access_token: 'demo-token-superadmin', user: demoSuper };
+      }
+
+      if (
+        cleanEmail === 'admin123@gmail.com' ||
+        cleanEmail === 'admin@sipetasan.com' ||
+        cleanEmail === 'admin'
+      ) {
+        const demoAdmin = { role: 'admin', email: 'admin@sipetasan.com', name: 'Dr. Ir. Hendro, M.T. (Admin DLH)' };
         authService.setSession('demo-token-admin', demoAdmin);
         return { access_token: 'demo-token-admin', user: demoAdmin };
       }
 
       if (
+        cleanEmail === 'petugas@sipetasan.com' ||
         cleanEmail === 'petugas@kelurahan.go.id' ||
         cleanEmail === 'hendra@petugas.go.id' ||
         cleanEmail === 'petugas123@gmail.com' ||
+        cleanEmail === 'petugas' ||
         (cleanEmail === 'hendra' && password === 'petugas123')
       ) {
-        const demoPetugas = { role: 'petugas', email: cleanEmail, name: 'Hendra' };
+        const demoPetugas = { role: 'petugas', email: cleanEmail.includes('@') ? cleanEmail : 'petugas@sipetasan.com', name: 'Petugas TPS - Hendra' };
         authService.setSession('demo-token-petugas', demoPetugas);
         return { access_token: 'demo-token-petugas', user: demoPetugas };
       }
 
+      if (
+        cleanEmail === 'driver@sipetasan.com' ||
+        cleanEmail === 'driver' ||
+        cleanEmail === 'driver123@gmail.com'
+      ) {
+        const demoDriver = { role: 'driver', email: 'driver@sipetasan.com', name: 'Bambang Supriyadi (Driver Armada TPS)' };
+        authService.setSession('demo-token-driver', demoDriver);
+        return { access_token: 'demo-token-driver', user: demoDriver };
+      }
+
       // Fallback demo warga if backend offline and credentials match demo
-      if (password === 'password123' || password === 'warga123') {
-        const demoWarga = { role: 'warga', email: 'bayuwirayudha84@gmail.com', name: 'Budi Susanto', id: 19 };
+      if (
+        cleanEmail === 'warga@sipetasan.com' ||
+        cleanEmail === 'warga' ||
+        password === 'password123' ||
+        password === 'warga123'
+      ) {
+        const demoWarga = {
+          role: 'warga',
+          email: cleanEmail.includes('@') ? cleanEmail : 'warga@sipetasan.com',
+          nama_lengkap: 'Budi Santoso',
+          kelurahan: 'Tembok Dukuh',
+          kecamatan: 'Bubutan',
+          id: 19
+        };
         authService.setSession('demo-token-warga', demoWarga);
         return { access_token: 'demo-token-warga', user: demoWarga };
       }

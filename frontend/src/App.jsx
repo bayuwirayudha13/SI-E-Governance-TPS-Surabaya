@@ -10,13 +10,14 @@ import Footer from './components/Footer';
 import ArticleModal from './components/ArticleModal';
 import RewardCalculatorModal from './components/RewardCalculatorModal';
 import TpsMapModal from './components/TpsMapModal';
+import TpsDetailModal from './components/TpsDetailModal';
+import LaporanWargaModal from './components/LaporanWargaModal';
 import WasteGuideModal from './components/WasteGuideModal';
 import AuthPage from './components/AuthPage';
 import AdminPanel from './components/AdminPanelNew';
 import SuperadminPanel from './components/SuperadminPanel';
 import WargaPanel from './components/WargaPanel';
 import PetugasPanel from './components/PetugasPanel';
-import MultiRoleSwitcher from './components/MultiRoleSwitcher';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/MainLayout';
 import { authService } from './api/client';
@@ -29,7 +30,12 @@ export default function App() {
   // Listen to global auth state changes
   useEffect(() => {
     const handleAuthChange = () => {
-      setCurrentUser(authService.getCurrentUser());
+      const u = authService.getCurrentUser();
+      setCurrentUser(u);
+      if (!u && (currentPage === 'admin' || currentPage === 'petugas')) {
+        setCurrentPage('auth');
+        window.location.hash = 'auth';
+      }
     };
     window.addEventListener('auth:change', handleAuthChange);
     window.addEventListener('auth:unauthorized', handleAuthChange);
@@ -37,20 +43,48 @@ export default function App() {
       window.removeEventListener('auth:change', handleAuthChange);
       window.removeEventListener('auth:unauthorized', handleAuthChange);
     };
-  }, []);
+  }, [currentPage]);
 
   // Modals state
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
   const [isTpsModalOpen, setIsTpsModalOpen] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState(null);
+  const [selectedTpsDetail, setSelectedTpsDetail] = useState(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportTargetTps, setReportTargetTps] = useState(null);
 
 
-  // Sync hash routing (support #auth, #masuk, #daftar, #admin, #warga, #petugas)
+  // Sync hash routing (support #auth, #masuk, #daftar, #admin, #warga, #petugas, #driver)
   // Restore session on mount
   useEffect(() => {
-    const token = sessionStorage.getItem('access_token');
+    if (window.location.search.includes('demo=warga')) {
+      const demoWarga = {
+        id: 12,
+        nama_lengkap: 'Raditya',
+        nama: 'Raditya',
+        email: 'raditya@sipetasan.com',
+        role: 'warga',
+        kelurahan: 'Tembok Dukuh',
+        kecamatan: 'Bubutan',
+        poin: 650
+      };
+      authService.setSession('demo_token', demoWarga);
+      setCurrentUser(demoWarga);
+      setCurrentPage('warga');
+      window.location.hash = 'warga';
+      return;
+    }
+
+    const token = authService.getToken();
     const user = authService.getCurrentUser();
+    const initialHash = window.location.hash.toLowerCase();
+
+    if (initialHash === '#beranda' || initialHash === '#landing') {
+      setCurrentPage('landing');
+      if (token && user) setCurrentUser(user);
+      return;
+    }
 
     if (token && user) {
       setCurrentUser(user);
@@ -67,7 +101,7 @@ export default function App() {
     }
   }, []);
 
-  // Sync hash routing (support #auth, #masuk, #daftar, #admin, #superadmin, #warga, #multi)
+  // Sync hash routing (support #auth, #masuk, #daftar, #admin, #superadmin, #warga, #petugas)
   useEffect(() => {
     const handleHashChange = () => {
       let hash = window.location.hash.toLowerCase();
@@ -76,7 +110,7 @@ export default function App() {
 
       if (hash === '#admin' || hash === '#superadmin') {
         setCurrentPage('admin');
-      } else if (hash === '#warga' || hash === '#portal-warga' || hash === '#warga-dashboard' || hash === '#qr' || hash === '#qr-status' || hash === '#validasi' || hash === '#tracking') {
+      } else if (hash === '#warga' || hash === '#portal-warga' || hash === '#warga-dashboard' || hash === '#qr' || hash === '#qr-status' || hash === '#validasi' || hash === '#tracking' || hash === '#chat' || hash === '#chat-admin' || hash === '#riwayat-pengambilan') {
         setCurrentPage('warga');
       } else if (
         hash === '#petugas' ||
@@ -87,7 +121,7 @@ export default function App() {
         hash === '#scan' ||
         hash === '#scan-qr' ||
         hash === '#riwayat' ||
-        hash === '#riwayat-pengambilan'
+        hash === '#riwayat-petugas'
       ) {
         setCurrentPage('petugas');
       } else if (hash === '#auth' || hash === '#masuk' || hash === '#signin') {
@@ -99,10 +133,8 @@ export default function App() {
       } else if (hash === '#ganti-password' || hash === '#reset-password') {
         setCurrentPage('auth');
         setAuthTab('ganti-password');
-      } else if (hash === '#beranda' || hash === '') {
-        if (currentPage !== 'admin' && currentPage !== 'warga' && currentPage !== 'petugas') {
-          setCurrentPage('landing');
-        }
+      } else if (hash === '#beranda' || hash === '' || hash === '#landing') {
+        setCurrentPage('landing');
       }
     };
 
@@ -153,10 +185,6 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // If user navigates to Multi-Role Switcher
-  if (currentPage === 'multi') {
-    return <MultiRoleSwitcher />;
-  }
 
   // If user is inside Admin Panel (Protected by RBAC: admin & superadmin)
   if (currentPage === 'admin') {
@@ -175,7 +203,7 @@ export default function App() {
     );
   }
 
-  // If user is inside Petugas Pengangkut Panel (Protected by RBAC: petugas & driver)
+  // If user is inside Petugas Lapangan/TPS Panel (Protected by RBAC: petugas & driver)
   if (currentPage === 'petugas') {
     return (
       <ProtectedRoute allowedRoles={['petugas', 'driver']}>
@@ -220,7 +248,11 @@ export default function App() {
       onOpenRewardModal={() => setIsRewardModalOpen(true)}
     >
       {/* Hero Section with Exact Satellite Map Preview */}
-      <Hero onOpenTpsModal={() => setIsTpsModalOpen(true)} />
+      <Hero
+        onOpenTpsModal={() => setIsTpsModalOpen(true)}
+        onOpenTpsDetail={(tps) => setSelectedTpsDetail(tps)}
+        onOpenLoginModal={() => handleOpenAuth('masuk')}
+      />
 
       {/* 3. Tentang Kami Section */}
       <About />
@@ -254,6 +286,23 @@ export default function App() {
       <TpsMapModal
         isOpen={isTpsModalOpen}
         onClose={() => setIsTpsModalOpen(false)}
+      />
+
+      <TpsDetailModal
+        tps={selectedTpsDetail}
+        isOpen={Boolean(selectedTpsDetail)}
+        onClose={() => setSelectedTpsDetail(null)}
+        onOpenReport={(tps) => {
+          setReportTargetTps(tps);
+          setIsReportModalOpen(true);
+        }}
+      />
+
+      <LaporanWargaModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        targetTps={reportTargetTps}
+        currentUser={currentUser}
       />
 
       <WasteGuideModal

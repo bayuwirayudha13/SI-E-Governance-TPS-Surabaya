@@ -21,6 +21,7 @@ export default function MainLayout({
         currentUser={currentUser}
         onOpenLoginModal={onOpenLoginModal}
         onOpenTpsModal={onOpenTpsModal}
+        onOpenRewardModal={onOpenRewardModal}
       />
 
       {/* 2. Main Page Content / Children */}

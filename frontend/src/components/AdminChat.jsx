@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { api } from '../api/client';
+import { api, authService } from '../api/client';
 import './AdminChat.css';
 
 export default function AdminChat() {
@@ -196,9 +196,9 @@ export default function AdminChat() {
     }
     
     const connectWs = () => {
-      const token = sessionStorage.getItem('access_token');
+      const token = authService.getToken();
       if (!token) {
-        setError('Token tidak ditemukan');
+        setError('Sesi login telah berakhir. Silakan login ulang.');
         return;
       }
       

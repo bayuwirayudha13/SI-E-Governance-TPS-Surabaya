@@ -158,10 +158,27 @@ export default function HeroMap({ onOpenTpsModal }) {
     tileLayerRef.current = newTile;
   }, [mapType]);
 
-  // Update Markers when filterStatus or tpsList changes
+  const [isClusteringEnabled, setIsClusteringEnabled] = useState(true);
+  const [currentZoom, setCurrentZoom] = useState(DEFAULT_ZOOM);
+
+  // Track map zoom level
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    const map = mapInstanceRef.current;
+    const onZoom = () => {
+      setCurrentZoom(map.getZoom());
+    };
+    map.on('zoomend', onZoom);
+    return () => {
+      map.off('zoomend', onZoom);
+    };
+  }, []);
+
+  // Update Markers & Clusters when filterStatus, tpsList, zoom, or clustering toggle changes
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current) return;
 
+    const map = mapInstanceRef.current;
     const markersGroup = markersLayerRef.current;
     markersGroup.clearLayers();
 
@@ -173,14 +190,109 @@ export default function HeroMap({ onOpenTpsModal }) {
       return true;
     });
 
-    filtered.forEach((tps) => {
+    const zoom = map.getZoom();
+    const shouldCluster = isClusteringEnabled && zoom <= 13;
+
+    if (shouldCluster) {
+      // Spatial grid clustering algorithm based on current zoom
+      const gridSize = zoom <= 11 ? 0.055 : zoom === 12 ? 0.035 : 0.020;
+      const clusters = {};
+
+      filtered.forEach((tps) => {
+        if (!tps.lat || !tps.lng) return;
+        const gridKey = `${Math.floor(tps.lat / gridSize)}_${Math.floor(tps.lng / gridSize)}`;
+        if (!clusters[gridKey]) {
+          clusters[gridKey] = {
+            items: [],
+            sumLat: 0,
+            sumLng: 0,
+            hasCritical: false,
+            hasWarning: false,
+          };
+        }
+        clusters[gridKey].items.push(tps);
+        clusters[gridKey].sumLat += tps.lat;
+        clusters[gridKey].sumLng += tps.lng;
+        const pct = tps.kapasitasPersen ?? 50;
+        if (pct >= 80 || tps.status === 'Kritis' || tps.status === 'Merah') {
+          clusters[gridKey].hasCritical = true;
+        } else if (pct >= 60 || tps.status === 'Waspada' || tps.status === 'Kuning') {
+          clusters[gridKey].hasWarning = true;
+        }
+      });
+
+      Object.values(clusters).forEach((c) => {
+        const count = c.items.length;
+        const centerLat = c.sumLat / count;
+        const centerLng = c.sumLng / count;
+
+        if (count === 1) {
+          renderSingleMarker(c.items[0], markersGroup);
+        } else {
+          // Render Cluster Bubble Marker
+          const haloColor = c.hasCritical ? '#ef4444' : c.hasWarning ? '#f59e0b' : '#10b981';
+          const size = Math.min(56, 38 + Math.floor(Math.log2(count) * 4));
+
+          const clusterIcon = L.divIcon({
+            className: 'osm-cluster-marker-wrapper',
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2],
+            html: `
+              <div style="
+                width: ${size}px;
+                height: ${size}px;
+                background: ${haloColor};
+                color: #ffffff;
+                border-radius: 50%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justifyContent: center;
+                box-shadow: 0 4px 14px rgba(0,0,0,0.35), 0 0 0 4px rgba(255,255,255,0.85);
+                font-family: inherit;
+                font-weight: 800;
+                cursor: pointer;
+                border: 2px solid #ffffff;
+                animation: pulseCluster 2.5s infinite;
+              ">
+                <span style="font-size: ${size > 44 ? '0.85rem' : '0.78rem'}; line-height: 1;">${count}</span>
+                <span style="font-size: 0.6rem; font-weight: 700; opacity: 0.95; line-height: 1; margin-top: 2px;">TPS</span>
+              </div>
+            `,
+          });
+
+          const clusterMarker = L.marker([centerLat, centerLng], { icon: clusterIcon });
+
+          // Tooltip on cluster hover
+          const sampleNames = c.items.slice(0, 3).map((x) => x.nama).join(', ');
+          clusterMarker.bindTooltip(
+            `<strong>Kluster ${count} TPS</strong><br/><span style="font-size:0.75rem">${sampleNames}${count > 3 ? ` +${count - 3} lainnya` : ''}</span><br/><em style="font-size:0.7rem; color:#059669">Klik untuk memperbesar peta</em>`,
+            { direction: 'top', offset: [0, -size / 2] }
+          );
+
+          // Click cluster -> Smooth Zoom In
+          clusterMarker.on('click', () => {
+            const nextZoom = Math.min(16, map.getZoom() + 2);
+            map.flyTo([centerLat, centerLng], nextZoom, { duration: 0.5 });
+          });
+
+          clusterMarker.addTo(markersGroup);
+        }
+      });
+    } else {
+      // Zoomed in (>=14) or clustering disabled: Render all individual markers
+      filtered.forEach((tps) => {
+        renderSingleMarker(tps, markersGroup);
+      });
+    }
+
+    function renderSingleMarker(tps, group) {
       if (!tps.lat || !tps.lng) return;
 
-      const isCritical = tps.statusColor === 'red' || tps.capacity >= 90;
-      const isWarning = tps.statusColor === 'yellow' || (tps.capacity >= 75 && tps.capacity < 90);
-      const isInactive = tps.status === 'Tidak Aktif';
-      const badgeClass = isInactive ? 'gray' : isCritical ? 'red' : isWarning ? 'yellow' : 'green';
-      const pinColor = isInactive ? '#94a3b8' : isCritical ? '#ef4444' : isWarning ? '#f59e0b' : '#10b981';
+      const isCritical = tps.status === 'Merah';
+      const isWarning = tps.status === 'Kuning';
+      const badgeClass = isCritical ? 'red' : isWarning ? 'yellow' : 'green';
+      const pinColor = isCritical ? '#ef4444' : isWarning ? '#f59e0b' : '#10b981';
 
       // Custom pulsing HTML marker
       const customIcon = L.divIcon({
@@ -191,11 +303,11 @@ export default function HeroMap({ onOpenTpsModal }) {
         html: `
           <div class="osm-marker-pin" style="--marker-color: ${pinColor}">
             <div class="osm-marker-pulse"></div>
-            <div class="osm-marker-dot" style="background: ${pinColor}; width: 28px; height: 28px;">
-              <span>${isInactive ? 'OFF' : `${tps.capacity || tps.kapasitasPersen}%`}</span>
+            <div class="osm-marker-dot">
+              <span>${tps.kapasitasPersen}%</span>
             </div>
           </div>
-        `
+        `,
       });
 
       const marker = L.marker([tps.lat, tps.lng], { icon: customIcon });
@@ -205,23 +317,23 @@ export default function HeroMap({ onOpenTpsModal }) {
         <div class="osm-popup-container">
           <div class="osm-popup-title-row">
             <h4 class="osm-popup-title">${tps.nama}</h4>
-            <span class="map-tooltip-badge ${badgeClass}">${tps.capacity || tps.kapasitasPersen}% &bull; ${tps.statusText || (isInactive ? 'Nonaktif' : badgeClass.charAt(0).toUpperCase() + badgeClass.slice(1))}</span>
+            <span class="map-tooltip-badge ${badgeClass}">${tps.kapasitasPersen}% &bull; ${tps.statusText ? tps.statusText.split(' ')[0] : tps.status}</span>
           </div>
           <div class="osm-popup-details">
-            <p><strong>📍 Lokasi:</strong> ${tps.lokasi || (tps.kecamatan ? `Kec. ${tps.kecamatan}` : '-')}${tps.kelurahan ? `, Kel. ${tps.kelurahan}` : ''}</p>
+            <p><strong>📍 Lokasi:</strong> Kec. ${tps.kecamatan}, Kel. ${tps.kelurahan}</p>
             <p><strong>⏰ Jam Operasional:</strong> ${tps.jamOperasional}</p>
-            <p><strong>📦 Daya Tampung:</strong> ${tps.dayaTampungM3 || tps.kapasitasM3 || '-'} m&sup3;</p>
+            <p><strong>📦 Daya Tampung:</strong> ${tps.kapasitasM3 || '-'} m&sup3;</p>
             <p><strong>⏱️ Terakhir Diperbarui:</strong> ${tps.terakhirUpdate}</p>
           </div>
           <div class="osm-popup-bar-track">
-            <div class="osm-popup-bar-fill ${badgeClass}" style="width: ${tps.capacity || tps.kapasitasPersen}%;"></div>
+            <div class="osm-popup-bar-fill ${badgeClass}" style="width: ${tps.kapasitasPersen}%;"></div>
           </div>
           <button 
             type="button" 
             id="osm-btn-${tps.id}"
             class="osm-popup-action-btn"
           >
-            Lihat Detail & Lapor Kendala &rarr;
+            Buka Detail Lengkap TPS &rarr;
           </button>
         </div>
       `;
@@ -231,15 +343,14 @@ export default function HeroMap({ onOpenTpsModal }) {
         className: 'osm-styled-leaflet-popup',
         autoPan: true,
         autoPanPaddingTopLeft: [20, 135],
-        autoPanPaddingBottomRight: [20, 70]
+        autoPanPaddingBottomRight: [20, 70],
       });
 
-      // Show info when marker is clicked (both popup and bottom keterangan card)
       marker.on('click', () => {
         setSelectedTps(tps);
         marker.openPopup();
         if (mapInstanceRef.current) {
-          mapInstanceRef.current.panTo([tps.lat + 0.020, tps.lng], { animate: true, duration: 0.35 });
+          mapInstanceRef.current.panTo([tps.lat + 0.015, tps.lng], { animate: true, duration: 0.35 });
         }
       });
 
@@ -254,8 +365,8 @@ export default function HeroMap({ onOpenTpsModal }) {
         }
       });
 
-      marker.addTo(markersGroup);
-    });
+      marker.addTo(group);
+    }
 
     if (mapInstanceRef.current) {
       setTimeout(() => {
@@ -281,7 +392,7 @@ export default function HeroMap({ onOpenTpsModal }) {
   return (
     <div className="hero-map-wrapper" style={{ position: 'relative', borderRadius: '20px', overflow: 'hidden' }}>
       {/* Top Floating Controls Wrapper (Row 1: Header/Legend, Row 2: Switcher & Filters) */}
-      <div 
+      <div
         className="hero-map-header-controls"
         style={{
           position: 'absolute',
@@ -296,7 +407,7 @@ export default function HeroMap({ onOpenTpsModal }) {
         }}
       >
         {/* Row 1: Header & Legend */}
-        <div 
+        <div
           className="map-status-bar"
           style={{
             alignSelf: 'flex-start',
@@ -340,8 +451,22 @@ export default function HeroMap({ onOpenTpsModal }) {
             </button>
           </div>
 
-          {/* Status Filters */}
+          {/* Status Filters & Cluster Toggle */}
           <div className="osm-filter-chips">
+            <button
+              type="button"
+              className={`osm-filter-chip ${isClusteringEnabled ? 'active' : ''}`}
+              onClick={() => setIsClusteringEnabled(!isClusteringEnabled)}
+              title="Aktifkan/Nonaktifkan pengelompokan (clustering) marker TPS"
+              style={{
+                background: isClusteringEnabled ? '#047857' : 'rgba(255,255,255,0.9)',
+                color: isClusteringEnabled ? '#ffffff' : '#1e293b',
+                fontWeight: 700,
+                border: '1px solid #10b981'
+              }}
+            >
+              🧩 Kluster: {isClusteringEnabled ? 'ON' : 'OFF'}
+            </button>
             {['Semua', 'Aman', 'Waspada', 'Kritis'].map((status) => (
               <button
                 key={status}

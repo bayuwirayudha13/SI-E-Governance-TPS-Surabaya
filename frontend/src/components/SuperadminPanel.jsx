@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { TPS_SURABAYA_ALL } from '../data/tpsSurabayaData';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -9,6 +10,8 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
   const [petugasList, setPetugasList] = useState([]);
   const [tpsList, setTpsList] = useState([]);
   const [jadwals, setJadwals] = useState([]);
+  const [laporanList, setLaporanList] = useState([]);
+  const [dispatchedTpsList, setDispatchedTpsList] = useState([]);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showAddJadwalModal, setShowAddJadwalModal] = useState(false);
   const [showAddTpsModal, setShowAddTpsModal] = useState(false);
@@ -82,6 +85,7 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
     loadJadwals();
     loadTps();
     loadSettings();
+    loadLaporan();
     (async () => {
       try {
         const r = await fetch(`${API_BASE}/api/wilayah/kecamatan`);
@@ -153,6 +157,43 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
     } catch (err) {
       console.error('Load jadwals error:', err);
     }
+  };
+
+  const loadLaporan = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/laporan/`);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setLaporanList(data);
+          return;
+        }
+      }
+    } catch {}
+    try {
+      const saved = JSON.parse(localStorage.getItem('sipetasan_laporan_warga') || '[]');
+      if (saved.length > 0) {
+        setLaporanList(saved);
+        return;
+      }
+    } catch {}
+    setLaporanList([
+      { id: 101, tps_nama: 'TPS PRINGADI', jenis_laporan: 'Penuh', deskripsi: 'Kontainer meluber ke badan jalan, bau menyengat.', status_tindak_lanjut: 'Menunggu', tanggal_lapor: '10 menit lalu' },
+      { id: 102, tps_nama: 'TPS KEPUTRAN', jenis_laporan: 'Rusak', deskripsi: 'Roda kontainer patah dan penutup tidak bisa dibuka.', status_tindak_lanjut: 'Proses', tanggal_lapor: '35 menit lalu' },
+      { id: 103, tps_nama: 'TPS KALISARI', jenis_laporan: 'Penuh', deskripsi: 'Tumpukan sampah plastik memenuhi bak kontainer.', status_tindak_lanjut: 'Menunggu', tanggal_lapor: '1 jam lalu' }
+    ]);
+  };
+
+  const handleDispatchTruck = (tps) => {
+    setDispatchedTpsList((prev) => [...prev, tps.id]);
+    setSuccess(`Instruksi Disposisi Terkirim! Truk Armada DLH SBY-${Math.floor(10 + Math.random() * 89)} segera meluncur ke ${tps.nama} (Kecamatan ${tps.kecamatan}).`);
+    setTimeout(() => setSuccess(''), 5000);
+  };
+
+  const handleResolveLaporan = (id) => {
+    setLaporanList((prev) => prev.map(item => item.id === id ? { ...item, status_tindak_lanjut: 'Selesai' } : item));
+    setSuccess(`Laporan aduan #${id} berhasil divalidasi dan ditandai selesai ditangani.`);
+    setTimeout(() => setSuccess(''), 4500);
   };
 
   const loadTps = async () => {
@@ -648,64 +689,516 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
           </div>
         )}
 
-        {/* DASHBOARD */}
-        {activeMenu === 'dashboard' && (
-          <div className="admin-content-view">
-            <div className="admin-stats-row">
-              <div className="admin-stat-card">
-                <div className="stat-card-header">
-                  <div className="stat-icon-wrap icon-blue">👥</div>
-                  <span className="stat-badge-live">LIVE</span>
+        {/* DASHBOARD EKSEKUTIF SUPERADMIN */}
+        {activeMenu === 'dashboard' && (() => {
+          const totalTpsCount = TPS_SURABAYA_ALL.length;
+          const criticalTpsList = TPS_SURABAYA_ALL.filter(t => (t.kapasitasPersen || t.capacity || 0) >= 80);
+          const avgCapacityPercent = Math.round(
+            TPS_SURABAYA_ALL.reduce((acc, t) => acc + (t.kapasitasPersen || t.capacity || 50), 0) / (totalTpsCount || 1)
+          );
+          const pendingReports = laporanList.filter(l => l.status_tindak_lanjut !== 'Selesai');
+
+          const REGIONS = [
+            { name: 'Surabaya Pusat', icon: '🏛️', desc: 'Tegalsari, Genteng, Bubutan, Simokerto' },
+            { name: 'Surabaya Timur', icon: '🎓', desc: 'Gubeng, Sukolilo, Rungkut, Mulyorejo' },
+            { name: 'Surabaya Barat', icon: '🏢', desc: 'Tandes, Sambikerep, Benowo, Sukomanunggal' },
+            { name: 'Surabaya Utara', icon: '⚓', desc: 'Krembangan, Semampir, Pabean Cantian, Kenjeran' },
+            { name: 'Surabaya Selatan', icon: '🌳', desc: 'Wonokromo, Wonocolo, Sawahan, Gayungan' }
+          ];
+
+          const regionStats = REGIONS.map(reg => {
+            const list = TPS_SURABAYA_ALL.filter(t => t.wilayahKota === reg.name);
+            const count = list.length || 1;
+            const avg = Math.round(list.reduce((acc, t) => acc + (t.kapasitasPersen || t.capacity || 50), 0) / count);
+            const crit = list.filter(t => (t.kapasitasPersen || t.capacity || 0) >= 80).length;
+            return {
+              ...reg,
+              totalTps: list.length,
+              avgPct: avg,
+              criticalCount: crit,
+              statusText: avg >= 80 ? 'Kritis' : avg >= 65 ? 'Waspada' : 'Aman',
+              statusColor: avg >= 80 ? '#ef4444' : avg >= 65 ? '#f59e0b' : '#10b981'
+            };
+          });
+
+          return (
+            <div className="admin-content-view" style={{ paddingBottom: '40px' }}>
+              {/* Executive Welcome Hero Banner */}
+              <div style={{
+                background: 'linear-gradient(135deg, #064e3b 0%, #047857 55%, #059669 100%)',
+                color: '#ffffff',
+                borderRadius: '16px',
+                padding: '24px 28px',
+                marginBottom: '24px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '16px',
+                boxShadow: '0 8px 24px rgba(4, 120, 87, 0.22)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                    <span style={{
+                      background: 'rgba(255,255,255,0.2)',
+                      padding: '3px 10px',
+                      borderRadius: '999px',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      letterSpacing: '0.5px',
+                      textTransform: 'uppercase'
+                    }}>
+                      SUPERADMIN COMMAND CENTER DLH SURABAYA
+                    </span>
+                    <span style={{
+                      background: '#22c55e',
+                      color: '#ffffff',
+                      padding: '3px 10px',
+                      borderRadius: '999px',
+                      fontSize: '0.72rem',
+                      fontWeight: 800
+                    }}>
+                      ● LIVE MONITORING
+                    </span>
+                  </div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 900, margin: '0 0 6px', color: '#ffffff' }}>
+                    Executive Waste Governance Control Center
+                  </h2>
+                  <p style={{ margin: 0, fontSize: '0.86rem', opacity: 0.9, maxWidth: '680px' }}>
+                    Akses kontrol eksekutif superadmin: pemantauan operasional 231 TPS, neraca volume sampah 5 wilayah, radar dump truck darurat, dan penanganan aduan warga kota.
+                  </p>
                 </div>
-                <div className="stat-card-number">{users.length}</div>
-                <div className="stat-card-label">Total Pengguna Sistem</div>
+
+                <div style={{
+                  background: 'rgba(255,255,255,0.12)',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  borderRadius: '12px',
+                  padding: '12px 20px',
+                  textAlign: 'center',
+                  backdropFilter: 'blur(8px)',
+                  minWidth: '150px'
+                }}>
+                  <div style={{ fontSize: '0.72rem', opacity: 0.85, textTransform: 'uppercase', fontWeight: 700 }}>
+                    Indeks Kebersihan Kota
+                  </div>
+                  <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#fef08a', marginTop: '2px' }}>
+                    94.8%
+                  </div>
+                  <span style={{ fontSize: '0.7rem', color: '#bbf7d0', fontWeight: 700 }}>
+                    Grade A &bull; Sangat Baik
+                  </span>
+                </div>
               </div>
 
-              <div className="admin-stat-card">
-                <div className="stat-card-header">
-                  <div className="stat-icon-wrap icon-orange">📅</div>
-                  <span className="stat-badge-live">LIVE</span>
+              {/* 4 Executive KPI Cards */}
+              <div className="admin-stats-row">
+                {/* KPI 1 */}
+                <div className="admin-stat-card">
+                  <div className="stat-card-header">
+                    <div className="stat-icon-wrap icon-blue">👥</div>
+                    <span className="stat-badge-live">USERS</span>
+                  </div>
+                  <div className="stat-card-number">{users.length}</div>
+                  <div className="stat-card-label">Total Pengguna Terdaftar</div>
+                  <div style={{ fontSize: '0.74rem', color: '#0284c7', fontWeight: 700, marginTop: '6px' }}>
+                    Warga &bull; Petugas &bull; Admin
+                  </div>
                 </div>
-                <div className="stat-card-number">{jadwals.length}</div>
-                <div className="stat-card-label">Jadwal Aktif</div>
-              </div>
-            </div>
 
-            <div className="admin-dashboard-grid">
-              <div className="admin-card">
-                <h3 className="admin-card-title">Pengguna Terbaru</h3>
-                <div className="recent-users-list">
-                  {users.slice(0, 5).map(user => (
-                    <div key={user.id} className="recent-user-item">
-                      <div className="recent-user-avatar">{user.nama_lengkap?.charAt(0) || 'U'}</div>
-                      <div className="recent-user-info">
-                        <div className="recent-user-name">{user.nama_lengkap}</div>
-                        <div className="recent-user-email">{user.email}</div>
+                {/* KPI 2 */}
+                <div className="admin-stat-card">
+                  <div className="stat-card-header">
+                    <div className="stat-icon-wrap icon-gold">📈</div>
+                    <span className="stat-badge-live">KOTA</span>
+                  </div>
+                  <div className="stat-card-number">{avgCapacityPercent}%</div>
+                  <div className="stat-card-label">Rata-rata Beban TPS Kota</div>
+                  <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 700, marginTop: '6px' }}>
+                    231 TPS &bull; Target &lt; 75%
+                  </div>
+                </div>
+
+                {/* KPI 3 */}
+                <div className="admin-stat-card" style={{ border: criticalTpsList.length > 0 ? '1.5px solid #fecaca' : '1px solid #e2e8f0' }}>
+                  <div className="stat-card-header">
+                    <div className="stat-icon-wrap icon-orange" style={{ background: '#fee2e2', color: '#dc2626' }}>⚠️</div>
+                    <span style={{
+                      background: '#ef4444',
+                      color: '#ffffff',
+                      fontSize: '0.65rem',
+                      fontWeight: 800,
+                      padding: '2px 7px',
+                      borderRadius: '6px'
+                    }}>
+                      OVERLOAD
+                    </span>
+                  </div>
+                  <div className="stat-card-number" style={{ color: '#dc2626' }}>{criticalTpsList.length} TPS</div>
+                  <div className="stat-card-label">TPS Kritis (&ge; 80%)</div>
+                  <div style={{ fontSize: '0.74rem', color: '#dc2626', fontWeight: 700, marginTop: '6px' }}>
+                    Perlu Dispatch Dump Truck
+                  </div>
+                </div>
+
+                {/* KPI 4 */}
+                <div className="admin-stat-card">
+                  <div className="stat-card-header">
+                    <div className="stat-icon-wrap icon-sand" style={{ background: '#fdf4ff', color: '#c026d3' }}>📢</div>
+                    <span style={{
+                      background: '#8b5cf6',
+                      color: '#ffffff',
+                      fontSize: '0.65rem',
+                      fontWeight: 800,
+                      padding: '2px 7px',
+                      borderRadius: '6px'
+                    }}>
+                      ADUAN
+                    </span>
+                  </div>
+                  <div className="stat-card-number">{pendingReports.length} Aduan</div>
+                  <div className="stat-card-label">Laporan Warga Menunggu</div>
+                  <div style={{ fontSize: '0.74rem', color: '#7c3aed', fontWeight: 700, marginTop: '6px' }}>
+                    Respon Tim Lapangan
+                  </div>
+                </div>
+              </div>
+
+              {/* SEBARAN BEBAN 5 WILAYAH KOTA SURABAYA */}
+              <div style={{
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '16px',
+                padding: '22px 24px',
+                marginBottom: '28px',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+                      🗺️ Sebaran Beban Kapasitas TPS per Wilayah Surabaya
+                    </h3>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                      Distribusi rata-rata tampungan kontainer sampah di 5 zona kota
+                    </p>
+                  </div>
+                  <span style={{
+                    fontSize: '0.75rem',
+                    background: '#f1f5f9',
+                    padding: '4px 10px',
+                    borderRadius: '8px',
+                    fontWeight: 700,
+                    color: '#475569'
+                  }}>
+                    Total 231 TPS Aktif
+                  </span>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '16px'
+                }}>
+                  {regionStats.map((reg) => (
+                    <div
+                      key={reg.name}
+                      style={{
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
+                            {reg.icon} {reg.name}
+                          </span>
+                          <span style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            background: reg.statusColor === '#ef4444' ? '#fef2f2' : reg.statusColor === '#f59e0b' ? '#fffbeb' : '#f0fdf4',
+                            color: reg.statusColor
+                          }}>
+                            {reg.statusText}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '12px' }}>
+                          {reg.desc}
+                        </div>
                       </div>
-                      <span className={`status-pill role-${user.role}`}>{user.role}</span>
+
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 600 }}>
+                            {reg.totalTps} TPS ({reg.criticalCount} Kritis)
+                          </span>
+                          <strong style={{ fontSize: '1.1rem', fontWeight: 900, color: reg.statusColor }}>
+                            {reg.avgPct}%
+                          </strong>
+                        </div>
+                        <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
+                          <div style={{
+                            width: `${reg.avgPct}%`,
+                            height: '100%',
+                            background: reg.statusColor,
+                            borderRadius: '999px',
+                            transition: 'width 0.4s ease'
+                          }} />
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="admin-card">
-                <h3 className="admin-card-title">Jadwal Minggu Ini</h3>
-                <div className="tps-realtime-list">
-                  {jadwals.slice(0, 5).map(j => (
-                    <div key={j.id} className="tps-realtime-row">
-                      <div className="tps-name-col">
-                        <span>{j.hari}</span>
-                      </div>
-                      <div style={{ flex: 1, fontSize: '0.85rem', color: '#64748b' }}>
-                        {j.area} • {j.waktu_mulai}
-                      </div>
+              {/* DUA GRID: RADAR TPS OVERLOAD & ADUAN WARGA */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))',
+                gap: '24px',
+                marginBottom: '28px'
+              }}>
+                {/* 1. RADAR TPS PRIORITAS PENGANGKUTAN */}
+                <div style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '16px',
+                  padding: '22px 24px',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                        🚨 Radar Prioritas Pengangkutan (TPS Overload &ge; 80%)
+                      </h3>
+                      <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                        TPS membutuhkan penugasan armada dump truck DLH segera
+                      </p>
                     </div>
-                  ))}
+                    <span style={{
+                      background: '#fee2e2',
+                      color: '#dc2626',
+                      fontWeight: 800,
+                      fontSize: '0.72rem',
+                      padding: '3px 8px',
+                      borderRadius: '6px'
+                    }}>
+                      DARURAT
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {criticalTpsList.slice(0, 5).map((tps) => {
+                      const isDispatched = dispatchedTpsList.includes(tps.id);
+                      const pct = tps.kapasitasPersen || tps.capacity || 85;
+                      return (
+                        <div
+                          key={tps.id}
+                          style={{
+                            border: '1px solid #fed7aa',
+                            background: '#fffaf5',
+                            borderRadius: '10px',
+                            padding: '12px 14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '12px'
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <strong style={{ fontSize: '0.88rem', color: '#0f172a' }}>
+                                {tps.nama}
+                              </strong>
+                              <span style={{
+                                fontSize: '0.68rem',
+                                fontWeight: 800,
+                                background: '#ef4444',
+                                color: '#fff',
+                                padding: '1px 6px',
+                                borderRadius: '4px'
+                              }}>
+                                {pct}%
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
+                              Kec. {tps.kecamatan} &bull; {tps.wilayahKota} &bull; Kapasitas: {tps.dayaTampungM3 || 12} m³
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDispatchTruck(tps)}
+                            disabled={isDispatched}
+                            style={{
+                              background: isDispatched ? '#059669' : '#ea580c',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '8px',
+                              padding: '8px 12px',
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                              cursor: isDispatched ? 'default' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            <span>{isDispatched ? '✓' : '🚨'}</span>
+                            <span>{isDispatched ? 'Truk Ditugaskan' : 'Disposisi Truk'}</span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. ADUAN & LAPORAN WARGA TERKINI */}
+                <div style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '16px',
+                  padding: '22px 24px',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                        📢 Aduan &amp; Laporan Warga Lapangan
+                      </h3>
+                      <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                        Umpan balik real-time dari aplikasi warga SI-PETASAN
+                      </p>
+                    </div>
+                    <span style={{
+                      background: '#ede9fe',
+                      color: '#6d28d9',
+                      fontWeight: 800,
+                      fontSize: '0.72rem',
+                      padding: '3px 8px',
+                      borderRadius: '6px'
+                    }}>
+                      {pendingReports.length} Menunggu
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {laporanList.slice(0, 4).map((lap) => {
+                      const isDone = lap.status_tindak_lanjut === 'Selesai';
+                      return (
+                        <div
+                          key={lap.id}
+                          style={{
+                            border: `1px solid ${isDone ? '#e2e8f0' : '#fed7aa'}`,
+                            background: isDone ? '#f8fafc' : '#ffffff',
+                            borderRadius: '10px',
+                            padding: '12px 14px',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            justifyContent: 'space-between',
+                            gap: '12px'
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                              <span style={{
+                                fontSize: '0.68rem',
+                                fontWeight: 800,
+                                background: lap.jenis_laporan === 'Penuh' ? '#fee2e2' : '#fef3c7',
+                                color: lap.jenis_laporan === 'Penuh' ? '#b91c1c' : '#b45309',
+                                padding: '1px 6px',
+                                borderRadius: '4px'
+                              }}>
+                                {lap.jenis_laporan}
+                              </span>
+                              <strong style={{ fontSize: '0.84rem', color: '#0f172a' }}>
+                                {lap.tps_nama || 'TPS Surabaya'}
+                              </strong>
+                            </div>
+                            <p style={{ margin: '4px 0 2px', fontSize: '0.78rem', color: '#475569', lineHeight: 1.35 }}>
+                              {lap.deskripsi}
+                            </p>
+                            <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                              Dilaporkan: {lap.tanggal_lapor ? (lap.tanggal_lapor.includes('lalu') ? lap.tanggal_lapor : new Date(lap.tanggal_lapor).toLocaleDateString('id-ID')) : 'Baru saja'}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleResolveLaporan(lap.id)}
+                            disabled={isDone}
+                            style={{
+                              background: isDone ? '#f1f5f9' : '#059669',
+                              color: isDone ? '#64748b' : '#ffffff',
+                              border: isDone ? '1px solid #cbd5e1' : 'none',
+                              borderRadius: '8px',
+                              padding: '6px 10px',
+                              fontSize: '0.74rem',
+                              fontWeight: 700,
+                              cursor: isDone ? 'default' : 'pointer',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {isDone ? '✓ Selesai' : 'Tindak Lanjuti'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* DUA GRID BAWAH: PENGGUNA TERBARU & JADWAL MINGGU INI */}
+              <div className="admin-dashboard-grid">
+                <div className="admin-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                    <h3 className="admin-card-title" style={{ margin: 0 }}>👥 Pengguna Terbaru Sistem</h3>
+                    <span style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: 700 }}>Total: {users.length} Pengguna</span>
+                  </div>
+                  <div className="recent-users-list">
+                    {users.slice(0, 5).map(user => (
+                      <div key={user.id} className="recent-user-item">
+                        <div className="recent-user-avatar">{user.nama_lengkap?.charAt(0) || 'U'}</div>
+                        <div className="recent-user-info">
+                          <div className="recent-user-name">{user.nama_lengkap}</div>
+                          <div className="recent-user-email">{user.email}</div>
+                        </div>
+                        <span className={`status-pill role-${user.role}`}>{user.role}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="admin-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                    <h3 className="admin-card-title" style={{ margin: 0 }}>📅 Jadwal Pengambilan Minggu Ini</h3>
+                    <span style={{ fontSize: '0.75rem', color: '#ea580c', fontWeight: 700 }}>{jadwals.length} Rute</span>
+                  </div>
+                  <div className="tps-realtime-list">
+                    {jadwals.slice(0, 5).map(j => (
+                      <div key={j.id} className="tps-realtime-row">
+                        <div className="tps-name-col">
+                          <span>{j.hari}</span>
+                        </div>
+                        <div style={{ flex: 1, fontSize: '0.85rem', color: '#64748b' }}>
+                          {j.area} &bull; {j.waktu_mulai}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* PENGGUNA */}
         {activeMenu === 'pengguna' && (

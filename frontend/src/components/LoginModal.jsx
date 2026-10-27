@@ -88,7 +88,9 @@ export default function LoginModal({ isOpen, onClose }) {
                     onClose();
                     if (role === 'admin') {
                       window.location.hash = 'admin';
-                    } else if (role === 'driver' || role === 'tps' || role === 'kelurahan') {
+                    } else if (role === 'driver') {
+                      window.location.hash = 'driver';
+                    } else if (role === 'tps' || role === 'kelurahan') {
                       window.location.hash = 'petugas';
                     } else {
                       window.location.hash = 'warga';

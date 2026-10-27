@@ -2089,7 +2089,6 @@ export default function AuthPage({
                   <polyline points="12 5 19 12 12 19" />
                 </svg>
               </button>
-
             </form>
 
             {/* GANTI & LUPA PASSWORD (HANYA MUNCUL DI LOGIN) */}

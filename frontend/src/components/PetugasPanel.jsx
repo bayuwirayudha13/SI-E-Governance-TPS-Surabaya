@@ -48,13 +48,12 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
         setActiveMenu('tugas');
       } else if (hash === '#scan' || hash === '#scan-qr') {
         setActiveMenu('scan');
-      } else if (hash === '#riwayat' || hash === '#riwayat-pengambilan') {
+      } else if (hash === '#riwayat' || hash === '#riwayat-pengambilan' || hash === '#riwayat-petugas') {
         setActiveMenu('riwayat');
       }
     };
     handleHash();
     window.addEventListener('hashchange', handleHash);
-    return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
   // Timer untuk jam & tanggal
@@ -1313,6 +1312,7 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                           border: selectedCondition === 'Bersih' ? '1.5px solid #22c55e' : '1.5px solid #e2e8f0',
                           color: selectedCondition === 'Bersih' ? '#15803d' : '#334155',
                           fontWeight: selectedCondition === 'Bersih' ? 700 : 600,
+                          boxShadow: selectedCondition === 'Bersih' ? '0 0 0 2px rgba(34, 197, 94, 0.2)' : 'none',
                           borderRadius: '10px',
                           padding: '12px 6px',
                           cursor: 'pointer',
@@ -1327,10 +1327,11 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                         type="button"
                         onClick={() => setSelectedCondition('Perlu Pemilahan')}
                         style={{
-                          background: selectedCondition === 'Perlu Pemilahan' ? '#f0fdf4' : '#ffffff',
-                          border: selectedCondition === 'Perlu Pemilahan' ? '1.5px solid #22c55e' : '1.5px solid #e2e8f0',
-                          color: selectedCondition === 'Perlu Pemilahan' ? '#15803d' : '#334155',
+                          background: selectedCondition === 'Perlu Pemilahan' ? '#fff7ed' : '#ffffff',
+                          border: selectedCondition === 'Perlu Pemilahan' ? '1.5px solid #f97316' : '1.5px solid #e2e8f0',
+                          color: selectedCondition === 'Perlu Pemilahan' ? '#c2410c' : '#334155',
                           fontWeight: selectedCondition === 'Perlu Pemilahan' ? 700 : 600,
+                          boxShadow: selectedCondition === 'Perlu Pemilahan' ? '0 0 0 2px rgba(249, 115, 22, 0.2)' : 'none',
                           borderRadius: '10px',
                           padding: '8px 6px',
                           cursor: 'pointer',
@@ -1347,10 +1348,11 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                         type="button"
                         onClick={() => setSelectedCondition('Campuran')}
                         style={{
-                          background: selectedCondition === 'Campuran' ? '#f0fdf4' : '#ffffff',
-                          border: selectedCondition === 'Campuran' ? '1.5px solid #22c55e' : '1.5px solid #e2e8f0',
-                          color: selectedCondition === 'Campuran' ? '#15803d' : '#334155',
+                          background: selectedCondition === 'Campuran' ? '#fef2f2' : '#ffffff',
+                          border: selectedCondition === 'Campuran' ? '1.5px solid #ef4444' : '1.5px solid #e2e8f0',
+                          color: selectedCondition === 'Campuran' ? '#b91c1c' : '#334155',
                           fontWeight: selectedCondition === 'Campuran' ? 700 : 600,
+                          boxShadow: selectedCondition === 'Campuran' ? '0 0 0 2px rgba(239, 68, 68, 0.2)' : 'none',
                           borderRadius: '10px',
                           padding: '12px 6px',
                           cursor: 'pointer',
@@ -1719,7 +1721,20 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
                         <td>{row.waktu}</td>
                         <td className="petugas-warga-cell">{row.warga}</td>
                         <td style={{ fontSize: '0.82rem', color: '#475569' }}>{row.alamat || row.kelurahan}</td>
-                        <td>{row.kondisi}</td>
+                        <td>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: 600,
+                            background: row.kondisi === 'Bersih' ? '#f0fdf4' : row.kondisi === 'Perlu Pemilahan' ? '#fff7ed' : row.kondisi === 'Campuran' ? '#fef2f2' : '#f8fafc',
+                            color: row.kondisi === 'Bersih' ? '#15803d' : row.kondisi === 'Perlu Pemilahan' ? '#c2410c' : row.kondisi === 'Campuran' ? '#b91c1c' : '#475569',
+                            border: `1px solid ${row.kondisi === 'Bersih' ? '#bbf7d0' : row.kondisi === 'Perlu Pemilahan' ? '#fed7aa' : row.kondisi === 'Campuran' ? '#fecaca' : '#e2e8f0'}`
+                          }}>
+                            {row.kondisi}
+                          </span>
+                        </td>
                         <td>{row.berat}</td>
                         <td>
                           {row.foto_bukti_url ? (

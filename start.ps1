@@ -5,6 +5,11 @@ Write-Host "Backend: http://localhost:8000" -ForegroundColor Cyan
 Write-Host "Frontend: http://localhost:5173" -ForegroundColor Cyan
 Write-Host ""
 
+# Stop previous backend on port 8000 if running
+Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | ForEach-Object {
+    Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue
+}
+
 # Start Backend
 Write-Host "Launching Backend..." -ForegroundColor Yellow
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PSScriptRoot\backend'; .\venv\Scripts\python main.py"

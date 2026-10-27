@@ -16,7 +16,12 @@ class ConnectionManager:
         self.active_connections: Dict[int, List[tuple]] = {}
     
     async def connect(self, websocket: WebSocket, conversation_id: int, user: dict):
-        await websocket.accept()
+        try:
+            from starlette.websockets import WebSocketState
+            if websocket.client_state == WebSocketState.CONNECTING:
+                await websocket.accept()
+        except Exception:
+            pass
         if conversation_id not in self.active_connections:
             self.active_connections[conversation_id] = []
         self.active_connections[conversation_id].append((websocket, user))

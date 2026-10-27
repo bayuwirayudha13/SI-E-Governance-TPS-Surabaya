@@ -1860,19 +1860,22 @@
     flex-direction: column;
   }
 
+  /* Desktop sidebar is hidden on mobile; mobile uses sticky top bar + YouTube drawer */
   .warga-sidebar {
-    width: 100%;
-    height: auto;
-    position: relative;
-    border-right: none;
-    border-bottom: 1px solid #e2e8f0;
+    display: none !important;
   }
 
   .warga-main-content {
-    padding: 20px 16px;
+    padding: 16px 14px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .warga-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .warga-two-col-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -2560,6 +2563,337 @@
   .warga-reward-hero-badge {
     width: 100%;
     box-sizing: border-box;
+  }
+}
+
+/* ==========================================================================
+   WARGA MOBILE STICKY TOP BAR & YOUTUBE-STYLE LEFT DRAWER
+   (Pixel-matched to YouTube Mobile Drawer Reference)
+   ========================================================================== */
+
+/* Hidden on Desktop */
+.warga-mobile-top-bar,
+.warga-drawer-backdrop,
+.warga-mobile-drawer {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Show Mobile Header Bar */
+  .warga-mobile-top-bar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    z-index: 1000;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  .warga-mobile-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .warga-mobile-hamburger-btn {
+    background: transparent;
+    border: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0f172a;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .warga-mobile-hamburger-btn:active {
+    background: #f1f5f9;
+  }
+
+  .warga-mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .warga-mobile-logo-icon {
+    width: 28px;
+    height: 28px;
+    background: #166534;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 0.8rem;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: -0.5px;
+  }
+
+  .warga-mobile-brand-title {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.3px;
+  }
+
+  .warga-mobile-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .warga-mobile-points-badge {
+    background: #ecfdf5;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .warga-mobile-points-badge:active {
+    background: #d1fae5;
+  }
+
+  .warga-mobile-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #166534;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.88rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Backdrop Overlay */
+  .warga-drawer-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+    z-index: 9998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s ease;
+  }
+
+  .warga-drawer-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Slide-over Left Drawer Menu */
+  .warga-mobile-drawer {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 82vw;
+    height: 100vh;
+    background: #ffffff;
+    color: #0f172a;
+    z-index: 9999;
+    box-shadow: 4px 0 28px rgba(0, 0, 0, 0.25);
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .warga-mobile-drawer.open {
+    transform: translateX(0);
+  }
+
+  .warga-mobile-drawer .drawer-header {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+  }
+
+  .warga-mobile-drawer .drawer-close-btn {
+    background: transparent;
+    border: none;
+    color: #334155;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .warga-mobile-drawer .drawer-close-btn:hover {
+    background: #f1f5f9;
+  }
+
+  .warga-mobile-drawer .drawer-content-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0 24px;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+  }
+
+  .warga-mobile-drawer .drawer-content-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .warga-mobile-drawer .drawer-content-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+
+  .warga-mobile-drawer .drawer-section {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .warga-mobile-drawer .drawer-section-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 18px 4px;
+    font-size: 0.96rem;
+    font-weight: 700;
+    color: #0f172a;
+    user-select: none;
+  }
+
+  /* YouTube style menu items */
+  .warga-mobile-drawer .drawer-item {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    width: calc(100% - 16px);
+    margin: 2px 8px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: #0f172a;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    box-sizing: border-box;
+  }
+
+  .warga-mobile-drawer .drawer-item:hover {
+    background: #f8fafc;
+  }
+
+  /* Active YouTube pill */
+  .warga-mobile-drawer .drawer-item.active {
+    background: #f2f2f2;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .warga-mobile-drawer .drawer-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    color: #0f172a;
+    flex-shrink: 0;
+  }
+
+  .warga-mobile-drawer .drawer-item.active .drawer-icon {
+    color: #166534;
+  }
+
+  .warga-mobile-drawer .drawer-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .warga-mobile-drawer .drawer-divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 8px 0;
+    width: 100%;
+  }
+
+  .warga-drawer-footer {
+    flex-shrink: 0;
+    margin-top: auto;
+    border-top: 1px solid #f1f5f9;
+    background: #ffffff;
+    padding: 12px 10px 14px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
+  }
+
+  .warga-drawer-user-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border-radius: 12px;
+    margin: 0;
+    border: 1px solid #e2e8f0;
+  }
+
+  .warga-drawer-logout-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .warga-drawer-logout-btn:hover,
+  .warga-drawer-logout-btn:active {
+    background: #fee2e2;
   }
 }
 

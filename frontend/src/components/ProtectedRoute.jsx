@@ -112,7 +112,7 @@ export default function ProtectedRoute({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button
               type="button"
-              onClick={() => { window.location.hash = fallbackHash; }}
+              onClick={() => { window.location.href = '/#auth'; }}
               style={{
                 background: '#0a5c36',
                 color: '#ffffff',
@@ -218,7 +218,7 @@ export default function ProtectedRoute({
               type="button"
               onClick={() => {
                 authService.clearSession();
-                window.location.hash = '#auth';
+                window.location.href = '/#auth';
               }}
               style={{
                 background: 'transparent',
