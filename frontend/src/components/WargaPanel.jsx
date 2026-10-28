@@ -342,16 +342,55 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
   const [weightInput, setWeightInput] = useState('');
   const [depositSuccessMsg, setDepositSuccessMsg] = useState('');
 
-  // Real TPS serving the selected Kelurahan
-  const kelurahanTpsList = useMemo(() => {
-    const list = getTpsByKelurahan(selectedKelurahan);
-    if (list && list.length > 0) return list;
-    if (displayKecamatanRaw) {
-      const kecList = getTpsByKecamatan(displayKecamatanRaw);
-      if (kecList && kecList.length > 0) return kecList;
+  const [allTps, setAllTps] = useState([]);
+  const [tpsLoading, setTpsLoading] = useState(false);
+
+  // Load TPS from API
+  useEffect(() => {
+    async function loadTps() {
+      setTpsLoading(true);
+      try {
+        const data = await fetchPublicTps();
+        if (data && data.length > 0) {
+          setAllTps(data);
+        } else {
+          // Fallback to static data if API fails or returns empty
+          setAllTps(TPS_SURABAYA_ALL);
+        }
+      } catch (error) {
+        console.error('Error loading TPS in WargaPanel:', error);
+        setAllTps(TPS_SURABAYA_ALL);
+      } finally {
+        setTpsLoading(false);
+      }
     }
-    return TPS_SURABAYA_ALL.slice(0, 6);
-  }, [selectedKelurahan, displayKecamatanRaw]);
+    loadTps();
+  }, []);
+
+  // Real TPS serving the selected Kelurahan or Kecamatan
+  const kelurahanTpsList = useMemo(() => {
+    if (!allTps || allTps.length === 0) return [];
+
+    // Prioritize matching kecamatan first so all TPS in Sukolilo show up
+    if (displayKecamatanRaw) {
+      const matchKec = allTps.filter(tps =>
+        tps.kecamatan?.toLowerCase() === displayKecamatanRaw.toLowerCase()
+      );
+      if (matchKec.length > 0) return matchKec;
+    }
+
+    // Filter by selected kelurahan
+    const filtered = allTps.filter(tps => {
+      const matchKel = tps.kelurahanList?.some(k => k.toLowerCase() === selectedKelurahan.toLowerCase()) ||
+                      tps.lokasi?.toLowerCase().includes(selectedKelurahan.toLowerCase()) ||
+                      tps.nama?.toLowerCase().includes(selectedKelurahan.toLowerCase());
+      return matchKel;
+    });
+
+    if (filtered.length > 0) return filtered;
+
+    return allTps.slice(0, 6);
+  }, [allTps, selectedKelurahan, displayKecamatanRaw]);
 
   const [selectedTpsId, setSelectedTpsId] = useState('');
 

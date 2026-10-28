@@ -40,6 +40,31 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
     });
   };
 
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
+  // Prevent background scroll when mobile drawer is open
+  useEffect(() => {
+    if (mobileDrawerOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileDrawerOpen]);
+
+  // Close mobile drawer on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && mobileDrawerOpen) {
+        setMobileDrawerOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileDrawerOpen]);
+
   // Listen to hash changes if needed
   useEffect(() => {
     const handleHash = () => {
@@ -591,6 +616,223 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
           <span>{toastMessage}</span>
         </div>
       )}
+
+      {/* Mobile Sticky Top Header Bar (Matching Warga Style) */}
+      <header className="petugas-mobile-top-bar">
+        <div className="petugas-mobile-left">
+          <button
+            type="button"
+            className="petugas-mobile-hamburger-btn"
+            onClick={() => setMobileDrawerOpen(true)}
+            aria-label="Buka navigasi menu"
+            title="Menu Navigasi"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+
+          <div
+            className="petugas-mobile-brand"
+            onClick={() => {
+              setActiveMenu('tugas');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          >
+            <div className="petugas-mobile-logo-icon">SI</div>
+            <div className="petugas-mobile-brand-title">
+              <span>SI-Petasan</span>
+              <span className="brand-badge-country">SBY</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="petugas-mobile-right">
+          <div className="petugas-mobile-status-badge">
+            <span className="petugas-pulse-dot" style={{ width: '7px', height: '7px' }} />
+            <span>Bertugas</span>
+          </div>
+          <div className="petugas-mobile-avatar" title={displayOfficerName}>
+            {displayOfficerName ? displayOfficerName.charAt(0).toUpperCase() : 'H'}
+          </div>
+        </div>
+      </header>
+
+      {/* Backdrop for Left Slide-over Drawer */}
+      <div
+        className={`petugas-drawer-backdrop ${mobileDrawerOpen ? 'open' : ''}`}
+        onClick={() => setMobileDrawerOpen(false)}
+        aria-hidden={!mobileDrawerOpen}
+      />
+
+      {/* Slide-over Left Drawer Menu (Matching Warga Style) */}
+      <aside
+        className={`petugas-mobile-drawer ${mobileDrawerOpen ? 'open' : ''}`}
+        aria-label="Sidebar Menu Mobile Petugas"
+      >
+        {/* Drawer Top Header: Hamburger Close & Logo */}
+        <div className="drawer-header">
+          <button
+            type="button"
+            className="drawer-close-btn"
+            onClick={() => setMobileDrawerOpen(false)}
+            aria-label="Tutup menu"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+
+          <div
+            className="brand-logo drawer-brand-logo"
+            onClick={() => {
+              setActiveMenu('tugas');
+              setMobileDrawerOpen(false);
+            }}
+            style={{ cursor: 'pointer' }}
+          >
+            <div className="logo-icon" style={{ background: '#0a5c36', color: '#fff', width: '30px', height: '30px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+              SI
+            </div>
+            <div className="brand-text-wrap">
+              <span className="brand-title">SI-Petasan</span>
+              <span className="brand-badge-country">SBY</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Drawer Content */}
+        <div className="drawer-content-scroll">
+          <div className="drawer-section-header">Menu Lapangan</div>
+          <nav className="drawer-section">
+            <button
+              type="button"
+              className={`drawer-item ${activeMenu === 'tugas' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveMenu('tugas');
+                window.location.hash = 'tugas';
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                </svg>
+              </span>
+              <span className="drawer-label">Tugas Hari Ini</span>
+            </button>
+
+            <button
+              type="button"
+              className={`drawer-item ${activeMenu === 'scan' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveMenu('scan');
+                window.location.hash = 'scan';
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+                  <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+                  <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+                  <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+                  <rect x="7" y="7" width="3" height="3" />
+                  <rect x="14" y="7" width="3" height="3" />
+                  <rect x="7" y="14" width="3" height="3" />
+                  <rect x="14" y="14" width="3" height="3" />
+                </svg>
+              </span>
+              <span className="drawer-label">Scan QR Warga</span>
+            </button>
+
+            <button
+              type="button"
+              className={`drawer-item ${activeMenu === 'riwayat' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveMenu('riwayat');
+                window.location.hash = 'riwayat';
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="14" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" />
+                </svg>
+              </span>
+              <span className="drawer-label">Riwayat Pengambilan</span>
+            </button>
+
+            <div className="drawer-divider" />
+
+            <button
+              type="button"
+              className="drawer-item"
+              onClick={() => {
+                setMobileDrawerOpen(false);
+                window.location.hash = 'beranda';
+              }}
+            >
+              <span className="drawer-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                </svg>
+              </span>
+              <span className="drawer-label">Portal Publik SI-Petasan</span>
+            </button>
+          </nav>
+        </div>
+
+        {/* Pinned Bottom Profile & Logout Footer */}
+        <div className="petugas-drawer-footer">
+          <div className="petugas-drawer-user-card">
+            <div className="petugas-avatar-circle" style={{ width: '38px', height: '38px', fontSize: '1rem', background: '#0a5c36', color: '#fff', flexShrink: 0 }}>
+              {displayOfficerName ? displayOfficerName.charAt(0).toUpperCase() : 'H'}
+            </div>
+            <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {displayOfficerName}
+              </div>
+              <div style={{ fontSize: '0.74rem', color: '#0b694b', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {displayOfficerRole}
+              </div>
+              {wilayahDisplay && wilayahDisplay !== 'Belum diatur superadmin' && (
+                <div style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '1px' }}>
+                  📍 {wilayahLineShort}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="drawer-item petugas-drawer-logout-btn"
+            onClick={() => {
+              setMobileDrawerOpen(false);
+              if (onLogout) onLogout();
+            }}
+          >
+            <span className="drawer-icon" style={{ color: '#dc2626' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </span>
+            <span className="drawer-label" style={{ fontWeight: 600, color: '#dc2626' }}>Keluar dari Akun</span>
+          </button>
+        </div>
+      </aside>
 
       {/* =========================================================
           SIDEBAR

@@ -204,10 +204,19 @@ export const authService = {
         cleanEmail === 'petugas@kelurahan.go.id' ||
         cleanEmail === 'hendra@petugas.go.id' ||
         cleanEmail === 'petugas123@gmail.com' ||
+        cleanEmail === 'budi@sipetasan.com' ||
+        cleanEmail === 'budi' ||
         cleanEmail === 'petugas' ||
         (cleanEmail === 'hendra' && password === 'petugas123')
       ) {
-        const demoPetugas = { role: 'petugas', email: cleanEmail.includes('@') ? cleanEmail : 'petugas@sipetasan.com', name: 'Petugas TPS - Hendra' };
+        const demoPetugas = { 
+          role: 'petugas', 
+          email: cleanEmail.includes('@') ? cleanEmail : 'petugas@sipetasan.com', 
+          name: 'Budi',
+          nama_lengkap: 'Budi',
+          wilayah_kelurahan: 'Sukamaju',
+          wilayah_kecamatan: 'Gubeng'
+        };
         authService.setSession('demo-token-petugas', demoPetugas, 'demo-refresh-petugas', rememberMe);
         return { access_token: 'demo-token-petugas', user: demoPetugas, refresh_token: 'demo-refresh-petugas' };
       }

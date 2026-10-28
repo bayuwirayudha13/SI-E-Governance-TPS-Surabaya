@@ -3,16 +3,18 @@ import WargaPanel from './WargaPanel';
 import AdminPanel from './AdminPanelNew';
 import SuperadminPanel from './SuperadminPanel';
 import PetugasPanel from './PetugasPanel';
+import PetugasTpsPanel from './PetugasTpsPanel';
 
 export default function MultiRoleSwitcher() {
-  const [activeTab, setActiveTab] = useState('warga');
+  const [activeTab, setActiveTab] = useState('petugas-tps');
 
   // Mock users for each role to preview immediately
   const users = {
     warga: { id: 1, name: 'Warga Demo', role: 'warga', email: 'bayuwirayudha84@gmail.com' },
     admin: { id: 2, name: 'Admin Desa', role: 'admin', email: 'admin@sampahpintar.com' },
     superadmin: { id: 3, name: 'Superadmin Pusat', role: 'superadmin', email: 'superadmin@sampahpintar.com' },
-    petugas: { id: 4, name: 'Petugas Kebersihan', role: 'petugas', email: 'petugas@sampahpintar.com' }
+    petugasTps: { id: 8, name: 'Budi', nama_lengkap: 'Budi', role: 'petugas', email: 'budi@sipetasan.com', wilayah_kelurahan: 'Sukamaju' },
+    petugasPengangkut: { id: 5, name: 'Hendra', nama_lengkap: 'Hendra', role: 'driver', email: 'hendra@sipetasan.com' }
   };
 
   return (
@@ -30,8 +32,28 @@ export default function MultiRoleSwitcher() {
         
         <div className="flex space-x-2 bg-slate-950 p-1 rounded-lg border border-slate-800">
           <button
+            onClick={() => setActiveTab('petugas-tps')}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+              activeTab === 'petugas-tps' 
+                ? 'bg-emerald-600 text-white shadow' 
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            🏢 Petugas TPS
+          </button>
+          <button
+            onClick={() => setActiveTab('petugas')}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+              activeTab === 'petugas' 
+                ? 'bg-amber-600 text-white shadow' 
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            🚚 Petugas Pengangkut
+          </button>
+          <button
             onClick={() => setActiveTab('warga')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
               activeTab === 'warga' 
                 ? 'bg-emerald-600 text-white shadow' 
                 : 'text-slate-400 hover:text-white'
@@ -41,7 +63,7 @@ export default function MultiRoleSwitcher() {
           </button>
           <button
             onClick={() => setActiveTab('admin')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
               activeTab === 'admin' 
                 ? 'bg-blue-600 text-white shadow' 
                 : 'text-slate-400 hover:text-white'
@@ -50,18 +72,8 @@ export default function MultiRoleSwitcher() {
             🛡️ Admin Panel
           </button>
           <button
-            onClick={() => setActiveTab('petugas')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-              activeTab === 'petugas' 
-                ? 'bg-amber-600 text-white shadow' 
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            🚚 Petugas Panel
-          </button>
-          <button
             onClick={() => setActiveTab('superadmin')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
               activeTab === 'superadmin' 
                 ? 'bg-purple-600 text-white shadow' 
                 : 'text-slate-400 hover:text-white'
@@ -84,6 +96,18 @@ export default function MultiRoleSwitcher() {
 
       {/* Main Content Area per Tab */}
       <div className="flex-1 overflow-auto bg-slate-900">
+        {activeTab === 'petugas-tps' && (
+          <PetugasTpsPanel 
+            currentUser={users.petugasTps} 
+            onLogout={() => alert('Demo Mode Petugas TPS')} 
+          />
+        )}
+        {activeTab === 'petugas' && (
+          <PetugasPanel 
+            currentUser={users.petugasPengangkut} 
+            onLogout={() => alert('Demo Mode Petugas Pengangkut')} 
+          />
+        )}
         {activeTab === 'warga' && (
           <WargaPanel 
             currentUser={users.warga} 
@@ -94,12 +118,6 @@ export default function MultiRoleSwitcher() {
           <AdminPanel 
             currentUser={users.admin} 
             onLogout={() => alert('Demo Mode Admin')} 
-          />
-        )}
-        {activeTab === 'petugas' && (
-          <PetugasPanel 
-            currentUser={users.petugas} 
-            onLogout={() => alert('Demo Mode Petugas')} 
           />
         )}
         {activeTab === 'superadmin' && (

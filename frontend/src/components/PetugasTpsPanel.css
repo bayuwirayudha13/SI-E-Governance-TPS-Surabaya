@@ -1,0 +1,1481 @@
+/* ==========================================================================
+   SI-PETASAN - PANEL PETUGAS TPS & KELURAHAN
+   Pixel-accurate implementation matching provided high-fidelity mockups
+   ========================================================================== */
+
+:root {
+  --tps-primary: #15803d;
+  --tps-primary-dark: #166534;
+  --tps-primary-light: #22c55e;
+  --tps-primary-subtle: #f0fdf4;
+  --tps-bg-page: #f8fafc;
+  --tps-surface: #ffffff;
+  --tps-border: #e2e8f0;
+  --tps-border-subtle: #f1f5f9;
+  --tps-text-main: #0f172a;
+  --tps-text-muted: #64748b;
+  --tps-text-light: #94a3b8;
+  --tps-green: #15803d;
+  --tps-orange: #ea580c;
+  --tps-red: #dc2626;
+  --tps-blue: #2563eb;
+  --tps-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --tps-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+}
+
+.tps-page-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--tps-bg-page);
+  color: var(--tps-text-main);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ==========================================================================
+   SIDEBAR
+   ========================================================================== */
+.tps-sidebar {
+  width: 260px;
+  background-color: #ffffff;
+  border-right: 1px solid var(--tps-border);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px 16px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 40;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.tps-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 8px 24px 8px;
+}
+
+.tps-brand-badge {
+  width: 40px;
+  height: 40px;
+  background-color: #135d38;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  letter-spacing: -0.03em;
+  box-shadow: 0 2px 4px rgba(19, 93, 56, 0.25);
+}
+
+.tps-brand-texts {
+  display: flex;
+  flex-direction: column;
+}
+
+.tps-brand-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: 0.02em;
+}
+
+.tps-brand-subtitle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.tps-menu-section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.08em;
+  padding: 8px 12px;
+  text-transform: uppercase;
+}
+
+.tps-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.tps-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #475569;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s ease;
+  width: 100%;
+}
+
+.tps-nav-item:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.tps-nav-item.active {
+  background-color: #15803d;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(21, 128, 61, 0.22);
+}
+
+.tps-nav-item.active svg {
+  stroke: #ffffff;
+}
+
+.tps-nav-item svg {
+  flex-shrink: 0;
+  stroke: currentColor;
+}
+
+/* Sidebar Bottom User Profile Card */
+.tps-sidebar-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--tps-border-subtle);
+}
+
+.tps-user-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background-color: #ecfdf5;
+  border-radius: 12px;
+  border: 1px solid #d1fae5;
+}
+
+.tps-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #15803d;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.tps-user-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tps-user-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.tps-user-role {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.tps-back-home-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.tps-back-home-btn:hover {
+  color: #0f172a;
+  background-color: #f1f5f9;
+}
+
+/* ==========================================================================
+   MAIN CONTENT AREA
+   ========================================================================== */
+.tps-main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+/* TOPBAR */
+.tps-topbar {
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--tps-border);
+  padding: 16px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.tps-topbar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tps-topbar-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.tps-topbar-subtitle {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.tps-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.tps-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f8fafc;
+  border: 1px solid var(--tps-border);
+  border-radius: 9999px;
+  padding: 8px 16px;
+  width: 240px;
+  transition: all 0.2s ease;
+}
+
+.tps-search-box:focus-within {
+  border-color: #15803d;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.1);
+}
+
+.tps-search-box input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.82rem;
+  color: #0f172a;
+  width: 100%;
+}
+
+.tps-search-box input::placeholder {
+  color: #94a3b8;
+}
+
+.tps-icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--tps-border);
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.tps-icon-btn:hover {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.tps-badge-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ef4444;
+  border: 2px solid #ffffff;
+}
+
+.tps-user-badge-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tps-mobile-toggle-btn {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--tps-border);
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   PAGE BODY CONTENT
+   ========================================================================== */
+.tps-content-body {
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ALERT BANNER */
+.tps-alert-banner {
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  box-shadow: 0 1px 2px rgba(245, 158, 11, 0.05);
+}
+
+.tps-alert-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tps-alert-icon {
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+.tps-alert-text {
+  font-size: 0.88rem;
+  color: #78350f;
+  margin: 0;
+}
+
+.tps-alert-strong {
+  font-weight: 700;
+  color: #b45309;
+}
+
+.tps-alert-link {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #b45309;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.tps-alert-link:hover {
+  text-decoration: underline;
+}
+
+/* STATS 4 CARDS GRID */
+.tps-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.tps-stat-card {
+  background-color: #ffffff;
+  border: 1px solid var(--tps-border);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: var(--tps-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tps-stat-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0;
+}
+
+.tps-stat-value {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.tps-stat-subtext {
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.tps-stat-subtext.trend-up {
+  color: #16a34a;
+}
+
+.tps-stat-subtext.trend-muted {
+  color: #64748b;
+}
+
+.tps-stat-subtext.trend-warn {
+  color: #ea580c;
+}
+
+.tps-stat-subtext.trend-info {
+  color: #2563eb;
+}
+
+/* ==========================================================================
+   CARDS & COMMON WIDGETS
+   ========================================================================== */
+.tps-card {
+  background-color: #ffffff;
+  border: 1px solid var(--tps-border);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--tps-shadow-sm);
+}
+
+.tps-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  gap: 12px;
+}
+
+.tps-card-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tps-card-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.tps-card-subtitle {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Two columns grid for Dashboard Map & Capacity status */
+.tps-dash-split-grid {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr;
+  gap: 20px;
+}
+
+/* Pill filters for map */
+.tps-filter-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #f1f5f9;
+  padding: 3px;
+  border-radius: 9999px;
+}
+
+.tps-pill-btn {
+  padding: 5px 14px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tps-pill-btn.active {
+  background-color: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Interactive Map Viewport */
+.tps-map-viewport-wrapper {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+}
+
+.tps-map-viewport-large {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+}
+
+.tps-map-live-tag {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background-color: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 400;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.tps-live-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.35);
+  animation: pulse-live 1.8s infinite;
+}
+
+@keyframes pulse-live {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+.tps-map-legend-overlay {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(6px);
+  border: 1px solid #cbd5e1;
+  padding: 10px 14px;
+  border-radius: 10px;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.tps-legend-title {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.tps-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.tps-legend-bullet {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tps-legend-dashed-line {
+  width: 18px;
+  height: 2px;
+  border-top: 2px dashed #15803d;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   STATUS KAPASITAS TPS LIST & CARDS
+   ========================================================================== */
+.tps-capacity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.tps-capacity-item-card {
+  border: 1px solid var(--tps-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.15s ease;
+}
+
+.tps-capacity-item-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.tps-capacity-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tps-id-code {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.tps-item-name {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+/* Status Badges */
+.tps-status-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+.tps-status-badge.aman {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.tps-status-badge.hampir-penuh {
+  background-color: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.tps-status-badge.overload {
+  background-color: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.tps-capacity-metric-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.tps-progress-bar-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tps-progress-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.tps-progress-track {
+  height: 8px;
+  background-color: #f1f5f9;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.tps-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.6s ease;
+}
+
+.tps-progress-fill.aman {
+  background-color: #16a34a;
+}
+
+.tps-progress-fill.hampir-penuh {
+  background-color: #f59e0b;
+}
+
+.tps-progress-fill.overload {
+  background-color: #ef4444;
+}
+
+/* Action Outline Button (e.g. Cari TPS Terdekat) */
+.tps-btn-outline-action {
+  width: 100%;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  background: transparent;
+  transition: all 0.15s ease;
+}
+
+.tps-btn-outline-action.orange {
+  border: 1.5px solid #ea580c;
+  color: #ea580c;
+}
+
+.tps-btn-outline-action.orange:hover {
+  background-color: #fff7ed;
+}
+
+.tps-btn-outline-action.red {
+  border: 1.5px solid #dc2626;
+  color: #dc2626;
+}
+
+.tps-btn-outline-action.red:hover {
+  background-color: #fef2f2;
+}
+
+/* ==========================================================================
+   STATISTIK TONASE HARIAN CHART
+   ========================================================================== */
+.tps-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.tps-chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.tps-tonase-chart-container {
+  width: 100%;
+  height: 220px;
+  position: relative;
+  margin-top: 10px;
+}
+
+/* ==========================================================================
+   PAGE: STATUS KAPASITAS TPS (GRID 6 CARDS)
+   ========================================================================== */
+.tps-capacity-top-summaries {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.tps-summary-card {
+  background-color: #ffffff;
+  border: 1px solid var(--tps-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: var(--tps-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tps-summary-card.aman {
+  border-left: 4px solid #16a34a;
+}
+
+.tps-summary-card.waspada {
+  border-left: 4px solid #f59e0b;
+}
+
+.tps-summary-card.bahaya {
+  border-left: 4px solid #ef4444;
+}
+
+.tps-summary-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0;
+}
+
+.tps-summary-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.tps-summary-sub {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.tps-capacity-6grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
+.tps-detailed-card {
+  background-color: #ffffff;
+  border: 1px solid var(--tps-border);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: var(--tps-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tps-detailed-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.tps-card-title-col {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==========================================================================
+   PAGE: JADWAL TRUK
+   ========================================================================== */
+.tps-truck-top-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.tps-truck-route-card {
+  background-color: #ffffff;
+  border: 1px solid var(--tps-border);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: var(--tps-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tps-truck-icon-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background-color: #f0fdf4;
+  color: #15803d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dcfce7;
+}
+
+.tps-truck-route-name {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.tps-truck-driver-plate {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0;
+}
+
+.tps-truck-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.tps-truck-time-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* Schedule List Card */
+.tps-btn-add-green {
+  background-color: #15803d;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tps-btn-add-green:hover {
+  background-color: #166534;
+}
+
+.tps-schedule-rows-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.tps-schedule-row-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background-color: #f8fafc;
+  border: 1px solid var(--tps-border-subtle);
+  transition: all 0.15s ease;
+}
+
+.tps-schedule-row-item:hover {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.tps-schedule-left-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.tps-schedule-right-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+/* Status Badges for Truck */
+.tps-truck-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 9999px;
+}
+
+.tps-truck-badge.selesai {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.tps-truck-badge.berjalan {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.tps-truck-badge.menunggu {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+/* ==========================================================================
+   PAGE: VALIDASI WARGA (REWARD)
+   ========================================================================== */
+.tps-validasi-split-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 24px;
+}
+
+.tps-validation-queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.tps-queue-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--tps-border);
+  background-color: #ffffff;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.tps-queue-item:hover {
+  border-color: #94a3b8;
+  background-color: #f8fafc;
+}
+
+.tps-queue-item.active {
+  background-color: #ecfdf5;
+  border-color: #86efac;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.1);
+}
+
+.tps-queue-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tps-queue-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  background-color: #f1f5f9;
+  flex-shrink: 0;
+  border: 1px solid #e2e8f0;
+}
+
+.tps-queue-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tps-queue-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.tps-queue-desc {
+  font-size: 0.74rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.tps-queue-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tps-tag-solid {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.tps-tag-solid.bersih {
+  background-color: #15803d;
+  color: #ffffff;
+}
+
+.tps-tag-solid.campuran {
+  background-color: #ea580c;
+  color: #ffffff;
+}
+
+.tps-tag-soft {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+.tps-tag-soft.terverifikasi {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.tps-tag-soft.menunggu {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.tps-tag-soft.ditolak {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+/* Right Inspection Box */
+.tps-inspection-photo-card {
+  background-color: #ffffff;
+  border: 1px solid var(--tps-border);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: var(--tps-shadow-sm);
+}
+
+.tps-photo-preview-wrap {
+  width: 100%;
+  height: 240px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  position: relative;
+  background-color: #0f172a;
+}
+
+.tps-photo-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tps-inspection-actions-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.tps-btn-photo-action {
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tps-btn-photo-action.outline {
+  border: 1.5px solid #15803d;
+  color: #15803d;
+  background-color: transparent;
+}
+
+.tps-btn-photo-action.outline:hover {
+  background-color: #f0fdf4;
+}
+
+.tps-btn-photo-action.solid-green {
+  border: 1.5px solid #15803d;
+  background-color: #15803d;
+  color: #ffffff;
+}
+
+.tps-btn-photo-action.solid-green:hover {
+  background-color: #166534;
+}
+
+/* AI Detection Callout */
+.tps-ai-detection-box {
+  background-color: #fffbeb;
+  border: 1.5px solid #fde68a;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tps-ai-text-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tps-ai-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #b45309;
+  margin: 0;
+}
+
+.tps-ai-desc {
+  font-size: 0.78rem;
+  color: #92400e;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.tps-ai-score-large {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #ea580c;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* Bottom Decision Buttons */
+.tps-decision-buttons-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.tps-btn-decision {
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.tps-btn-decision.reject {
+  background: transparent;
+  border: 1.5px solid #ef4444;
+  color: #dc2626;
+}
+
+.tps-btn-decision.reject:hover {
+  background-color: #fef2f2;
+}
+
+.tps-btn-decision.approve {
+  background-color: #e2e8f0;
+  border: 1.5px solid #cbd5e1;
+  color: #64748b;
+}
+
+.tps-btn-decision.approve.active-ready {
+  background-color: #15803d;
+  border-color: #15803d;
+  color: #ffffff;
+}
+
+.tps-btn-decision.approve.active-ready:hover {
+  background-color: #166534;
+}
+
+.tps-decision-caption {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-style: italic;
+  text-align: center;
+  margin: 0;
+}
+
+/* ==========================================================================
+   MODAL FOR JADWAL / REROUTE POPUP
+   ========================================================================== */
+.tps-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.tps-modal-box {
+  background-color: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--tps-border);
+}
+
+.tps-modal-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--tps-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tps-modal-header h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.tps-modal-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.tps-modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tps-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tps-form-group label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.tps-form-input, .tps-form-select {
+  padding: 10px 14px;
+  border: 1px solid var(--tps-border);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.tps-form-input:focus, .tps-form-select:focus {
+  border-color: #15803d;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.1);
+}
+
+.tps-modal-footer {
+  padding: 16px 24px;
+  background-color: #f8fafc;
+  border-top: 1px solid var(--tps-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN (TABLET & MOBILE)
+   ========================================================================== */
+@media (max-width: 1024px) {
+  .tps-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tps-dash-split-grid {
+    grid-template-columns: 1fr;
+  }
+  .tps-capacity-6grid {
+    grid-template-columns: 1fr;
+  }
+  .tps-truck-top-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tps-validasi-split-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .tps-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 100;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  }
+
+  .tps-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .tps-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(2px);
+    z-index: 90;
+  }
+
+  .tps-mobile-toggle-btn {
+    display: flex;
+  }
+
+  .tps-topbar {
+    padding: 14px 16px;
+  }
+
+  .tps-search-box {
+    display: none;
+  }
+
+  .tps-content-body {
+    padding: 16px;
+  }
+
+  .tps-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tps-truck-top-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tps-capacity-top-summaries {
+    grid-template-columns: 1fr;
+  }
+}

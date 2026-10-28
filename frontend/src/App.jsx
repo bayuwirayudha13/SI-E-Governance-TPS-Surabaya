@@ -18,6 +18,7 @@ import AdminPanel from './components/AdminPanelNew';
 import SuperadminPanel from './components/SuperadminPanel';
 import WargaPanel from './components/WargaPanel';
 import PetugasPanel from './components/PetugasPanel';
+import PetugasTpsPanel from './components/PetugasTpsPanel';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/MainLayout';
 import { authService } from './api/client';
@@ -76,6 +77,49 @@ export default function App() {
       return;
     }
 
+    if (window.location.search.includes('demo=petugas-tps') || window.location.search.includes('demo=tps')) {
+      const demoPetugasTps = {
+        id: 8,
+        nama_lengkap: 'Budi',
+        nama: 'Budi',
+        email: 'budi@sipetasan.com',
+        role: 'petugas',
+        kelurahan: 'Sukamaju',
+        wilayah_kelurahan: 'Sukamaju',
+        wilayah_kecamatan: 'Gubeng',
+        wilayah_kota: 'Surabaya'
+      };
+      authService.setSession('demo_token', demoPetugasTps);
+      setCurrentUser(demoPetugasTps);
+      setCurrentPage('petugas-tps');
+      const h = window.location.hash.toLowerCase();
+      if (!h || h === '#beranda' || h === '#landing') {
+        window.location.hash = 'petugas-tps';
+      }
+      return;
+    }
+
+    if (window.location.search.includes('demo=petugas')) {
+      const demoPetugas = {
+        id: 5,
+        nama_lengkap: 'Hendra',
+        nama: 'Hendra',
+        email: 'hendra@sipetasan.com',
+        role: 'petugas',
+        wilayah_kelurahan: 'Sukamaju',
+        wilayah_kecamatan: 'Gubeng',
+        wilayah_kota: 'Surabaya'
+      };
+      authService.setSession('demo_token', demoPetugas);
+      setCurrentUser(demoPetugas);
+      setCurrentPage('petugas');
+      const h = window.location.hash.toLowerCase();
+      if (!h || h === '#beranda' || h === '#landing') {
+        window.location.hash = 'petugas';
+      }
+      return;
+    }
+
     const token = authService.getToken();
     const user = authService.getCurrentUser();
     const initialHash = window.location.hash.toLowerCase();
@@ -91,7 +135,10 @@ export default function App() {
       if (user.role === 'superadmin' || user.role === 'admin') {
         setCurrentPage('admin');
         window.location.hash = user.role === 'superadmin' ? 'superadmin' : 'admin';
-      } else if (user.role === 'petugas' || user.role === 'driver') {
+      } else if (user.role === 'petugas') {
+        setCurrentPage('petugas-tps');
+        window.location.hash = 'petugas-tps';
+      } else if (user.role === 'driver') {
         setCurrentPage('petugas');
         window.location.hash = 'petugas';
       } else {
@@ -110,6 +157,30 @@ export default function App() {
 
       if (hash === '#admin' || hash === '#superadmin') {
         setCurrentPage('admin');
+      } else if (
+        hash.startsWith('#petugas-tps') ||
+        hash.startsWith('#tps') ||
+        hash === '#petugas_tps' ||
+        hash === '#kelurahan' ||
+        hash === '#petugas-kelurahan' ||
+        hash === '#dasbor-tps'
+      ) {
+        if (!authService.getCurrentUser()) {
+          const demoPetugasTps = {
+            id: 8,
+            nama_lengkap: 'Budi',
+            nama: 'Budi',
+            email: 'budi@sipetasan.com',
+            role: 'petugas',
+            kelurahan: 'Sukamaju',
+            wilayah_kelurahan: 'Sukamaju',
+            wilayah_kecamatan: 'Gubeng',
+            wilayah_kota: 'Surabaya'
+          };
+          authService.setSession('demo_token', demoPetugasTps);
+          setCurrentUser(demoPetugasTps);
+        }
+        setCurrentPage('petugas-tps');
       } else if (hash === '#warga' || hash === '#portal-warga' || hash === '#warga-dashboard' || hash === '#qr' || hash === '#qr-status' || hash === '#validasi' || hash === '#tracking' || hash === '#chat' || hash === '#chat-admin' || hash === '#riwayat-pengambilan') {
         setCurrentPage('warga');
       } else if (
@@ -168,7 +239,10 @@ export default function App() {
     } else if (user.role === 'admin') {
       setCurrentPage('admin');
       window.location.hash = 'admin';
-    } else if (user.role === 'petugas' || user.role === 'driver') {
+    } else if (user.role === 'petugas') {
+      setCurrentPage('petugas-tps');
+      window.location.hash = 'petugas-tps';
+    } else if (user.role === 'driver') {
       setCurrentPage('petugas');
       window.location.hash = 'petugas';
     } else {
@@ -207,7 +281,19 @@ export default function App() {
     );
   }
 
-  // If user is inside Petugas Lapangan/TPS Panel (Protected by RBAC: petugas & driver)
+  // If user is inside Petugas TPS / Kelurahan Panel
+  if (currentPage === 'petugas-tps') {
+    return (
+      <ProtectedRoute allowedRoles={['petugas', 'driver', 'admin', 'superadmin']}>
+        <PetugasTpsPanel
+          onLogout={handleLogout}
+          currentUser={currentUser}
+        />
+      </ProtectedRoute>
+    );
+  }
+
+  // If user is inside Petugas Lapangan/Pengangkut Panel (Protected by RBAC: petugas & driver)
   if (currentPage === 'petugas') {
     return (
       <ProtectedRoute allowedRoles={['petugas', 'driver']}>
@@ -255,7 +341,6 @@ export default function App() {
       <Hero
         onOpenTpsModal={() => setIsTpsModalOpen(true)}
         onOpenTpsDetail={(tps) => setSelectedTpsDetail(tps)}
-        onOpenLoginModal={() => handleOpenAuth('masuk')}
       />
 
       {/* 3. Tentang Kami Section */}
