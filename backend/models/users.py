@@ -11,7 +11,7 @@ class User(Base):
     email = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     nama_lengkap = Column(String(100), nullable=False)
-    role = Column(Enum('admin', 'petugas', 'driver', 'superadmin'), nullable=False)
+    role = Column(Enum('admin', 'petugas', 'petugas_kelurahan', 'driver', 'superadmin'), nullable=False)
     is_active = Column(Boolean, default=True)
     # Wilayah tugas petugas & foto profil
     wilayah_kecamatan = Column(String(100), nullable=True)

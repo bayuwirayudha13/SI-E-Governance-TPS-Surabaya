@@ -284,7 +284,7 @@ export default function App() {
   // If user is inside Petugas TPS / Kelurahan Panel
   if (currentPage === 'petugas-tps') {
     return (
-      <ProtectedRoute allowedRoles={['petugas', 'driver', 'admin', 'superadmin']}>
+      <ProtectedRoute allowedRoles={['petugas_kelurahan', 'admin', 'superadmin']}>
         <PetugasTpsPanel
           onLogout={handleLogout}
           currentUser={currentUser}

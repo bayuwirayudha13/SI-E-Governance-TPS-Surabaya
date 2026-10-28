@@ -14,8 +14,17 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
     authService.getProfile().then((u) => { if (u) setAuthUser((prev) => ({ ...prev, ...u })); }).catch(() => { });
     return () => window.removeEventListener('auth:change', h);
   }, []);
+  
+  const roleLabelMap = {
+    'petugas': 'Petugas Pengangkut',
+    'driver': 'Driver Truk',
+    'petugas_kelurahan': 'Petugas Kelurahan',
+    'admin': 'Admin',
+    'superadmin': 'Superadmin'
+  };
+  
   const displayOfficerName = authUser?.nama_lengkap || authUser?.nama || authUser?.full_name || currentUserProp?.nama_lengkap || officerName;
-  const displayOfficerRole = authUser?.role ? (authUser.role.charAt(0).toUpperCase() + authUser.role.slice(1)) : (currentUserProp?.role ? currentUserProp.role.charAt(0).toUpperCase() + currentUserProp.role.slice(1) : officerRole);
+  const displayOfficerRole = authUser?.role ? (roleLabelMap[authUser.role] || authUser.role) : (currentUserProp?.role ? (roleLabelMap[currentUserProp.role] || currentUserProp.role) : officerRole);
   // hijau = wilayah kerja petugas (diatur superadmin: kecamatan + kelurahan + kota)
   const wilayahKecamatan = authUser?.wilayah_kecamatan || null;
   const wilayahKelurahan = authUser?.wilayah_kelurahan || null;
@@ -125,96 +134,58 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await api.get('/api/setoran/');
-        const data = res.data || [];
-
-        const waiting = data.filter(s => s.status === 'Menunggu Penjemputan');
-        const done = data.filter(s => s.status === 'Sudah Divalidasi');
-
+        // Fetch queue (pending setoran in petugas' wilayah)
+        const queueRes = await api.get('/api/petugas/queue');
+        const queueData = queueRes.data || [];
+        
         // Format queue list
-        setQueueList(waiting.map((s, idx) => ({
-          id: s.id,
+        setQueueList(queueData.map((s, idx) => ({
+          id: s.setoran_id,
           number: (idx + 1).toString().padStart(2, '0'),
-          name: `Warga ID: ${s.warga_id}`,
-          address: s.alamat_penjemputan || 'TPS Terdekat',
+          name: s.warga_nama,
+          address: s.warga_alamat || s.kelurahan || 'TPS Terdekat',
           status: idx === 0 ? 'ready' : 'next',
           statusText: idx === 0 ? 'Siap diambil' : 'Berikutnya',
           isActive: idx === 0,
           category: s.jenis_sampah || 'Sampah',
-          estimatedKg: parseFloat(s.perkiraan_berat_kg) || 0,
-          setoran_id: s.id
+          estimatedKg: s.perkiraan_berat_kg || 0,
+          setoran_id: s.setoran_id,
+          kelurahan: s.kelurahan,
+          alamatRumah: s.warga_alamat,
+          kode: s.qr_code,
         })));
 
-        // Format history list dari scan-history dan setoran
-        try {
-          const histRes = await api.get('/api/petugas/scan-history');
-          if (histRes.data && Array.isArray(histRes.data) && histRes.data.length > 0) {
-            setHistoryList(histRes.data.map(h => {
-              const dt = h.scanned_at ? new Date(h.scanned_at) : new Date();
-              // Convert UTC to WIB (+7 hours)
-              const wibTime = new Date(dt.getTime() + (7 * 60 * 60 * 1000));
-              const waktuStr = `${String(wibTime.getUTCHours()).padStart(2, '0')}.${String(wibTime.getUTCMinutes()).padStart(2, '0')}`;
-              return {
-                id: h.id,
-                waktu: waktuStr,
-                warga: h.nama_warga || 'Warga',
-                alamat: h.alamat_warga || '-',
-                kelurahan: h.kelurahan || '-',
-                berat: h.berat || '2.5 kg',
-                kondisi: h.jenis_sampah || 'Sampah Disetor',
-                status: 'Selesai',
-                foto_bukti_url: h.foto_bukti_url,
-                catatan: h.catatan,
-                qr_token: h.qr_token
-              };
-            }));
-          } else {
-            setHistoryList(done.map(s => {
-              const waktuValidasi = s.waktu_validasi || s.waktu_setor;
-              const date = new Date(waktuValidasi);
-              const waktuStr = `${String(date.getHours()).padStart(2, '0')}.${String(date.getMinutes()).padStart(2, '0')}`;
-              return {
-                id: s.id,
-                waktu: waktuStr,
-                warga: `Warga ID: ${s.warga_id}`,
-                alamat: s.alamat_penjemputan || 'Jl. Mawar',
-                kelurahan: 'Sukamaju',
-                berat: `${parseFloat(s.perkiraan_berat_kg || 0).toFixed(1).replace('.', ',')} kg`,
-                kondisi: s.jenis_sampah || 'Sampah',
-                status: 'Selesai',
-                foto_bukti_url: s.foto_bukti_url,
-                catatan: s.catatan || 'Selesai diambil'
-              };
-            }));
-          }
-        } catch {
-          setHistoryList(done.map(s => {
-            const waktuValidasi = s.waktu_validasi || s.waktu_setor;
-            const date = new Date(waktuValidasi);
-            const waktuStr = `${String(date.getHours()).padStart(2, '0')}.${String(date.getMinutes()).padStart(2, '0')}`;
-            return {
-              id: s.id,
-              waktu: waktuStr,
-              warga: `Warga ID: ${s.warga_id}`,
-              alamat: s.alamat_penjemputan || 'Jl. Mawar',
-              kelurahan: 'Sukamaju',
-              berat: `${parseFloat(s.perkiraan_berat_kg || 0).toFixed(1).replace('.', ',')} kg`,
-              kondisi: s.jenis_sampah || 'Sampah',
-              status: 'Selesai',
-              foto_bukti_url: s.foto_bukti_url,
-              catatan: s.catatan || 'Selesai diambil'
-            };
-          }));
-        }
+        // Fetch history for current petugas
+        const histRes = await api.get('/api/petugas/riwayat');
+        const histData = histRes.data || [];
+        setHistoryList(histData.map(h => {
+          const dt = h.waktu_validasi ? new Date(h.waktu_validasi) : new Date();
+          const wibTime = new Date(dt.getTime() + (7 * 60 * 60 * 1000));
+          const waktuStr = `${String(wibTime.getUTCHours()).padStart(2, '0')}.${String(wibTime.getUTCMinutes()).padStart(2, '0')}`;
+          return {
+            id: h.id,
+            waktu: waktuStr,
+            warga: h.warga_nama || 'Warga',
+            alamat: h.warga_alamat || '-',
+            kelurahan: h.kelurahan || '-',
+            berat: h.berat_aktual_kg ? `${parseFloat(h.berat_aktual_kg).toFixed(1).replace('.', ',')} kg` : '-',
+            kondisi: h.kondisi_sampah || h.jenis_sampah || 'Sampah',
+            status: 'Selesai',
+            foto_bukti_url: h.foto_bukti_url,
+            catatan: h.catatan_petugas || h.hasil_pemeriksaan || '',
+            qr_token: h.qr_code || '',
+          };
+        }));
 
-        // Update stats
-        const totalKg = done.reduce((acc, curr) => acc + (parseFloat(curr.perkiraan_berat_kg) || 0), 0);
+        // Fetch daily stats
+        const statsRes = await api.get('/api/petugas/daily-stats');
+        const statsData = statsRes.data || {};
         setStats({
-          targetPengambilan: data.length,
-          sudahDiambil: done.length,
-          persentaseSelesai: data.length > 0 ? Math.round((done.length / data.length) * 100) : 0,
-          totalMuatanKg: totalKg,
-          kapasitasTruk: Math.min(100, Math.round((totalKg / 50) * 100))
+          targetPengambilan: statsData.target_pengambilan || 0,
+          sudahDiambil: statsData.sudah_diambil || 0,
+          persentaseSelesai: statsData.persentase_selesai || 0,
+          totalMuatanKg: statsData.total_muatan_kg || 0,
+          kapasitasTruk: Math.min(100, Math.round((statsData.total_muatan_kg || 0) / 50 * 100))
         });
       } catch (err) {
         console.error('Gagal ambil data petugas:', err);
@@ -415,12 +386,14 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
       address: alamatRumah.startsWith('RT') ? alamatRumah : `RT 03 · ${alamatRumah}`,
       jenis_sampah: jenisSampah,
       berat_laporan: beratLaporan || '3.5',
+      setoran_id: null,
     };
 
     try {
-      const res = await api.post('/api/petugas/scan-qr', { qr_token: cleanToken });
-      if (res.data && res.data.warga) {
+      const res = await api.post('/api/petugas/scan-qr-validate', { qr_code: cleanToken });
+      if (res.data) {
         const w = res.data.warga;
+        const s = res.data;
         const kel = w.kelurahan || kelurahan;
         const alamat = w.alamat_rumah || alamatRumah;
         wargaFinal = {
@@ -431,12 +404,13 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
           kelurahan: kel,
           alamatRumah: alamat,
           address: alamat.startsWith('RT') ? alamat : `RT 03 · ${alamat}`,
-          jenis_sampah: w.jenis_sampah || jenisSampah,
-          berat_laporan: w.berat ? String(w.berat).replace(/[^0-9.]/g, '') : beratLaporan,
+          jenis_sampah: s.jenis_sampah_dilaporkan || w.jenis_sampah || jenisSampah,
+          berat_laporan: String(s.perkiraan_berat_kg || w.berat ? String(w.berat || s.perkiraan_berat_kg).replace(/[^0-9.]/g, '') : beratLaporan),
+          setoran_id: s.setoran_id,
         };
       }
     } catch (err) {
-      console.warn('API scan-qr offline/fallback:', err);
+      console.warn('API scan-qr-validate offline/fallback:', err);
     }
 
     setScannedWarga(wargaFinal);
@@ -524,33 +498,22 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
 
     try {
       const fd = new FormData();
-      fd.append('qr_token', scannedToken || scannedWarga.kode || 'SP-2025-0042');
-      if (scannedWarga) {
-        fd.append('nama', scannedWarga.name || scannedWarga.displayName || 'Warga');
-        fd.append('alamat', scannedWarga.address || scannedWarga.alamatRumah || 'RT 03 · Jl. Mawar');
-        fd.append('kelurahan', scannedWarga.kelurahan || 'Sukamaju');
-        fd.append('jenis_sampah', scannedWarga.jenis_sampah ? `${scannedWarga.jenis_sampah} (${selectedCondition})` : selectedCondition);
-        fd.append('berat', `${beratVal.toFixed(1)} kg`);
+      fd.append('setoran_id', scannedWarga.setoran_id || scannedWarga.id || '');
+      fd.append('berat_aktual_kg', beratVal.toFixed(1));
+      fd.append('kondisi_sampah', selectedCondition);
+      fd.append('jenis_sampah_terverifikasi', scannedWarga.jenis_sampah || 'PET');
+      fd.append('hasil_pemeriksaan', 'Sesuai');
+      if (officerNote) {
+        fd.append('catatan_petugas', officerNote);
       }
       if (fotoFile) {
-        fd.append('foto_sampah', fotoFile);
-      }
-      if (officerNote) {
-        fd.append('catatan', officerNote);
+        fd.append('foto_bukti', fotoFile);
       }
 
-      await api.post('/api/petugas/pengambilan', fd, {
+      await api.post('/api/petugas/complete-verification', fd, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      if (scannedWarga.setoran_id) {
-        try {
-          await api.patch(`/api/setoran/${scannedWarga.setoran_id}/status`, {
-            status: 'Sudah Divalidasi',
-            perkiraan_berat_kg: beratVal
-          });
-        } catch { }
-      }
       showToast(`Pengambilan dari ${scannedWarga.name || 'Warga'} berhasil dicatat!`);
     } catch (err) {
       setScanError(err.response?.data?.detail || 'Gagal mencatat pengambilan');

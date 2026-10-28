@@ -12,7 +12,7 @@ export default function LoginModal({ isOpen, onClose }) {
     { id: 'warga', label: 'Warga / Publik', desc: 'Akses Saldo Reward, QR Code Anggota & Riwayat Penimbangan' },
     { id: 'kelurahan', label: 'Petugas Kelurahan', desc: 'Verifikasi Timbangan Bank Sampah & Validasi Kebersihan' },
     { id: 'tps', label: 'Petugas TPS', desc: 'Update Volume Real-time, Geofencing GPS & Bukti Foto' },
-    { id: 'driver', label: 'Driver Truk', desc: 'Monitoring Rute TPS Prioritas Merah/Kuning ke TPA Benowo' },
+    { id: 'driver', label: 'Petugas Pengangkut', desc: 'Scan QR Warga, Angkut Sampah dari Rumah ke TPS' },
     { id: 'admin', label: 'Admin DLH', desc: 'Executive Dashboard Kota, Manajemen 231 TPS & Armada' }
   ];
 
@@ -29,8 +29,16 @@ export default function LoginModal({ isOpen, onClose }) {
   };
 
   const handleQuickLogin = (roleId) => {
+    const backendRoleMap = {
+      'warga': 'warga',
+      'driver': 'driver',
+      'kelurahan': 'petugas_kelurahan',
+      'tps': 'petugas_kelurahan',
+      'admin': 'admin'
+    };
     setRole(roleId);
-    setIdentifier(roleId === 'warga' ? '3578012304920001' : `${roleId}@dlh.surabaya.go.id`);
+    const backendRole = backendRoleMap[roleId] || roleId;
+    setIdentifier(backendRole === 'warga' ? '3578012304920001' : `${backendRole}@dlh.surabaya.go.id`);
     setPassword('surabayabersih2026');
   };
 
@@ -89,9 +97,9 @@ export default function LoginModal({ isOpen, onClose }) {
                     if (role === 'admin') {
                       window.location.hash = 'admin';
                     } else if (role === 'driver') {
-                      window.location.hash = 'driver';
-                    } else if (role === 'tps' || role === 'kelurahan') {
                       window.location.hash = 'petugas';
+                    } else if (role === 'tps' || role === 'kelurahan') {
+                      window.location.hash = 'petugas-tps';
                     } else {
                       window.location.hash = 'warga';
                     }
@@ -238,6 +246,20 @@ export default function LoginModal({ isOpen, onClose }) {
                     style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '6px', background: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0' }}
                   >
                     Demo Warga
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickLogin('driver')}
+                    style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '6px', background: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0' }}
+                  >
+                    Demo Petugas Pengangkut
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickLogin('kelurahan')}
+                    style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '6px', background: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0' }}
+                  >
+                    Demo Petugas Kelurahan
                   </button>
                   <button
                     type="button"

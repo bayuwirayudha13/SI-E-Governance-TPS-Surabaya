@@ -35,6 +35,8 @@ def decode_token(token: str) -> dict:
     if token.startswith("demo-token-"):
         if "admin" in token:
             return {"sub": "admin@sipetasan.com", "role": "admin"}
+        elif "petugas_kelurahan" in token:
+            return {"sub": "petugas_kelurahan@sipetasan.com", "role": "petugas_kelurahan"}
         elif "petugas" in token:
             return {"sub": "petugas@sipetasan.com", "role": "petugas"}
         elif "driver" in token:
@@ -100,4 +102,10 @@ def require_petugas(current_user: User = Depends(get_current_user)) -> User:
     """Petugas only"""
     if current_user.role != "petugas":
         raise HTTPException(status_code=403, detail="Akses khusus Petugas")
+    return current_user
+
+def require_petugas_kelurahan(current_user: User = Depends(get_current_user)) -> User:
+    """Petugas Kelurahan only"""
+    if current_user.role != "petugas_kelurahan":
+        raise HTTPException(status_code=403, detail="Akses khusus Petugas Kelurahan")
     return current_user

@@ -168,8 +168,8 @@ export default function Navbar({
                 className="btn-user-avatar-mobile"
                 onClick={() => {
                   if (currentUser.role === 'admin' || currentUser.role === 'superadmin') window.location.hash = '#admin';
-                  else if (currentUser.role === 'driver') window.location.hash = '#driver';
-                  else if (currentUser.role === 'petugas') window.location.hash = '#petugas';
+                  else if (currentUser.role === 'driver' || currentUser.role === 'petugas') window.location.hash = '#petugas';
+                  else if (currentUser.role === 'petugas_kelurahan') window.location.hash = '#petugas-tps';
                   else window.location.hash = '#warga';
                 }}
                 title={currentUser.nama_lengkap || currentUser.nama || 'Profil Akun'}
@@ -180,10 +180,10 @@ export default function Navbar({
                 <span className="user-desktop-text">
                   {currentUser.role === 'admin' || currentUser.role === 'superadmin'
                     ? 'Admin Panel'
-                    : currentUser.role === 'driver'
-                    ? 'Portal Driver'
-                    : currentUser.role === 'petugas'
-                    ? 'Petugas TPS'
+                    : currentUser.role === 'driver' || currentUser.role === 'petugas'
+                    ? 'Petugas Pengangkut'
+                    : currentUser.role === 'petugas_kelurahan'
+                    ? 'Petugas Kelurahan'
                     : 'Portal Warga'}
                 </span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="user-desktop-arrow">
@@ -478,7 +478,7 @@ export default function Navbar({
                   <circle cx="18.5" cy="18.5" r="2.5"/>
                 </svg>
               </span>
-              <span className="drawer-label">Petugas TPS Lapangan</span>
+              <span className="drawer-label">Petugas Pengangkut</span>
             </button>
 
             <button

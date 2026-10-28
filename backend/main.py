@@ -45,6 +45,7 @@ from routes.jadwal_routes import router as jadwal_router
 from routes.admin_routes import router as admin_router
 from routes.chat_routes import router as chat_router
 from routes.chat_ws import router as chat_ws_router
+from routes.petugas_integrated_routes import router as petugas_integrated_router
 
 # Config
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
@@ -237,6 +238,7 @@ app.include_router(jadwal_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(chat_ws_router)
+app.include_router(petugas_integrated_router, prefix="/api")
 
 # Mount frontend dist folder AFTER all API routes
 frontend_dist_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
