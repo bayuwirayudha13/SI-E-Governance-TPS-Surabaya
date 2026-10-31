@@ -140,7 +140,7 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
       if (response.ok) {
         const data = await response.json();
         setUsers(data);
-        setPetugasList(data.filter(u => u.role === 'petugas' || u.role === 'admin' || u.role === 'superadmin' || u.role === 'driver'));
+        setPetugasList(data.filter(u => u.role === 'petugas' || u.role === 'admin' || u.role === 'superadmin' || u.role === 'driver' || u.role === 'petugas_kelurahan' || u.role === 'petugas_pengangkut'));
       }
     } catch (err) {
       console.error('Load users error:', err);
@@ -1529,9 +1529,11 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   <option value="superadmin">Superadmin</option>
                   <option value="petugas">Petugas</option>
                   <option value="driver">Driver</option>
+                  <option value="petugas_kelurahan">Petugas Kelurahan</option>
+                  <option value="petugas_pengangkut">Petugas Pengangkut</option>
                 </select>
               </div>
-              {(newUser.role === 'petugas' || newUser.role === 'driver') && (
+              {(newUser.role === 'petugas' || newUser.role === 'driver' || newUser.role === 'petugas_kelurahan' || newUser.role === 'petugas_pengangkut') && (
               <>
               <div className="form-group">
                 <label className="form-label">Kecamatan Tugas</label>
@@ -1588,9 +1590,11 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   <option value="superadmin">Superadmin</option>
                   <option value="petugas">Petugas</option>
                   <option value="driver">Driver</option>
+                  <option value="petugas_kelurahan">Petugas Kelurahan</option>
+                  <option value="petugas_pengangkut">Petugas Pengangkut</option>
                 </select>
               </div>
-              {(editUser.role === 'petugas' || editUser.role === 'driver') && (
+              {(editUser.role === 'petugas' || editUser.role === 'driver' || editUser.role === 'petugas_kelurahan' || editUser.role === 'petugas_pengangkut') && (
               <>
               <div className="form-group">
                 <label className="form-label">Kecamatan Tugas</label>

@@ -1,82 +1,75 @@
 import { api } from './client.js';
 
+const toOptionalNumber = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 /**
- * Normalize backend TPS data to frontend format
+ * Normalize one TPS record from the public API.
+ * TPS records are retained even when their coordinates are missing or invalid.
  */
 function normalizeTpsData(backendTps) {
-  if (!backendTps || !backendTps.latitude || !backendTps.longitude) {
-    return null;
-  }
+  if (!backendTps) return null;
 
-  const lat = parseFloat(backendTps.latitude);
-  const lng = parseFloat(backendTps.longitude);
+  const rawLat = toOptionalNumber(backendTps.latitude);
+  const rawLng = toOptionalNumber(backendTps.longitude);
+  const hasValidCoordinates =
+    rawLat !== null &&
+    rawLng !== null &&
+    rawLat >= -8.0 && rawLat <= -7.0 &&
+    rawLng >= 112.0 && rawLng <= 113.0;
 
-  // Validate coordinates
-  if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
-    return null;
-  }
-
-  // Validate Surabaya range
-  if (lat < -8.0 || lat > -7.0 || lng < 112.0 || lng > 113.0) {
-    return null;
-  }
-
-  // Mock capacity percentage since backend doesn't provide it yet
-  const capacity = Math.floor(Math.random() * 60) + 30;
-  
+  const latitude = hasValidCoordinates ? rawLat : null;
+  const longitude = hasValidCoordinates ? rawLng : null;
+  const dayaTampungM3 = toOptionalNumber(backendTps.daya_tampung_m3);
   const isInactive = backendTps.status !== 'Aktif';
-  const statusColor = isInactive ? 'gray' : capacity >= 90 ? 'red' : capacity >= 75 ? 'yellow' : 'green';
-  const statusText = isInactive ? 'Nonaktif' : capacity >= 90 ? 'Overload' : capacity >= 75 ? 'Waspada' : 'Aman';
-  const dotColor = isInactive ? '#94a3b8' : capacity >= 90 ? '#ef4444' : capacity >= 75 ? '#f59e0b' : '#10b981';
 
   return {
     id: backendTps.id,
     nama: backendTps.nama,
-    nama_lama: backendTps.nama_lama || null,
-    lokasi: backendTps.lokasi || backendTps.kecamatan,
-    kecamatan: backendTps.kecamatan,
-    wilayahKota: backendTps.wilayah_kota,
+    nama_lama: backendTps.nama_lama ?? null,
+    lokasi: backendTps.lokasi || backendTps.kecamatan || '-',
+    kecamatan: backendTps.kecamatan || '-',
+    wilayahKota: backendTps.wilayah_kota || '-',
     kelurahan: backendTps.lokasi || '',
     kelurahanList: backendTps.lokasi ? [backendTps.lokasi] : [],
-    lat,
-    lng,
-    latitude: lat,
-    longitude: lng,
-    jenisTps: backendTps.jenis_tps || 'TPS Reguler',
-    jumlahContainer: backendTps.jumlah_container || 'Data belum tersedia',
-    dayaTampungM3: backendTps.daya_tampung_m3 || 0,
-    kapasitasM3: backendTps.daya_tampung_m3 || 0,
+    lat: latitude,
+    lng: longitude,
+    latitude,
+    longitude,
+    hasValidCoordinates,
+    jenisTps: backendTps.jenis_tps ?? null,
+    jumlahContainer: backendTps.jumlah_container ?? null,
+    dayaTampungM3,
+    kapasitasM3: dayaTampungM3,
     status: backendTps.status,
-    statusColor,
-    statusText,
-    dotColor,
-    capacity,
-    kapasitasPersen: capacity,
-    jamOperasional: '06:00 - 18:00 WIB',
-    terakhirUpdate: backendTps.tanggal_update || 'Baru saja',
-    tanggal_update: backendTps.tanggal_update,
+    // Occupancy is not present in the current backend schema; do not fabricate it.
+    statusColor: isInactive ? 'gray' : null,
+    statusText: isInactive ? 'Nonaktif' : 'Data keterisian belum tersedia',
+    dotColor: isInactive ? '#94a3b8' : '#64748b',
+    capacity: null,
+    kapasitasPersen: null,
+    jamOperasional: null,
+    terakhirUpdate: backendTps.tanggal_update || null,
+    tanggal_update: backendTps.tanggal_update || null,
     catatan: backendTps.catatan || null,
-    sumber_data: backendTps.sumber_data || 'Data DLH'
+    sumber_data: backendTps.sumber_data || null
   };
 }
 
-/**
- * Fetch active public TPS data from backend
- * No authentication required
- */
+/** Fetch all active public TPS records from MySQL through the public API. */
 export async function fetchPublicTps() {
   try {
     const response = await api.get('/api/tps/public');
-    
-    if (response.data && Array.isArray(response.data)) {
-      // Normalize and filter out invalid entries
-      const normalized = response.data
+
+    if (Array.isArray(response.data)) {
+      return response.data
         .map(normalizeTpsData)
-        .filter(tps => tps !== null);
-      
-      return normalized;
+        .filter((tps) => tps !== null);
     }
-    
+
     return [];
   } catch (error) {
     console.error('Error fetching public TPS:', error);
@@ -84,30 +77,17 @@ export async function fetchPublicTps() {
   }
 }
 
-/**
- * Fetch TPS by kelurahan name
- * Filters normalized data by lokasi field
- */
+/** Fetch public TPS and filter by the supplied kelurahan/location text. */
 export async function fetchTpsByKelurahan(kelurahanName) {
   try {
     const allTps = await fetchPublicTps();
-    
-    if (!allTps || allTps.length === 0) {
-      return [];
-    }
-    
-    // Filter by lokasi or check kelurahanList
-    const filtered = allTps.filter(tps => {
-      if (tps.lokasi && tps.lokasi.toLowerCase().includes(kelurahanName.toLowerCase())) {
-        return true;
-      }
-      if (tps.kelurahanList && tps.kelurahanList.length > 0) {
-        return tps.kelurahanList.some(k => k.toLowerCase().includes(kelurahanName.toLowerCase()));
-      }
-      return false;
+    if (!Array.isArray(allTps) || allTps.length === 0) return [];
+
+    const query = String(kelurahanName || '').toLowerCase();
+    return allTps.filter((tps) => {
+      if (tps.lokasi && tps.lokasi.toLowerCase().includes(query)) return true;
+      return tps.kelurahanList.some((name) => name.toLowerCase().includes(query));
     });
-    
-    return filtered;
   } catch (error) {
     console.error('Error fetching TPS by kelurahan:', error);
     return [];

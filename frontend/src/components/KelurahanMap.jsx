@@ -33,7 +33,7 @@ export default function KelurahanMap({
   const markerRefsMap = useRef({});
 
   const [mapType, setMapType] = useState('osm'); // 'osm' | 'satellite'
-  const [filterStatus, setFilterStatus] = useState('Semua'); // 'Semua' | 'Aman' | 'Waspada' | 'Overload'
+  const [filterStatus, setFilterStatus] = useState('Semua'); // Occupancy status filters are unavailable without live fill data.
   const [searchKelInput, setSearchKelInput] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dropdownPlacement, setDropdownPlacement] = useState('left');
@@ -63,16 +63,9 @@ export default function KelurahanMap({
     }
   }, [isDropdownOpen]);
 
-  // Filter TPS based on status filter
-  const filteredTps = useMemo(() => {
-    return tpsList.filter((tps) => {
-      if (filterStatus === 'Semua') return true;
-      if (filterStatus === 'Aman') return (tps.statusColor === 'green' || tps.statusText === 'Aman' || tps.capacity < 75);
-      if (filterStatus === 'Waspada') return (tps.statusColor === 'yellow' || tps.statusText === 'Waspada' || (tps.capacity >= 75 && tps.capacity < 90));
-      if (filterStatus === 'Overload') return (tps.statusColor === 'red' || tps.statusText === 'Overload' || tps.capacity >= 90);
-      return true;
-    });
-  }, [tpsList, filterStatus]);
+  // Occupancy percentages are not provided by the backend yet, so status filters
+  // such as Aman/Waspada/Overload must not classify TPS using fabricated values.
+  const filteredTps = useMemo(() => tpsList, [tpsList]);
 
   // Filter kelurahan dropdown options based on search input
   const filteredKelurahanOptions = useMemo(() => {
@@ -198,15 +191,13 @@ export default function KelurahanMap({
     const latLngBounds = [];
 
     filteredTps.forEach((tps) => {
-      if (!tps.lat || !tps.lng) return;
+      if (!Number.isFinite(tps.lat) || !Number.isFinite(tps.lng)) return;
 
       latLngBounds.push([tps.lat, tps.lng]);
 
-      const isCritical = tps.statusColor === 'red' || tps.capacity >= 90;
-      const isWarning = tps.statusColor === 'yellow' || (tps.capacity >= 75 && tps.capacity < 90);
       const isInactive = tps.status === 'Tidak Aktif';
-      const badgeClass = isInactive ? 'gray' : isCritical ? 'red' : isWarning ? 'yellow' : 'green';
-      const pinColor = isInactive ? '#94a3b8' : isCritical ? '#ef4444' : isWarning ? '#f59e0b' : '#10b981';
+      const badgeClass = 'gray';
+      const pinColor = isInactive ? '#94a3b8' : '#64748b';
 
       // Custom pulsing HTML marker
       const customIcon = L.divIcon({
@@ -218,7 +209,7 @@ export default function KelurahanMap({
           <div class="osm-marker-pin" style="--marker-color: ${pinColor}">
             <div class="osm-marker-pulse"></div>
             <div class="osm-marker-dot" style="background: ${pinColor}; width: 28px; height: 28px;">
-              <span>${isInactive ? 'OFF' : `${tps.capacity || tps.kapasitasPersen}%`}</span>
+              <span>${isInactive ? 'OFF' : 'TPS'}</span>
             </div>
           </div>
         `
@@ -233,7 +224,7 @@ export default function KelurahanMap({
           <div class="osm-popup-title-row" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
             <h4 class="osm-popup-title" style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a;">${tps.nama}</h4>
             <span class="map-tooltip-badge ${badgeClass}" style="margin: 0; font-size: 0.72rem; padding: 2px 7px; border-radius: 6px; white-space: nowrap;">
-              ${isInactive ? 'Nonaktif' : `${tps.capacity}% • ${tps.statusText}`}
+              ${isInactive ? 'Nonaktif' : 'Aktif'}
             </span>
           </div>
 
@@ -241,14 +232,14 @@ export default function KelurahanMap({
             <p style="margin: 0;"><strong>📍 Lokasi:</strong> ${tps.lokasi}</p>
             <p style="margin: 0;"><strong>🏛️ Kecamatan:</strong> ${tps.kecamatan} (${tps.wilayahKota || 'Surabaya'})</p>
             <p style="margin: 0;"><strong>🏘️ Kelurahan:</strong> ${tps.kelurahanList && tps.kelurahanList.length > 0 ? tps.kelurahanList.join(', ') : selectedKelurahan}</p>
-            <p style="margin: 0;"><strong>🚛 Jenis:</strong> ${tps.jenisTps} &bull; ${tps.jumlahContainer}</p>
-            <p style="margin: 0;"><strong>📦 Daya Tampung:</strong> ${tps.dayaTampungM3} m&sup3;</p>
-            <p style="margin: 0;"><strong>⏰ Jam Operasional:</strong> ${tps.jamOperasional}</p>
+            <p style="margin: 0;"><strong>🚛 Jenis:</strong> ${tps.jenisTps || 'Jenis belum tersedia'} &bull; ${tps.jumlahContainer || 'Kontainer belum tersedia'}</p>
+            <p style="margin: 0;"><strong>📦 Daya Tampung Maksimum:</strong> ${tps.dayaTampungM3 != null ? `${tps.dayaTampungM3} m&sup3;` : 'Belum ada data'}</p>
+            <p style="margin: 0;"><strong>⏰ Jam Operasional:</strong> ${tps.jamOperasional || 'Belum ada data'}</p>
           </div>
 
-          <div class="osm-popup-bar-track" style="height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin-bottom: 10px;">
-            <div class="osm-popup-bar-fill ${badgeClass}" style="width: ${tps.capacity}%; height: 100%; background: ${pinColor}; border-radius: 999px;"></div>
-          </div>
+          <p style="margin: 0 0 10px; font-size: 0.72rem; color: #64748b;">
+            Persentase keterisian belum tersedia.
+          </p>
 
           <div style="display: flex; gap: 6px;">
             <button 
@@ -327,7 +318,9 @@ export default function KelurahanMap({
   const handleResetView = () => {
     if (!mapInstanceRef.current) return;
     const map = mapInstanceRef.current;
-    const validCoords = filteredTps.filter((t) => t.lat && t.lng).map((t) => [t.lat, t.lng]);
+    const validCoords = filteredTps
+      .filter((t) => Number.isFinite(t.lat) && Number.isFinite(t.lng))
+      .map((t) => [t.lat, t.lng]);
     if (validCoords.length > 0) {
       if (validCoords.length === 1) {
         map.setView(validCoords[0], 15, { animate: true });
@@ -589,9 +582,8 @@ export default function KelurahanMap({
 
             {/* Legend Indicators */}
             <div className="map-status-indicators">
-              <span title="Daya tampung aman"><span className="status-dot green"></span>Aman (&lt;75%)</span>
-              <span title="Mendekati batas"><span className="status-dot yellow"></span>Waspada (75-89%)</span>
-              <span title="Perlu penanganan"><span className="status-dot red"></span>Overload (&ge;90%)</span>
+              <span title="Daya tampung maksimum berasal dari data TPS"><span className="status-dot" style={{ background: '#64748b' }}></span>Daya tampung maksimum ditampilkan di detail TPS</span>
+              <span>Persentase keterisian belum tersedia</span>
             </div>
           </div>
 
@@ -619,7 +611,7 @@ export default function KelurahanMap({
 
             {/* Status Filters */}
             <div className="osm-filter-chips">
-              {['Semua', 'Aman', 'Waspada', 'Overload'].map((status) => (
+              {['Semua'].map((status) => (
                 <button
                   key={status}
                   type="button"
@@ -674,7 +666,7 @@ export default function KelurahanMap({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: currentSelectedTps.dotColor || '#10b981' }}></span>
               <span>
-                TPS Terpilih: <strong>{currentSelectedTps.nama}</strong> ({currentSelectedTps.capacity}%) &bull; {currentSelectedTps.lokasi}
+                TPS Terpilih: <strong>{currentSelectedTps.nama}</strong> &bull; Daya tampung maksimum: {currentSelectedTps.dayaTampungM3 != null ? `${currentSelectedTps.dayaTampungM3} m³` : 'Belum ada data'} &bull; {currentSelectedTps.lokasi}
               </span>
             </div>
           ) : (
@@ -682,7 +674,9 @@ export default function KelurahanMap({
           )}
 
           <a 
-            href={`https://www.google.com/maps/search/?api=1&query=${currentSelectedTps ? `${currentSelectedTps.lat},${currentSelectedTps.lng}` : encodeURIComponent(`TPS Kelurahan ${selectedKelurahan} Surabaya`)}`}
+            href={currentSelectedTps && Number.isFinite(currentSelectedTps.lat) && Number.isFinite(currentSelectedTps.lng)
+              ? `https://www.google.com/maps/search/?api=1&query=${currentSelectedTps.lat},${currentSelectedTps.lng}`
+              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`TPS Kelurahan ${selectedKelurahan} Surabaya`)}`}
             target="_blank"
             rel="noreferrer"
             style={{
@@ -694,7 +688,7 @@ export default function KelurahanMap({
               gap: '4px'
             }}
           >
-            <span>🗺️ Buka di Google Maps &rarr;</span>
+            <span>Buka di Google Maps &rarr;</span>
           </a>
         </div>
       </div>

@@ -135,9 +135,12 @@ export default function App() {
       if (user.role === 'superadmin' || user.role === 'admin') {
         setCurrentPage('admin');
         window.location.hash = user.role === 'superadmin' ? 'superadmin' : 'admin';
-      } else if (user.role === 'petugas') {
+      } else if (user.role === 'petugas_kelurahan') {
         setCurrentPage('petugas-tps');
         window.location.hash = 'petugas-tps';
+      } else if (user.role === 'petugas' || user.role === 'petugas_pengangkut') {
+        setCurrentPage('petugas');
+        window.location.hash = 'petugas';
       } else if (user.role === 'driver') {
         setCurrentPage('petugas');
         window.location.hash = 'petugas';
@@ -239,9 +242,12 @@ export default function App() {
     } else if (user.role === 'admin') {
       setCurrentPage('admin');
       window.location.hash = 'admin';
-    } else if (user.role === 'petugas') {
+    } else if (user.role === 'petugas_kelurahan') {
       setCurrentPage('petugas-tps');
       window.location.hash = 'petugas-tps';
+    } else if (user.role === 'petugas' || user.role === 'petugas_pengangkut') {
+      setCurrentPage('petugas');
+      window.location.hash = 'petugas';
     } else if (user.role === 'driver') {
       setCurrentPage('petugas');
       window.location.hash = 'petugas';

@@ -14,9 +14,9 @@ router = APIRouter(prefix="/tps", tags=["TPS Management"])
 @router.get("/public", response_model=List[TPSResponse])
 def get_public_tps(db: Session = Depends(get_db)):
     """
-    Get active TPS with valid coordinates for public map.
+    Get all active TPS for public display.
     No authentication required.
-    Only returns TPS dengan status 'Aktif' and valid latitude/longitude.
+    Includes TPS without coordinates.
     """
     tps_list = get_active_public_tps(db)
     return tps_list

@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { tpsList as mockTpsList } from '../data/mockData';
 import { fetchPublicTps } from '../api/tps';
 
 // Stable module-level constants
@@ -26,9 +25,9 @@ export default function HeroMap({ onOpenTpsModal }) {
   const markersLayerRef = useRef(null);
 
   const [mapType, setMapType] = useState('osm'); // 'osm' | 'satellite'
-  const [filterStatus, setFilterStatus] = useState('Semua'); // 'Semua' | 'Aman' | 'Waspada' | 'Overload'
+  const [filterStatus, setFilterStatus] = useState('Semua');
   const [selectedTps, setSelectedTps] = useState(null);
-  const [tpsList, setTpsList] = useState(mockTpsList);
+  const [tpsList, setTpsList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState(null);
 
@@ -39,11 +38,12 @@ export default function HeroMap({ onOpenTpsModal }) {
       setApiError(null);
       try {
         const data = await fetchPublicTps();
-        if (data && data.length > 0) {
+        if (Array.isArray(data)) {
           setTpsList(data);
-        } else if (data === null) {
-          console.warn('Failed to load from API, using mock data');
-          setApiError('API tidak tersedia, menampilkan data lokal');
+          if (data.length === 0) setApiError('Belum ada data TPS aktif dari server.');
+        } else {
+          setTpsList([]);
+          setApiError('Gagal memuat data TPS dari server.');
         }
       } catch (error) {
         console.error('Error loading TPS:', error);
@@ -166,31 +166,21 @@ export default function HeroMap({ onOpenTpsModal }) {
     const markersGroup = markersLayerRef.current;
     markersGroup.clearLayers();
 
-    const filtered = tpsList.filter((tps) => {
-      const pct = tps.kapasitasPersen ?? tps.capacity ?? 50;
-      if (filterStatus === 'Semua') return true;
-      if (filterStatus === 'Aman') return tps.statusColor === 'green' || tps.status === 'Aman' || pct < 60;
-      if (filterStatus === 'Waspada') return tps.statusColor === 'yellow' || tps.status === 'Waspada' || (pct >= 60 && pct < 80);
-      if (filterStatus === 'Kritis') return tps.statusColor === 'red' || tps.status === 'Kritis' || pct >= 80;
-      return true;
-    });
+    const filtered = tpsList;
 
-    // Render all individual TPS markers with percentage and rich details popup
+    // Render markers only for TPS records with valid coordinates.
     filtered.forEach((tps) => {
       renderSingleMarker(tps, markersGroup);
     });
 
     function renderSingleMarker(tps, group) {
-      if (!tps.lat || !tps.lng) return;
+      if (!Number.isFinite(tps.lat) || !Number.isFinite(tps.lng)) return;
 
-      const pct = tps.kapasitasPersen ?? tps.capacity ?? 50;
-      const isCritical = tps.statusColor === 'red' || tps.status === 'Merah' || tps.status === 'Kritis' || pct >= 80;
-      const isWarning = !isCritical && (tps.statusColor === 'yellow' || tps.status === 'Kuning' || tps.status === 'Waspada' || pct >= 60);
-      const badgeClass = isCritical ? 'red' : isWarning ? 'yellow' : 'green';
-      const pinColor = isCritical ? '#ef4444' : isWarning ? '#f59e0b' : '#10b981';
-      const statusLabel = isCritical ? 'Kritis' : isWarning ? 'Waspada' : 'Aman';
+      const isInactive = tps.status === 'Tidak Aktif';
+      const badgeClass = 'gray';
+      const pinColor = isInactive ? '#94a3b8' : '#64748b';
 
-      // Custom pulsing HTML marker displaying capacity percentage (e.g., 42%, 78%)
+      // Custom marker identifies the TPS; occupancy is not available in the API data.
       const customIcon = L.divIcon({
         className: 'osm-custom-marker-wrapper',
         iconSize: [36, 36],
@@ -200,7 +190,7 @@ export default function HeroMap({ onOpenTpsModal }) {
           <div class="osm-marker-pin" style="--marker-color: ${pinColor}">
             <div class="osm-marker-pulse"></div>
             <div class="osm-marker-dot">
-              <span>${pct}%</span>
+              <span>${isInactive ? 'OFF' : 'TPS'}</span>
             </div>
           </div>
         `,
@@ -213,17 +203,15 @@ export default function HeroMap({ onOpenTpsModal }) {
         <div class="osm-popup-container">
           <div class="osm-popup-title-row">
             <h4 class="osm-popup-title">${tps.nama}</h4>
-            <span class="map-tooltip-badge ${badgeClass}">${pct}% &bull; ${statusLabel}</span>
+            <span class="map-tooltip-badge ${badgeClass}">${isInactive ? 'Nonaktif' : 'Aktif'}</span>
           </div>
           <div class="osm-popup-details">
             <p><strong>📍 Lokasi:</strong> Kec. ${tps.kecamatan || '-'}, Kel. ${tps.kelurahan || '-'}</p>
-            <p><strong>⏰ Jam Operasional:</strong> ${tps.jamOperasional || '06:00 - 20:00 WIB'}</p>
-            <p><strong>📦 Daya Tampung:</strong> ${tps.kapasitasM3 || tps.dayaTampungM3 || '-'} m&sup3;</p>
-            <p><strong>⏱️ Terakhir Diperbarui:</strong> ${tps.terakhirUpdate || 'Baru saja'}</p>
+            <p><strong>⏰ Jam Operasional:</strong> ${tps.jamOperasional || 'Belum ada data'}</p>
+            <p><strong>📦 Daya Tampung Maksimum:</strong> ${tps.dayaTampungM3 != null ? `${tps.dayaTampungM3} m&sup3;` : 'Belum ada data'}</p>
+            <p><strong>⏱️ Terakhir Diperbarui:</strong> ${tps.terakhirUpdate || 'Belum ada data'}</p>
           </div>
-          <div class="osm-popup-bar-track">
-            <div class="osm-popup-bar-fill ${badgeClass}" style="width: ${pct}%;"></div>
-          </div>
+          <p style="font-size: 0.75rem; color: #64748b; margin: 0 0 10px;">Persentase keterisian belum tersedia.</p>
           <button 
             type="button" 
             id="osm-btn-${tps.id}"
@@ -319,9 +307,8 @@ export default function HeroMap({ onOpenTpsModal }) {
 
           {/* Legend Indicators */}
           <div className="map-status-indicators">
-            <span title="Daya tampung aman"><span className="status-dot green"></span>Aman (&le;60%)</span>
-            <span title="Mendekati batas"><span className="status-dot yellow"></span>Waspada (61-79%)</span>
-            <span title="Perlu pengangkutan segera"><span className="status-dot red"></span>Kritis (&ge;80%)</span>
+            <span><span className="status-dot" style={{ background: '#64748b' }}></span>Daya tampung maksimum ditampilkan di detail TPS</span>
+            <span>Persentase keterisian belum tersedia</span>
           </div>
         </div>
 
@@ -349,7 +336,7 @@ export default function HeroMap({ onOpenTpsModal }) {
 
           {/* Status Filters */}
           <div className="osm-filter-chips">
-            {['Semua', 'Aman', 'Waspada', 'Kritis'].map((status) => (
+            {['Semua'].map((status) => (
               <button
                 key={status}
                 type="button"
@@ -386,20 +373,20 @@ export default function HeroMap({ onOpenTpsModal }) {
         {selectedTps ? (
           <div className="hero-map-bottom-keterangan">
             <div className="hero-map-keterangan-left">
-              <span className={`status-dot ${selectedTps.statusColor === 'red' ? 'red' : selectedTps.statusColor === 'yellow' ? 'yellow' : 'green'}`}></span>
+              <span className="status-dot" style={{ background: '#64748b' }}></span>
               <div className="hero-map-keterangan-text">
                 <div className="hero-map-keterangan-title">
                   <strong>{selectedTps.nama}</strong>
-                  <span className={`map-tooltip-badge ${selectedTps.statusColor || 'green'}`} style={{ margin: 0, padding: '2px 8px', fontSize: '0.72rem' }}>
-                    {selectedTps.capacity || selectedTps.kapasitasPersen}% &bull; {selectedTps.statusText || 'Aman'}
+                  <span className="map-tooltip-badge gray" style={{ margin: 0, padding: '2px 8px', fontSize: '0.72rem' }}>
+                    {selectedTps.status || 'Status tidak tersedia'}
                   </span>
                 </div>
                 <div className="hero-map-keterangan-sub">
-                  <span>📍 ${selectedTps.lokasi || (selectedTps.kecamatan ? `Kec. ${selectedTps.kecamatan}` : '-')}</span>
+                  <span>📍 {selectedTps.lokasi || (selectedTps.kecamatan ? `Kec. ${selectedTps.kecamatan}` : '-')}</span>
                   <span>&bull;</span>
-                  <span>⏰ {selectedTps.jamOperasional}</span>
+                  <span>⏰ {selectedTps.jamOperasional || 'Jam operasional belum tersedia'}</span>
                   <span>&bull;</span>
-                  <span>📦 Daya Tampung: {selectedTps.dayaTampungM3 || selectedTps.kapasitasM3 || '-'} m&sup3;</span>
+                  <span>📦 Daya Tampung Maksimum: {selectedTps.dayaTampungM3 != null ? `${selectedTps.dayaTampungM3} m³` : 'Belum ada data'}</span>
                 </div>
               </div>
             </div>
@@ -429,7 +416,7 @@ export default function HeroMap({ onOpenTpsModal }) {
           <div className="hero-map-default-bar">
             <span style={{ color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span>📍</span>
-              <span>Menampilkan <strong>{tpsList.length} Titik TPS</strong> di Surabaya via OpenStreetMap (Klik titik untuk info detail)</span>
+              <span>{isLoading ? 'Memuat data TPS dari server...' : apiError || `Menampilkan ${tpsList.length} TPS aktif dari server. Klik marker untuk melihat detail.`}</span>
             </span>
             <button
               type="button"

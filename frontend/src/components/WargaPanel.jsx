@@ -7,11 +7,8 @@ import KelurahanMap from './KelurahanMap';
 import WargaChat from './WargaChat';
 import LaporanWargaModal from './LaporanWargaModal';
 import {
-  TPS_SURABAYA_ALL,
   KELURAHAN_SURABAYA_ALL,
-  KECAMATAN_SURABAYA_LIST,
-  getTpsByKelurahan,
-  getTpsByKecamatan
+  KECAMATAN_SURABAYA_LIST
 } from '../data/tpsSurabayaData';
 
 // Real Scannable QR Code Component
@@ -351,15 +348,11 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
       setTpsLoading(true);
       try {
         const data = await fetchPublicTps();
-        if (data && data.length > 0) {
-          setAllTps(data);
-        } else {
-          // Fallback to static data if API fails or returns empty
-          setAllTps(TPS_SURABAYA_ALL);
-        }
+        // Gunakan data dari MySQL saja. Tidak ada fallback ke data TPS statis.
+        setAllTps(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Error loading TPS in WargaPanel:', error);
-        setAllTps(TPS_SURABAYA_ALL);
+        setAllTps([]);
       } finally {
         setTpsLoading(false);
       }
@@ -387,9 +380,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
       return matchKel;
     });
 
-    if (filtered.length > 0) return filtered;
-
-    return allTps.slice(0, 6);
+    return filtered;
   }, [allTps, selectedKelurahan, displayKecamatanRaw]);
 
   const [selectedTpsId, setSelectedTpsId] = useState('');
@@ -399,6 +390,8 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
       if (!selectedTpsId || !kelurahanTpsList.some((t) => t.id === selectedTpsId)) {
         setSelectedTpsId(kelurahanTpsList[0].id);
       }
+    } else if (selectedTpsId) {
+      setSelectedTpsId('');
     }
   }, [kelurahanTpsList, selectedTpsId]);
 
@@ -406,7 +399,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
     return (
       kelurahanTpsList.find((t) => t.id === selectedTpsId) ||
       kelurahanTpsList[0] ||
-      TPS_SURABAYA_ALL[0]
+      null
     );
   }, [kelurahanTpsList, selectedTpsId]);
 
@@ -2001,6 +1994,8 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
 
               {/* Right Column: 2 Stacked Status Detail Cards */}
               <div className="warga-tracking-right-col" style={{ flex: 1 }}>
+                {selectedTps ? (
+                  <>
                 {/* Card 1: Selected TPS Details & Progress */}
                 <div className="warga-panel-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -2041,6 +2036,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
 
                   {/* Action buttons */}
                   <div style={{ display: 'flex', gap: '8px' }}>
+                    {Number.isFinite(selectedTps.lat) && Number.isFinite(selectedTps.lng) && (
                     <a
                       href={`https://www.google.com/maps/dir/?api=1&destination=${selectedTps.lat},${selectedTps.lng}`}
                       target="_blank"
@@ -2063,6 +2059,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                       <span>🧭</span>
                       <span>Rute Google Maps</span>
                     </a>
+                    )}
                     <button
                       type="button"
                       onClick={() => setShowLaporanModal(true)}
@@ -2111,6 +2108,14 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                       `TPS ini sedang dalam status tidak aktif atau pemeliharaan oleh DLH Surabaya.`}
                   </p>
                 </div>
+                  </>
+                ) : (
+                  <div className="warga-panel-card" style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                    {tpsLoading
+                      ? 'Memuat data TPS dari server...'
+                      : 'Belum ada data TPS untuk wilayah ini dari database.'}
+                  </div>
+                )}
               </div>
             </div>
           </div>
