@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from decimal import Decimal
 from datetime import date, datetime
 
@@ -35,6 +35,13 @@ class TPSUpdate(BaseModel):
     tanggal_update: Optional[date] = None
     catatan: Optional[str] = None
 
+class KelurahanDetail(BaseModel):
+    id: int
+    nama: str
+
+    class Config:
+        from_attributes = True
+
 class TPSResponse(BaseModel):
     id: int
     nama: str
@@ -51,6 +58,7 @@ class TPSResponse(BaseModel):
     sumber_data: Optional[str]
     tanggal_update: Optional[date]
     catatan: Optional[str]
+    kelurahans: List[KelurahanDetail] = []
 
     class Config:
         from_attributes = True

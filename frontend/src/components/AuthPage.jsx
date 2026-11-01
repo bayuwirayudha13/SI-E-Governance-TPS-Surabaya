@@ -1,71 +1,97 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { api, authService } from '../api/client';
+import React, { useState, useEffect, useRef } from "react";
+import { api, authService } from "../api/client";
 
 const DEFAULT_KECAMATAN = [
-  'Asemrowo', 'Benowo', 'Bubutan', 'Bulak', 'Dukuh Pakis', 'Gayungan', 'Genteng',
-  'Gubeng', 'Gunung Anyar', 'Jambangan', 'Karang Pilang', 'Kenjeran', 'Krembangan',
-  'Lakarsantri', 'Mulyorejo', 'Pabean Cantian', 'Pakal', 'Rungkut', 'Sambikerep',
-  'Sawahan', 'Semampir', 'Simokerto', 'Sukolilo', 'Sukomanunggal', 'Tambaksari',
-  'Tandes', 'Tegalsari', 'Tenggilis Mejoyo', 'Wiyung', 'Wonocolo', 'Wonokromo'
+  "Asemrowo",
+  "Benowo",
+  "Bubutan",
+  "Bulak",
+  "Dukuh Pakis",
+  "Gayungan",
+  "Genteng",
+  "Gubeng",
+  "Gunung Anyar",
+  "Jambangan",
+  "Karang Pilang",
+  "Kenjeran",
+  "Krembangan",
+  "Lakarsantri",
+  "Mulyorejo",
+  "Pabean Cantian",
+  "Pakal",
+  "Rungkut",
+  "Sambikerep",
+  "Sawahan",
+  "Semampir",
+  "Simokerto",
+  "Sukolilo",
+  "Sukomanunggal",
+  "Tambaksari",
+  "Tandes",
+  "Tegalsari",
+  "Tenggilis Mejoyo",
+  "Wiyung",
+  "Wonocolo",
+  "Wonokromo",
 ].map((nama, idx) => ({ id: idx + 1, nama }));
 
 export default function AuthPage({
-  initialTab = 'masuk',
+  initialTab = "masuk",
   onBackToHome,
   onLoginSuccess,
+  notice = "",
 }) {
   // =========================================================
   // AUTH STATES
   // =========================================================
   const [activeTab, setActiveTab] = useState(
-    initialTab === 'ganti-password' ? 'masuk' : initialTab
+    initialTab === "ganti-password" ? "masuk" : initialTab,
   );
-  const [authStep, setAuthStep] = useState('form');
+  const [authStep, setAuthStep] = useState("form");
 
   // =========================================================
   // FORGOT PASSWORD STATES
   // =========================================================
   const [forgotPassword, setForgotPassword] = useState(
-    initialTab === 'ganti-password'
+    initialTab === "ganti-password",
   );
   const [resetStep, setResetStep] = useState(
-    initialTab === 'ganti-password' ? 'password' : 'email'
+    initialTab === "ganti-password" ? "password" : "email",
   );
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetOtp, setResetOtp] = useState(['', '', '', '', '', '']);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetOtp, setResetOtp] = useState(["", "", "", "", "", ""]);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmNewPassword, setShowConfirmNewPassword] =
-    useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   // =========================================================
   // LOGIN / REGISTER STATES
   // =========================================================
   const [showPassword, setShowPassword] = useState(false);
 
-  const [fullName, setFullName] = useState('');
-  const [noKK, setNoKK] = useState('');
-  const [alamatRumah, setAlamatRumah] = useState('');
-  const [kecamatan, setKecamatan] = useState('');
-  const [kelurahan, setKelurahan] = useState('');
+  const [fullName, setFullName] = useState("");
+  const [noKK, setNoKK] = useState("");
+  const [alamatRumah, setAlamatRumah] = useState("");
+  const [kecamatan, setKecamatan] = useState("");
+  const [kelurahan, setKelurahan] = useState("");
   const [kecamatanList, setKecamatanList] = useState(DEFAULT_KECAMATAN);
   const [kelurahanList, setKelurahanList] = useState([]);
-  const [kecamatanSearch, setKecamatanSearch] = useState('');
-  const [kelurahanSearch, setKelurahanSearch] = useState('');
+  const [kecamatanSearch, setKecamatanSearch] = useState("");
+  const [kelurahanSearch, setKelurahanSearch] = useState("");
   const [showKecamatanDropdown, setShowKecamatanDropdown] = useState(false);
   const [showKelurahanDropdown, setShowKelurahanDropdown] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // =========================================================
   // REGISTRATION OTP STATES
   // =========================================================
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpStatus, setOtpStatus] = useState(null);
   const [otpTimer, setOtpTimer] = useState(300);
   const [isResending, setIsResending] = useState(false);
@@ -76,7 +102,7 @@ export default function AuthPage({
   // AUTO FOCUS REGISTRATION OTP
   // =========================================================
   useEffect(() => {
-    if (!forgotPassword && authStep === 'otp') {
+    if (!forgotPassword && authStep === "otp") {
       setTimeout(() => {
         inputRefs.current[0]?.focus();
       }, 100);
@@ -87,11 +113,9 @@ export default function AuthPage({
   // OTP COUNTDOWN
   // =========================================================
   useEffect(() => {
-    const isRegistrationOtp =
-      !forgotPassword && authStep === 'otp';
+    const isRegistrationOtp = !forgotPassword && authStep === "otp";
 
-    const isResetOtp =
-      forgotPassword && resetStep === 'otp';
+    const isResetOtp = forgotPassword && resetStep === "otp";
 
     if (!isRegistrationOtp && !isResetOtp) {
       return;
@@ -122,7 +146,7 @@ export default function AuthPage({
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
 
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
   // =========================================================
@@ -134,12 +158,15 @@ export default function AuthPage({
   // Fetch kecamatan dari MySQL — load sekali, filter instant di client
   const fetchKecamatan = async () => {
     try {
-      const res = await api.get('/api/wilayah/kecamatan');
+      const res = await api.get("/api/wilayah/kecamatan");
       if (res.data && res.data.length > 0) {
         setKecamatanList(res.data);
       }
     } catch (err) {
-      console.warn('Gagal load kecamatan dari server, tetap gunakan fallback:', err);
+      console.warn(
+        "Gagal load kecamatan dari server, tetap gunakan fallback:",
+        err,
+      );
     }
   };
 
@@ -155,10 +182,12 @@ export default function AuthPage({
     }
     const fetchKelurahan = async () => {
       try {
-        const res = await api.get('/api/wilayah/kelurahan', { params: { kecamatan } });
+        const res = await api.get("/api/wilayah/kelurahan", {
+          params: { kecamatan },
+        });
         setKelurahanList(res.data || []);
       } catch (err) {
-        console.warn('Gagal load kelurahan:', err);
+        console.warn("Gagal load kelurahan:", err);
         setKelurahanList([]);
       }
     };
@@ -167,10 +196,14 @@ export default function AuthPage({
 
   // Filter instant di client — pencarian fleksibel dengan includes
   const filteredKecamatan = kecamatanSearch
-    ? kecamatanList.filter((k) => k.nama.toLowerCase().includes(kecamatanSearch.toLowerCase().trim()))
+    ? kecamatanList.filter((k) =>
+        k.nama.toLowerCase().includes(kecamatanSearch.toLowerCase().trim()),
+      )
     : kecamatanList;
   const filteredKelurahan = kelurahanSearch
-    ? kelurahanList.filter((l) => l.nama.toLowerCase().includes(kelurahanSearch.toLowerCase().trim()))
+    ? kelurahanList.filter((l) =>
+        l.nama.toLowerCase().includes(kelurahanSearch.toLowerCase().trim()),
+      )
     : kelurahanList;
 
   // Close dropdown saat klik di luar
@@ -183,23 +216,23 @@ export default function AuthPage({
         setShowKelurahanDropdown(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Ketika kecamatan berubah, reset kelurahan jika tidak sesuai
   const handleSelectKecamatan = (nama) => {
     setKecamatan(nama);
-    setKecamatanSearch(''); // Reset search agar dropdown bersih saat dibuka lagi
+    setKecamatanSearch(""); // Reset search agar dropdown bersih saat dibuka lagi
     setShowKecamatanDropdown(false);
     // reset kelurahan karena ganti kecamatan
-    setKelurahan('');
-    setKelurahanSearch('');
+    setKelurahan("");
+    setKelurahanSearch("");
   };
 
   const handleSelectKelurahan = (nama) => {
     setKelurahan(nama);
-    setKelurahanSearch(''); // Reset search
+    setKelurahanSearch(""); // Reset search
     setShowKelurahanDropdown(false);
   };
 
@@ -207,7 +240,7 @@ export default function AuthPage({
   // REGISTRATION OTP INPUT
   // =========================================================
   const handleOtpChange = (index, value) => {
-    const cleaned = value.replace(/\D/g, '');
+    const cleaned = value.replace(/\D/g, "");
     const char = cleaned.slice(-1);
 
     const newOtp = [...otp];
@@ -225,13 +258,13 @@ export default function AuthPage({
   };
 
   const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace') {
+    if (e.key === "Backspace") {
       if (!otp[index] && index > 0) {
         inputRefs.current[index - 1]?.focus();
       }
-    } else if (e.key === 'ArrowLeft' && index > 0) {
+    } else if (e.key === "ArrowLeft" && index > 0) {
       inputRefs.current[index - 1]?.focus();
-    } else if (e.key === 'ArrowRight' && index < 5) {
+    } else if (e.key === "ArrowRight" && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -240,13 +273,13 @@ export default function AuthPage({
     e.preventDefault();
 
     const pasted = e.clipboardData
-      .getData('text')
-      .replace(/\D/g, '')
+      .getData("text")
+      .replace(/\D/g, "")
       .slice(0, 6);
 
     if (!pasted) return;
 
-    const newOtp = ['', '', '', '', '', ''];
+    const newOtp = ["", "", "", "", "", ""];
 
     for (let i = 0; i < pasted.length; i++) {
       newOtp[i] = pasted[i];
@@ -268,15 +301,15 @@ export default function AuthPage({
   const handleForgotPassword = () => {
     setForgotPassword(true);
 
-    setResetStep('email');
-    setResetEmail('');
-    setResetOtp(['', '', '', '', '', '']);
+    setResetStep("email");
+    setResetEmail("");
+    setResetOtp(["", "", "", "", "", ""]);
 
-    setNewPassword('');
-    setConfirmNewPassword('');
+    setNewPassword("");
+    setConfirmNewPassword("");
 
     setOtpStatus(null);
-    setErrorMessage('');
+    setErrorMessage("");
     setOtpTimer(300);
   };
 
@@ -286,22 +319,25 @@ export default function AuthPage({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    setErrorMessage('');
+    setErrorMessage("");
     setIsLoading(true);
 
     // =======================================================
     // LOGIN (WARGA, ADMIN, SUPERADMIN, PETUGAS)
     // =======================================================
-    if (activeTab === 'masuk') {
+    if (activeTab === "masuk") {
       try {
         const data = await authService.login(email.trim(), password);
-        const userData = data.user || { role: 'warga', email: email.trim() };
+        const userData = data.user || { role: "warga", email: email.trim() };
 
         if (data.access_token) {
-          sessionStorage.setItem('access_token', data.access_token);
-          sessionStorage.setItem('user_id', userData.id?.toString() || '');
-          sessionStorage.setItem('user_role', userData.role?.toString() || 'warga');
-          sessionStorage.setItem('auth_user', JSON.stringify(userData));
+          sessionStorage.setItem("access_token", data.access_token);
+          sessionStorage.setItem("user_id", userData.id?.toString() || "");
+          sessionStorage.setItem(
+            "user_role",
+            userData.role?.toString() || "warga",
+          );
+          sessionStorage.setItem("auth_user", JSON.stringify(userData));
         }
 
         setIsSuccess(true);
@@ -312,7 +348,7 @@ export default function AuthPage({
 
           if (onLoginSuccess) {
             onLoginSuccess({
-              role: userData.role || 'warga',
+              role: userData.role || "warga",
               ...userData,
             });
           } else {
@@ -320,9 +356,11 @@ export default function AuthPage({
           }
         }, 500);
       } catch (err) {
-        console.error('Login error:', err);
+        console.error("Login error:", err);
         setErrorMessage(
-          err.response?.data?.detail || err.message || 'Gagal login. Pastikan email dan password benar.'
+          err.response?.data?.detail ||
+            err.message ||
+            "Gagal login. Pastikan email dan password benar.",
         );
         setIsLoading(false);
       }
@@ -334,45 +372,43 @@ export default function AuthPage({
     // VALIDASI REGISTER
     // =======================================================
     if (!fullName.trim()) {
-      setErrorMessage('Nama Lengkap wajib diisi');
+      setErrorMessage("Nama Lengkap wajib diisi");
       setIsLoading(false);
       return;
     }
 
     if (noKK.trim().length !== 16) {
-      setErrorMessage(
-        'Nomor Kartu Keluarga (KK) harus 16 digit angka'
-      );
+      setErrorMessage("Nomor Kartu Keluarga (KK) harus 16 digit angka");
       setIsLoading(false);
       return;
     }
 
-    if (!email.trim() || !email.includes('@')) {
-      setErrorMessage('Format email tidak valid');
+    if (!email.trim() || !email.includes("@")) {
+      setErrorMessage("Format email tidak valid");
       setIsLoading(false);
       return;
     }
 
     if (password.length < 6) {
-      setErrorMessage('Password minimal 6 karakter');
+      setErrorMessage("Password minimal 6 karakter");
       setIsLoading(false);
       return;
     }
 
     if (!alamatRumah.trim()) {
-      setErrorMessage('Alamat rumah wajib diisi');
+      setErrorMessage("Alamat rumah wajib diisi");
       setIsLoading(false);
       return;
     }
 
     if (!kecamatan.trim()) {
-      setErrorMessage('Kecamatan wajib dipilih');
+      setErrorMessage("Kecamatan wajib dipilih");
       setIsLoading(false);
       return;
     }
 
     if (!kelurahan.trim()) {
-      setErrorMessage('Kelurahan wajib dipilih');
+      setErrorMessage("Kelurahan wajib dipilih");
       setIsLoading(false);
       return;
     }
@@ -381,13 +417,13 @@ export default function AuthPage({
     // REGISTER
     // =======================================================
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem("access_token");
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/register`,
+        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/auth/register`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
@@ -398,35 +434,31 @@ export default function AuthPage({
             kecamatan: kecamatan.trim(),
             kelurahan: kelurahan.trim(),
           }),
-        }
+        },
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.detail || 'Gagal membuat akun'
-        );
+        throw new Error(data.detail || "Gagal membuat akun");
       }
 
       // Berhasil register
-      setAuthStep('otp');
-      setOtp(['', '', '', '', '', '']);
+      setAuthStep("otp");
+      setOtp(["", "", "", "", "", ""]);
 
       // Resend pertama tersedia setelah 1 menit
       setOtpTimer(60);
 
       setOtpStatus({
-        type: 'success',
-        message:
-          'Akun berhasil dibuat. Kode OTP telah dikirim ke email Anda.',
+        type: "success",
+        message: "Akun berhasil dibuat. Kode OTP telah dikirim ke email Anda.",
       });
     } catch (err) {
-      console.error('Register error:', err);
+      console.error("Register error:", err);
 
       setErrorMessage(
-        err.message ||
-          'Gagal membuat akun. Pastikan backend berjalan.'
+        err.message || "Gagal membuat akun. Pastikan backend berjalan.",
       );
     } finally {
       setIsLoading(false);
@@ -437,13 +469,12 @@ export default function AuthPage({
   // VERIFY REGISTRATION OTP
   // =========================================================
   const handleVerifyOtp = async () => {
-    const enteredOtp = otp.join('');
+    const enteredOtp = otp.join("");
 
     if (enteredOtp.length < 6) {
       setOtpStatus({
-        type: 'error',
-        message:
-          'Silakan masukkan 6 digit kode OTP secara lengkap.',
+        type: "error",
+        message: "Silakan masukkan 6 digit kode OTP secara lengkap.",
       });
 
       return;
@@ -454,39 +485,32 @@ export default function AuthPage({
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/verify-otp`,
+        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/auth/verify-otp`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             email: email.trim(),
             otp: enteredOtp,
           }),
-        }
+        },
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.detail ||
-            'Kode OTP salah atau telah kadaluwarsa'
-        );
+        throw new Error(data.detail || "Kode OTP salah atau telah kadaluwarsa");
       }
 
       if (data.access_token) {
-        sessionStorage.setItem(
-          'access_token',
-          data.access_token
-        );
+        sessionStorage.setItem("access_token", data.access_token);
       }
 
       setOtpStatus({
-        type: 'success',
-        message:
-          'Verifikasi berhasil! Mengalihkan ke dashboard warga...',
+        type: "success",
+        message: "Verifikasi berhasil! Mengalihkan ke dashboard warga...",
       });
 
       setTimeout(() => {
@@ -494,7 +518,7 @@ export default function AuthPage({
 
         if (onLoginSuccess) {
           onLoginSuccess({
-            role: 'warga',
+            role: "warga",
             ...(data.user || {}),
             email: email.trim(),
             full_name: fullName.trim(),
@@ -504,13 +528,11 @@ export default function AuthPage({
         }
       }, 600);
     } catch (err) {
-      console.error('Verify OTP error:', err);
+      console.error("Verify OTP error:", err);
 
       setOtpStatus({
-        type: 'error',
-        message:
-          err.message ||
-          'Kode OTP salah. Silakan periksa kembali.',
+        type: "error",
+        message: err.message || "Kode OTP salah. Silakan periksa kembali.",
       });
 
       setIsLoading(false);
@@ -530,47 +552,43 @@ export default function AuthPage({
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/resend-otp`,
+        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/auth/resend-otp`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             email: email.trim(),
           }),
-        }
+        },
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.detail || 'Gagal mengirim ulang OTP'
-        );
+        throw new Error(data.detail || "Gagal mengirim ulang OTP");
       }
 
       const cooldown = data.cooldown_seconds || 300;
 
       setOtpTimer(cooldown);
-      setOtp(['', '', '', '', '', '']);
+      setOtp(["", "", "", "", "", ""]);
 
       setOtpStatus({
-        type: 'success',
-        message:
-          'Kode OTP baru telah dikirimkan ke email Anda.',
+        type: "success",
+        message: "Kode OTP baru telah dikirimkan ke email Anda.",
       });
 
       setTimeout(() => {
         inputRefs.current[0]?.focus();
       }, 100);
     } catch (err) {
-      console.error('Resend OTP error:', err);
+      console.error("Resend OTP error:", err);
 
       setOtpStatus({
-        type: 'error',
-        message:
-          err.message || 'Gagal mengirim ulang OTP.',
+        type: "error",
+        message: err.message || "Gagal mengirim ulang OTP.",
       });
     } finally {
       setIsResending(false);
@@ -583,9 +601,8 @@ export default function AuthPage({
   const handleSendResetOtp = async () => {
     if (!resetEmail.trim()) {
       setOtpStatus({
-        type: 'error',
-        message:
-          'Silakan masukkan email terlebih dahulu.',
+        type: "error",
+        message: "Silakan masukkan email terlebih dahulu.",
       });
 
       return;
@@ -596,55 +613,40 @@ export default function AuthPage({
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/forgot-password`,
+        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/auth/forgot-password`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             email: resetEmail.trim(),
           }),
-        }
+        },
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.detail ||
-            'Gagal mengirim OTP reset password'
-        );
+        throw new Error(data.detail || "Gagal mengirim OTP reset password");
       }
 
-      setResetStep('otp');
+      setResetStep("otp");
 
-      setResetOtp([
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-      ]);
+      setResetOtp(["", "", "", "", "", ""]);
 
       setOtpTimer(300);
 
       setOtpStatus({
-        type: 'success',
-        message:
-          'OTP reset password telah dikirim ke email Anda.',
+        type: "success",
+        message: "OTP reset password telah dikirim ke email Anda.",
       });
     } catch (err) {
-      console.error(
-        'Forgot password error:',
-        err
-      );
+      console.error("Forgot password error:", err);
 
       setOtpStatus({
-        type: 'error',
-        message:
-          err.message || 'Gagal mengirim OTP.',
+        type: "error",
+        message: err.message || "Gagal mengirim OTP.",
       });
     } finally {
       setIsLoading(false);
@@ -655,13 +657,12 @@ export default function AuthPage({
   // VERIFY RESET PASSWORD OTP
   // =========================================================
   const handleVerifyResetOtp = async () => {
-    const enteredOtp = resetOtp.join('');
+    const enteredOtp = resetOtp.join("");
 
     if (enteredOtp.length < 6) {
       setOtpStatus({
-        type: 'error',
-        message:
-          'Silakan masukkan 6 digit OTP.',
+        type: "error",
+        message: "Silakan masukkan 6 digit OTP.",
       });
 
       return;
@@ -672,48 +673,40 @@ export default function AuthPage({
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/verify-reset-otp`,
+        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/auth/verify-reset-otp`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             email: resetEmail.trim(),
             otp: enteredOtp,
           }),
-        }
+        },
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.detail ||
-            'OTP salah atau sudah expired'
-        );
+        throw new Error(data.detail || "OTP salah atau sudah expired");
       }
 
       setOtpStatus({
-        type: 'success',
-        message:
-          'OTP berhasil diverifikasi.',
+        type: "success",
+        message: "OTP berhasil diverifikasi.",
       });
 
-      setResetStep('password');
+      setResetStep("password");
 
-      setNewPassword('');
-      setConfirmNewPassword('');
+      setNewPassword("");
+      setConfirmNewPassword("");
     } catch (err) {
-      console.error(
-        'Verify reset OTP error:',
-        err
-      );
+      console.error("Verify reset OTP error:", err);
 
       setOtpStatus({
-        type: 'error',
-        message:
-          err.message || 'OTP salah.',
+        type: "error",
+        message: err.message || "OTP salah.",
       });
     } finally {
       setIsLoading(false);
@@ -726,9 +719,8 @@ export default function AuthPage({
   const handleResetPassword = async () => {
     if (!newPassword || newPassword.length < 8) {
       setOtpStatus({
-        type: 'error',
-        message:
-          'Kata sandi minimal 8 karakter.',
+        type: "error",
+        message: "Kata sandi minimal 8 karakter.",
       });
 
       return;
@@ -736,9 +728,8 @@ export default function AuthPage({
 
     if (newPassword !== confirmNewPassword) {
       setOtpStatus({
-        type: 'error',
-        message:
-          'Konfirmasi kata sandi tidak cocok.',
+        type: "error",
+        message: "Konfirmasi kata sandi tidak cocok.",
       });
 
       return;
@@ -749,63 +740,51 @@ export default function AuthPage({
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/reset-password`,
+        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/auth/reset-password`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             email: resetEmail.trim(),
             new_password: newPassword,
           }),
-        }
+        },
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        console.warn('Backend reset password info:', data);
+        console.warn("Backend reset password info:", data);
       }
 
       setOtpStatus({
-        type: 'success',
+        type: "success",
         message:
-          'Kata sandi berhasil diubah! Silakan masuk dengan kata sandi baru.',
+          "Kata sandi berhasil diubah! Silakan masuk dengan kata sandi baru.",
       });
 
       setTimeout(() => {
         setForgotPassword(false);
-        setResetStep('email');
+        setResetStep("email");
 
-        setActiveTab('masuk');
+        setActiveTab("masuk");
 
-        setResetEmail('');
-        setResetOtp([
-          '',
-          '',
-          '',
-          '',
-          '',
-          '',
-        ]);
+        setResetEmail("");
+        setResetOtp(["", "", "", "", "", ""]);
 
-        setNewPassword('');
-        setConfirmNewPassword('');
+        setNewPassword("");
+        setConfirmNewPassword("");
 
         setOtpStatus(null);
       }, 1500);
     } catch (err) {
-      console.error(
-        'Reset password error:',
-        err
-      );
+      console.error("Reset password error:", err);
 
       setOtpStatus({
-        type: 'error',
-        message:
-          err.message ||
-          'Gagal mengubah password.',
+        type: "error",
+        message: err.message || "Gagal mengubah password.",
       });
     } finally {
       setIsLoading(false);
@@ -819,34 +798,26 @@ export default function AuthPage({
     // =======================================================
     // STEP 1 - EMAIL
     // =======================================================
-    if (resetStep === 'email') {
+    if (resetStep === "email") {
       return (
         <div className="auth-form-wrapper">
           <div className="auth-form-header">
-            <h2 className="auth-form-title">
-              Lupa Password?
-            </h2>
+            <h2 className="auth-form-title">Lupa Password?</h2>
 
             <p className="auth-form-subtitle">
-              Masukkan email akun kamu untuk
-              mendapatkan kode OTP.
+              Masukkan email akun kamu untuk mendapatkan kode OTP.
             </p>
           </div>
 
           {otpStatus && (
-            <div
-              className={`auth-otp-feedback ${otpStatus.type}`}
-            >
+            <div className={`auth-otp-feedback ${otpStatus.type}`}>
               {otpStatus.message}
             </div>
           )}
 
           <div className="auth-form">
             <div className="form-group">
-              <label
-                className="form-label"
-                htmlFor="resetEmail"
-              >
+              <label className="form-label" htmlFor="resetEmail">
                 Email
               </label>
 
@@ -856,9 +827,7 @@ export default function AuthPage({
                 required
                 placeholder="email@kelurahan.go.id"
                 value={resetEmail}
-                onChange={(e) =>
-                  setResetEmail(e.target.value)
-                }
+                onChange={(e) => setResetEmail(e.target.value)}
                 className="form-input"
               />
             </div>
@@ -869,11 +838,7 @@ export default function AuthPage({
               onClick={handleSendResetOtp}
               disabled={isLoading}
             >
-              <span>
-                {isLoading
-                  ? 'Mengirim OTP...'
-                  : 'Kirim Kode OTP'}
-              </span>
+              <span>{isLoading ? "Mengirim OTP..." : "Kirim Kode OTP"}</span>
 
               <svg
                 width="18"
@@ -885,12 +850,7 @@ export default function AuthPage({
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <line
-                  x1="5"
-                  y1="12"
-                  x2="19"
-                  y2="12"
-                />
+                <line x1="5" y1="12" x2="19" y2="12" />
                 <polyline points="12 5 19 12 12 19" />
               </svg>
             </button>
@@ -901,7 +861,7 @@ export default function AuthPage({
             className="auth-otp-back-link"
             onClick={() => {
               setForgotPassword(false);
-              setResetStep('email');
+              setResetStep("email");
               setOtpStatus(null);
             }}
           >
@@ -909,8 +869,7 @@ export default function AuthPage({
           </button>
 
           <div className="auth-copyright">
-            &copy; 2025 Dinas Lingkungan Hidup ·
-            SampahPintar v2.4.1
+            &copy; 2025 Dinas Lingkungan Hidup · SampahPintar v2.4.1
           </div>
         </div>
       );
@@ -919,33 +878,25 @@ export default function AuthPage({
     // =======================================================
     // STEP 2 - RESET OTP
     // =======================================================
-    if (resetStep === 'otp') {
+    if (resetStep === "otp") {
       return (
         <div className="auth-otp-wrapper">
           <div className="auth-otp-header">
-            <h2 className="auth-otp-title">
-              Masukkan kode OTP
-            </h2>
+            <h2 className="auth-otp-title">Masukkan kode OTP</h2>
 
             <p className="auth-otp-subtitle">
-              Masukkan kode OTP yang terkirim ke
-              email{' '}
-              <span className="otp-email-highlight">
-                {resetEmail}
-              </span>
+              Masukkan kode OTP yang terkirim ke email{" "}
+              <span className="otp-email-highlight">{resetEmail}</span>
             </p>
 
             <div className="auth-otp-expiry">
-              Kode berlaku selama 5 menit{' '}
-              {otpTimer > 0 &&
-                `(${formatTimer(otpTimer)})`}
+              Kode berlaku selama 5 menit{" "}
+              {otpTimer > 0 && `(${formatTimer(otpTimer)})`}
             </div>
           </div>
 
           {otpStatus && (
-            <div
-              className={`auth-otp-feedback ${otpStatus.type}`}
-            >
+            <div className={`auth-otp-feedback ${otpStatus.type}`}>
               {otpStatus.message}
             </div>
           )}
@@ -961,13 +912,9 @@ export default function AuthPage({
                 maxLength={1}
                 value={digit}
                 onChange={(e) => {
-                  const value = e.target.value
-                    .replace(/\D/g, '')
-                    .slice(-1);
+                  const value = e.target.value.replace(/\D/g, "").slice(-1);
 
-                  const newOtp = [
-                    ...resetOtp,
-                  ];
+                  const newOtp = [...resetOtp];
 
                   newOtp[index] = value;
 
@@ -977,49 +924,28 @@ export default function AuthPage({
                     setOtpStatus(null);
                   }
 
-                  if (
-                    value &&
-                    index < 5
-                  ) {
+                  if (value && index < 5) {
                     document
-                      .getElementById(
-                        `reset-otp-input-${index + 1}`
-                      )
+                      .getElementById(`reset-otp-input-${index + 1}`)
                       ?.focus();
                   }
                 }}
                 onKeyDown={(e) => {
-                  if (
-                    e.key === 'Backspace' &&
-                    !resetOtp[index] &&
-                    index > 0
-                  ) {
+                  if (e.key === "Backspace" && !resetOtp[index] && index > 0) {
                     document
-                      .getElementById(
-                        `reset-otp-input-${index - 1}`
-                      )
+                      .getElementById(`reset-otp-input-${index - 1}`)
                       ?.focus();
                   }
 
-                  if (
-                    e.key === 'ArrowLeft' &&
-                    index > 0
-                  ) {
+                  if (e.key === "ArrowLeft" && index > 0) {
                     document
-                      .getElementById(
-                        `reset-otp-input-${index - 1}`
-                      )
+                      .getElementById(`reset-otp-input-${index - 1}`)
                       ?.focus();
                   }
 
-                  if (
-                    e.key === 'ArrowRight' &&
-                    index < 5
-                  ) {
+                  if (e.key === "ArrowRight" && index < 5) {
                     document
-                      .getElementById(
-                        `reset-otp-input-${index + 1}`
-                      )
+                      .getElementById(`reset-otp-input-${index + 1}`)
                       ?.focus();
                   }
                 }}
@@ -1027,56 +953,30 @@ export default function AuthPage({
                   e.preventDefault();
 
                   const pasted = e.clipboardData
-                    .getData('text')
-                    .replace(/\D/g, '')
+                    .getData("text")
+                    .replace(/\D/g, "")
                     .slice(0, 6);
 
                   if (!pasted) return;
 
-                  const newOtp = [
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                  ];
+                  const newOtp = ["", "", "", "", "", ""];
 
-                  for (
-                    let i = 0;
-                    i < pasted.length;
-                    i++
-                  ) {
-                    newOtp[i] =
-                      pasted[i];
+                  for (let i = 0; i < pasted.length; i++) {
+                    newOtp[i] = pasted[i];
                   }
 
                   setResetOtp(newOtp);
 
-                  const nextIndex = Math.min(
-                    pasted.length,
-                    5
-                  );
+                  const nextIndex = Math.min(pasted.length, 5);
 
                   document
-                    .getElementById(
-                      `reset-otp-input-${nextIndex}`
-                    )
+                    .getElementById(`reset-otp-input-${nextIndex}`)
                     ?.focus();
                 }}
-                className={`auth-otp-digit ${
-                  digit
-                    ? 'has-value'
-                    : ''
-                } ${
-                  otpStatus?.type ===
-                  'error'
-                    ? 'error'
-                    : ''
+                className={`auth-otp-digit ${digit ? "has-value" : ""} ${
+                  otpStatus?.type === "error" ? "error" : ""
                 }`}
-                aria-label={`Digit OTP ke-${
-                  index + 1
-                }`}
+                aria-label={`Digit OTP ke-${index + 1}`}
                 autoComplete="one-time-code"
               />
             ))}
@@ -1088,27 +988,16 @@ export default function AuthPage({
             onClick={handleVerifyResetOtp}
             disabled={isLoading}
           >
-            <span>
-              {isLoading
-                ? 'Memverifikasi...'
-                : 'Konfirmasi OTP'}
-            </span>
+            <span>{isLoading ? "Memverifikasi..." : "Konfirmasi OTP"}</span>
           </button>
 
           <button
             type="button"
             className="auth-otp-back-link"
             onClick={() => {
-              setResetStep('email');
+              setResetStep("email");
 
-              setResetOtp([
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-              ]);
+              setResetOtp(["", "", "", "", "", ""]);
 
               setOtpStatus(null);
             }}
@@ -1119,11 +1008,10 @@ export default function AuthPage({
           <div
             className="auth-copyright"
             style={{
-              marginTop: '48px',
+              marginTop: "48px",
             }}
           >
-            &copy; 2025 Dinas Lingkungan Hidup ·
-            SampahPintar v2.4.1
+            &copy; 2025 Dinas Lingkungan Hidup · SampahPintar v2.4.1
           </div>
         </div>
       );
@@ -1135,9 +1023,7 @@ export default function AuthPage({
     return (
       <div className="auth-form-wrapper">
         <div className="auth-form-header">
-          <h2 className="auth-form-title">
-            Ganti Kata Sandi
-          </h2>
+          <h2 className="auth-form-title">Ganti Kata Sandi</h2>
 
           <p className="auth-form-subtitle">
             Buat kata sandi baru yang kuat untuk mengamankan akun Anda
@@ -1145,9 +1031,7 @@ export default function AuthPage({
         </div>
 
         {otpStatus && (
-          <div
-            className={`auth-otp-feedback ${otpStatus.type}`}
-          >
+          <div className={`auth-otp-feedback ${otpStatus.type}`}>
             {otpStatus.message}
           </div>
         )}
@@ -1155,43 +1039,26 @@ export default function AuthPage({
         <div className="auth-form">
           {/* KATA SANDI BARU */}
           <div className="form-group">
-            <label
-              className="form-label"
-              htmlFor="newPassword"
-            >
+            <label className="form-label" htmlFor="newPassword">
               Kata Sandi Baru
             </label>
 
             <div className="password-input-wrap">
               <input
                 id="newPassword"
-                type={
-                  showNewPassword
-                    ? 'text'
-                    : 'password'
-                }
+                type={showNewPassword ? "text" : "password"}
                 placeholder="Minimal 8 karakter"
                 value={newPassword}
-                onChange={(e) =>
-                  setNewPassword(
-                    e.target.value
-                  )
-                }
+                onChange={(e) => setNewPassword(e.target.value)}
                 className="form-input"
               />
 
               <button
                 type="button"
                 className="password-toggle-btn"
-                onClick={() =>
-                  setShowNewPassword(
-                    !showNewPassword
-                  )
-                }
+                onClick={() => setShowNewPassword(!showNewPassword)}
                 aria-label={
-                  showNewPassword
-                    ? 'Sembunyikan password'
-                    : 'Lihat password'
+                  showNewPassword ? "Sembunyikan password" : "Lihat password"
                 }
               >
                 {showNewPassword ? (
@@ -1205,12 +1072,7 @@ export default function AuthPage({
                   >
                     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
                     <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-                    <line
-                      x1="1"
-                      y1="1"
-                      x2="23"
-                      y2="23"
-                    />
+                    <line x1="1" y1="1" x2="23" y2="23" />
                   </svg>
                 ) : (
                   <svg
@@ -1222,11 +1084,7 @@ export default function AuthPage({
                     strokeWidth="2"
                   >
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="3"
-                    />
+                    <circle cx="12" cy="12" r="3" />
                   </svg>
                 )}
               </button>
@@ -1235,30 +1093,17 @@ export default function AuthPage({
 
           {/* KONFIRMASI PASSWORD */}
           <div className="form-group">
-            <label
-              className="form-label"
-              htmlFor="confirmNewPassword"
-            >
+            <label className="form-label" htmlFor="confirmNewPassword">
               Konfirmasi Kata Sandi Baru
             </label>
 
             <div className="password-input-wrap">
               <input
                 id="confirmNewPassword"
-                type={
-                  showConfirmNewPassword
-                    ? 'text'
-                    : 'password'
-                }
+                type={showConfirmNewPassword ? "text" : "password"}
                 placeholder="Ulangi kata sandi baru"
-                value={
-                  confirmNewPassword
-                }
-                onChange={(e) =>
-                  setConfirmNewPassword(
-                    e.target.value
-                  )
-                }
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
                 className="form-input"
               />
 
@@ -1266,14 +1111,12 @@ export default function AuthPage({
                 type="button"
                 className="password-toggle-btn"
                 onClick={() =>
-                  setShowConfirmNewPassword(
-                    !showConfirmNewPassword
-                  )
+                  setShowConfirmNewPassword(!showConfirmNewPassword)
                 }
                 aria-label={
                   showConfirmNewPassword
-                    ? 'Sembunyikan password'
-                    : 'Lihat password'
+                    ? "Sembunyikan password"
+                    : "Lihat password"
                 }
               >
                 {showConfirmNewPassword ? (
@@ -1287,12 +1130,7 @@ export default function AuthPage({
                   >
                     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
                     <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-                    <line
-                      x1="1"
-                      y1="1"
-                      x2="23"
-                      y2="23"
-                    />
+                    <line x1="1" y1="1" x2="23" y2="23" />
                   </svg>
                 ) : (
                   <svg
@@ -1304,11 +1142,7 @@ export default function AuthPage({
                     strokeWidth="2"
                   >
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="3"
-                    />
+                    <circle cx="12" cy="12" r="3" />
                   </svg>
                 )}
               </button>
@@ -1323,19 +1157,15 @@ export default function AuthPage({
             disabled={isLoading}
             id="btn-confirm-ganti-password"
             style={{
-              background: '#136c43',
-              borderRadius: '10px',
-              padding: '14px',
-              marginTop: '16px',
+              background: "#136c43",
+              borderRadius: "10px",
+              padding: "14px",
+              marginTop: "16px",
             }}
           >
-            <span>
-              {isLoading
-                ? 'Menyimpan...'
-                : 'Konfirmasi'}
-            </span>
+            <span>{isLoading ? "Menyimpan..." : "Konfirmasi"}</span>
 
-            <span style={{ marginLeft: '4px', fontSize: '1.1rem' }}>
+            <span style={{ marginLeft: "4px", fontSize: "1.1rem" }}>
               &rarr;
             </span>
           </button>
@@ -1345,10 +1175,10 @@ export default function AuthPage({
         <button
           type="button"
           className="auth-otp-back-link"
-          style={{ marginTop: '16px' }}
+          style={{ marginTop: "16px" }}
           onClick={() => {
             setForgotPassword(false);
-            setResetStep('email');
+            setResetStep("email");
             setOtpStatus(null);
           }}
           id="btn-back-to-login"
@@ -1357,8 +1187,7 @@ export default function AuthPage({
         </button>
 
         <div className="auth-copyright">
-          &copy; 2025 Dinas Lingkungan Hidup ·
-          SampahPintar v2.4.1
+          &copy; 2025 Dinas Lingkungan Hidup · SampahPintar v2.4.1
         </div>
       </div>
     );
@@ -1369,18 +1198,15 @@ export default function AuthPage({
   // =========================================================
   return (
     <div className="auth-page-container">
-
       {/* =====================================================
           LEFT PANEL
       ====================================================== */}
       <div className="auth-left-panel">
-
         <div className="ambient-circle ambient-circle-1"></div>
         <div className="ambient-circle ambient-circle-2"></div>
         <div className="ambient-circle ambient-circle-3"></div>
 
         <div className="auth-left-content">
-
           {/* BRAND */}
           <div className="auth-brand-badge">
             <div className="auth-brand-icon">
@@ -1395,18 +1221,12 @@ export default function AuthPage({
                 strokeLinejoin="round"
               >
                 <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
-                <circle
-                  cx="12"
-                  cy="10"
-                  r="3"
-                />
+                <circle cx="12" cy="10" r="3" />
               </svg>
             </div>
 
             <div>
-              <div className="auth-brand-name">
-                SampahPintar
-              </div>
+              <div className="auth-brand-name">SampahPintar</div>
 
               <div className="auth-brand-subtitle">
                 Sistem Manajemen Sampah Kelurahan
@@ -1416,7 +1236,6 @@ export default function AuthPage({
 
           {/* HERO */}
           <div className="auth-hero-copy">
-
             <h1 className="auth-hero-title">
               <span>Kelola Sampah,</span>
               <span>Raih Reward,</span>
@@ -1424,45 +1243,29 @@ export default function AuthPage({
             </h1>
 
             <p className="auth-hero-desc">
-              Bergabunglah dengan ribuan warga
-              Kelurahan Sukamaju yang sudah aktif
-              memilah sampah dan mendapat poin
-              reward.
+              Bergabunglah dengan ribuan warga Kelurahan Sukamaju yang sudah
+              aktif memilah sampah dan mendapat poin reward.
             </p>
 
             {/* STATS */}
             <div className="auth-stats-grid">
-
               <div className="auth-stat-col">
-                <div className="auth-stat-number">
-                  2.400+
-                </div>
+                <div className="auth-stat-number">2.400+</div>
 
-                <div className="auth-stat-label">
-                  Warga Aktif
-                </div>
+                <div className="auth-stat-label">Warga Aktif</div>
               </div>
 
               <div className="auth-stat-col">
-                <div className="auth-stat-number">
-                  25+
-                </div>
+                <div className="auth-stat-number">25+</div>
 
-                <div className="auth-stat-label">
-                  Titik TPS
-                </div>
+                <div className="auth-stat-label">Titik TPS</div>
               </div>
 
               <div className="auth-stat-col">
-                <div className="auth-stat-number">
-                  58rb
-                </div>
+                <div className="auth-stat-number">58rb</div>
 
-                <div className="auth-stat-label">
-                  Poin Dibagi
-                </div>
+                <div className="auth-stat-label">Poin Dibagi</div>
               </div>
-
             </div>
           </div>
 
@@ -1484,22 +1287,14 @@ export default function AuthPage({
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <line
-                  x1="19"
-                  y1="12"
-                  x2="5"
-                  y2="12"
-                />
+                <line x1="19" y1="12" x2="5" y2="12" />
 
                 <polyline points="12 19 5 12 12 5" />
               </svg>
 
-              <span>
-                Kembali ke Beranda
-              </span>
+              <span>Kembali ke Beranda</span>
             </button>
           </div>
-
         </div>
       </div>
 
@@ -1507,94 +1302,54 @@ export default function AuthPage({
           RIGHT PANEL
       ====================================================== */}
       <div className="auth-right-panel">
-
         {/* ===================================================
             FORGOT PASSWORD
         ==================================================== */}
         {forgotPassword ? (
-
           renderForgotPassword()
-
-        ) : authStep === 'otp' ? (
-
+        ) : authStep === "otp" ? (
           /* =================================================
              REGISTRATION OTP
           ================================================== */
           <div className="auth-otp-wrapper">
-
             <div className="auth-otp-header">
-
-              <h2 className="auth-otp-title">
-                Masukan kode OTP
-              </h2>
+              <h2 className="auth-otp-title">Masukan kode OTP</h2>
 
               <p className="auth-otp-subtitle">
-                Masukan kode OTP yang terkirim
-                di email{' '}
-                <span className="otp-email-highlight">
-                  {email}
-                </span>
+                Masukan kode OTP yang terkirim di email{" "}
+                <span className="otp-email-highlight">{email}</span>
               </p>
 
               <div className="auth-otp-expiry">
-                Kode berlaku selama 5 menit{' '}
-                {otpTimer > 0 &&
-                  `(${formatTimer(otpTimer)})`}
+                Kode berlaku selama 5 menit{" "}
+                {otpTimer > 0 && `(${formatTimer(otpTimer)})`}
               </div>
-
             </div>
 
             {otpStatus && (
-              <div
-                className={`auth-otp-feedback ${otpStatus.type}`}
-              >
+              <div className={`auth-otp-feedback ${otpStatus.type}`}>
                 {otpStatus.message}
               </div>
             )}
 
             {/* OTP INPUT */}
-            <div
-              className="auth-otp-inputs-row"
-              onPaste={handleOtpPaste}
-            >
+            <div className="auth-otp-inputs-row" onPaste={handleOtpPaste}>
               {otp.map((digit, index) => (
                 <input
                   key={index}
-                  ref={(el) =>
-                    (inputRefs.current[index] =
-                      el)
-                  }
+                  ref={(el) => (inputRefs.current[index] = el)}
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"
                   maxLength={1}
                   value={digit}
-                  onChange={(e) =>
-                    handleOtpChange(
-                      index,
-                      e.target.value
-                    )
-                  }
-                  onKeyDown={(e) =>
-                    handleOtpKeyDown(
-                      index,
-                      e
-                    )
-                  }
-                  className={`auth-otp-digit ${
-                    digit
-                      ? 'has-value'
-                      : ''
-                  } ${
-                    otpStatus?.type ===
-                    'error'
-                      ? 'error'
-                      : ''
+                  onChange={(e) => handleOtpChange(index, e.target.value)}
+                  onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                  className={`auth-otp-digit ${digit ? "has-value" : ""} ${
+                    otpStatus?.type === "error" ? "error" : ""
                   }`}
                   id={`otp-input-${index}`}
-                  aria-label={`Digit OTP ke-${
-                    index + 1
-                  }`}
+                  aria-label={`Digit OTP ke-${index + 1}`}
                   autoComplete="one-time-code"
                 />
               ))}
@@ -1608,11 +1363,7 @@ export default function AuthPage({
               disabled={isLoading}
               id="btn-otp-confirm"
             >
-              <span>
-                {isLoading
-                  ? 'Memproses...'
-                  : 'Konfirmasi'}
-              </span>
+              <span>{isLoading ? "Memproses..." : "Konfirmasi"}</span>
             </button>
 
             {/* RESEND */}
@@ -1620,19 +1371,14 @@ export default function AuthPage({
               type="button"
               className="btn-otp-resend"
               onClick={handleResendOtp}
-              disabled={
-                isResending ||
-                otpTimer > 0
-              }
+              disabled={isResending || otpTimer > 0}
               id="btn-otp-resend"
             >
               {isResending
-                ? 'Mengirim ulang...'
+                ? "Mengirim ulang..."
                 : otpTimer > 0
-                ? `Kirim ulang OTP (${formatTimer(
-                    otpTimer
-                  )})`
-                : 'Kirim ulang OTP'}
+                  ? `Kirim ulang OTP (${formatTimer(otpTimer)})`
+                  : "Kirim ulang OTP"}
             </button>
 
             {/* BACK */}
@@ -1640,7 +1386,7 @@ export default function AuthPage({
               type="button"
               className="auth-otp-back-link"
               onClick={() => {
-                setAuthStep('form');
+                setAuthStep("form");
                 setOtpStatus(null);
               }}
               id="btn-otp-back-form"
@@ -1651,35 +1397,25 @@ export default function AuthPage({
             <div
               className="auth-copyright"
               style={{
-                marginTop: '48px',
+                marginTop: "48px",
               }}
             >
-              &copy; 2025 Dinas Lingkungan Hidup ·
-              SampahPintar v2.4.1
+              &copy; 2025 Dinas Lingkungan Hidup · SampahPintar v2.4.1
             </div>
-
           </div>
-
         ) : (
-
           /* =================================================
              LOGIN / REGISTER FORM
           ================================================== */
           <div className="auth-form-wrapper">
-
             {/* TAB */}
             <div className="auth-toggle-pill">
-
               <button
                 type="button"
                 className={`auth-toggle-btn ${
-                  activeTab === 'daftar'
-                    ? 'active'
-                    : ''
+                  activeTab === "daftar" ? "active" : ""
                 }`}
-                onClick={() =>
-                  setActiveTab('daftar')
-                }
+                onClick={() => setActiveTab("daftar")}
                 id="tab-toggle-daftar"
               >
                 Daftar
@@ -1688,65 +1424,61 @@ export default function AuthPage({
               <button
                 type="button"
                 className={`auth-toggle-btn ${
-                  activeTab === 'masuk'
-                    ? 'active'
-                    : ''
+                  activeTab === "masuk" ? "active" : ""
                 }`}
-                onClick={() =>
-                  setActiveTab('masuk')
-                }
+                onClick={() => setActiveTab("masuk")}
                 id="tab-toggle-masuk"
               >
                 Masuk
               </button>
-
             </div>
 
             {/* HEADER */}
-            {activeTab === 'daftar' ? (
-
+            {activeTab === "daftar" ? (
               <div className="auth-form-header">
-                <h2 className="auth-form-title">
-                  Buat Akun Baru
-                </h2>
+                <h2 className="auth-form-title">Buat Akun Baru</h2>
 
                 <p className="auth-form-subtitle">
-                  Daftarkan diri untuk mulai
-                  memilah sampah &amp; meraih
-                  reward.
+                  Daftarkan diri untuk mulai memilah sampah &amp; meraih reward.
                 </p>
               </div>
-
             ) : (
-
               <div className="auth-form-header">
-                <h2 className="auth-form-title">
-                  Masuk
-                </h2>
+                <h2 className="auth-form-title">Masuk</h2>
 
                 <p className="auth-form-subtitle">
-                  Masuk ke akun SampahPintar
-                  kamu.
+                  Masuk ke akun SampahPintar kamu.
                 </p>
               </div>
-
             )}
 
             {/* FORM */}
-            <form
-              onSubmit={handleSubmit}
-              className="auth-form"
-            >
+            <form onSubmit={handleSubmit} className="auth-form">
+              {notice && activeTab === "masuk" && (
+                <div
+                  role="alert"
+                  style={{
+                    padding: "10px 14px",
+                    background: "#fef3c7",
+                    color: "#92400e",
+                    borderRadius: "8px",
+                    fontSize: "0.85rem",
+                    marginBottom: "16px",
+                  }}
+                >
+                  {notice}
+                </div>
+              )}
 
               {errorMessage && (
                 <div
                   style={{
-                    padding: '10px 14px',
-                    background: '#fee2e2',
-                    color: '#b91c1c',
-                    borderRadius: '8px',
-                    fontSize: '0.85rem',
-                    marginBottom: '16px',
+                    padding: "10px 14px",
+                    background: "#fee2e2",
+                    color: "#b91c1c",
+                    borderRadius: "8px",
+                    fontSize: "0.85rem",
+                    marginBottom: "16px",
                   }}
                 >
                   {errorMessage}
@@ -1754,15 +1486,11 @@ export default function AuthPage({
               )}
 
               {/* REGISTER ONLY */}
-              {activeTab === 'daftar' && (
+              {activeTab === "daftar" && (
                 <>
                   {/* NAMA */}
                   <div className="form-group">
-
-                    <label
-                      className="form-label"
-                      htmlFor="fullName"
-                    >
+                    <label className="form-label" htmlFor="fullName">
                       Nama Lengkap
                     </label>
 
@@ -1772,27 +1500,16 @@ export default function AuthPage({
                       required
                       placeholder="contoh: Budi Santoso"
                       value={fullName}
-                      onChange={(e) =>
-                        setFullName(
-                          e.target.value
-                        )
-                      }
+                      onChange={(e) => setFullName(e.target.value)}
                       className="form-input"
                     />
-
                   </div>
 
                   {/* KK */}
                   <div className="form-group">
-
-                    <label
-                      className="form-label"
-                      htmlFor="noKK"
-                    >
-                      Nomor Kartu Keluarga (KK){' '}
-                      <span className="required-star">
-                        *
-                      </span>
+                    <label className="form-label" htmlFor="noKK">
+                      Nomor Kartu Keluarga (KK){" "}
+                      <span className="required-star">*</span>
                     </label>
 
                     <input
@@ -1803,22 +1520,14 @@ export default function AuthPage({
                       placeholder="16 digit nomor KK"
                       value={noKK}
                       onChange={(e) =>
-                        setNoKK(
-                          e.target.value.replace(
-                            /\D/g,
-                            ''
-                          )
-                        )
+                        setNoKK(e.target.value.replace(/\D/g, ""))
                       }
                       className="form-input font-mono"
                     />
 
                     <div className="form-helper-text">
-                      Digunakan untuk verifikasi
-                      kependudukan warga
-                      kelurahan.
+                      Digunakan untuk verifikasi kependudukan warga kelurahan.
                     </div>
-
                   </div>
 
                   {/* ALAMAT RUMAH */}
@@ -1838,47 +1547,125 @@ export default function AuthPage({
                   </div>
 
                   {/* KECAMATAN (Searchable Dropdown) */}
-                  <div className="form-group" style={{ position: 'relative' }} ref={kecamatanRef}>
+                  <div
+                    className="form-group"
+                    style={{ position: "relative" }}
+                    ref={kecamatanRef}
+                  >
                     <label className="form-label">
                       Kecamatan <span className="required-star">*</span>
                     </label>
-                    <div 
-                      className="form-input" 
+                    <div
+                      className="form-input"
                       onClick={() => {
                         setShowKecamatanDropdown(!showKecamatanDropdown);
                         if (kecamatanList.length === 0) fetchKecamatan();
                       }}
-                      style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff' }}
+                      style={{
+                        cursor: "pointer",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        background: "#fff",
+                      }}
                     >
-                      <span style={{ color: kecamatan ? '#0f172a' : '#94a3b8' }}>
-                        {kecamatan || '-- Pilih atau Cari Kecamatan --'}
+                      <span
+                        style={{ color: kecamatan ? "#0f172a" : "#94a3b8" }}
+                      >
+                        {kecamatan || "-- Pilih atau Cari Kecamatan --"}
                       </span>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
                     </div>
 
                     {showKecamatanDropdown && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #cbd5e1', borderRadius: '10px', marginTop: '4px', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', maxHeight: '220px', overflowY: 'auto', padding: '8px' }}>
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "100%",
+                          left: 0,
+                          right: 0,
+                          zIndex: 50,
+                          background: "#fff",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "10px",
+                          marginTop: "4px",
+                          boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+                          maxHeight: "220px",
+                          overflowY: "auto",
+                          padding: "8px",
+                        }}
+                      >
                         <input
                           type="text"
                           placeholder="Cari kecamatan..."
                           value={kecamatanSearch}
                           onChange={(e) => setKecamatanSearch(e.target.value)}
                           className="form-input"
-                          style={{ marginBottom: '6px', padding: '8px 12px', fontSize: '0.88rem' }}
+                          style={{
+                            marginBottom: "6px",
+                            padding: "8px 12px",
+                            fontSize: "0.88rem",
+                          }}
                           onClick={(e) => e.stopPropagation()}
                           autoFocus
                         />
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "2px",
+                          }}
+                        >
                           {filteredKecamatan.length === 0 ? (
-                            <div style={{ padding: '10px', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>Tidak ada data — ketik huruf depan (mis. B)</div>
+                            <div
+                              style={{
+                                padding: "10px",
+                                textAlign: "center",
+                                color: "#94a3b8",
+                                fontSize: "0.85rem",
+                              }}
+                            >
+                              Tidak ada data — ketik huruf depan (mis. B)
+                            </div>
                           ) : (
                             filteredKecamatan.map((k) => (
                               <div
                                 key={k.id}
                                 onClick={() => handleSelectKecamatan(k.nama)}
-                                style={{ padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', background: kecamatan === k.nama ? '#f0fdf4' : 'transparent', color: kecamatan === k.nama ? '#15803d' : '#1e293b', fontWeight: kecamatan === k.nama ? '600' : '400' }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = kecamatan === k.nama ? '#f0fdf4' : 'transparent'}
+                                style={{
+                                  padding: "8px 12px",
+                                  borderRadius: "6px",
+                                  cursor: "pointer",
+                                  fontSize: "0.9rem",
+                                  background:
+                                    kecamatan === k.nama
+                                      ? "#f0fdf4"
+                                      : "transparent",
+                                  color:
+                                    kecamatan === k.nama
+                                      ? "#15803d"
+                                      : "#1e293b",
+                                  fontWeight:
+                                    kecamatan === k.nama ? "600" : "400",
+                                }}
+                                onMouseEnter={(e) =>
+                                  (e.currentTarget.style.background = "#f8fafc")
+                                }
+                                onMouseLeave={(e) =>
+                                  (e.currentTarget.style.background =
+                                    kecamatan === k.nama
+                                      ? "#f0fdf4"
+                                      : "transparent")
+                                }
                               >
                                 {k.nama}
                               </div>
@@ -1890,44 +1677,128 @@ export default function AuthPage({
                   </div>
 
                   {/* KELURAHAN (Searchable Dropdown) */}
-                  <div className="form-group" style={{ position: 'relative' }} ref={kelurahanRef}>
+                  <div
+                    className="form-group"
+                    style={{ position: "relative" }}
+                    ref={kelurahanRef}
+                  >
                     <label className="form-label">
                       Kelurahan <span className="required-star">*</span>
                     </label>
-                    <div 
-                      className="form-input" 
-                      onClick={() => kecamatan && setShowKelurahanDropdown(!showKelurahanDropdown)}
-                      style={{ cursor: kecamatan ? 'pointer' : 'not-allowed', background: kecamatan ? '#fff' : '#f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    <div
+                      className="form-input"
+                      onClick={() =>
+                        kecamatan &&
+                        setShowKelurahanDropdown(!showKelurahanDropdown)
+                      }
+                      style={{
+                        cursor: kecamatan ? "pointer" : "not-allowed",
+                        background: kecamatan ? "#fff" : "#f1f5f9",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
                     >
-                      <span style={{ color: kelurahan ? '#0f172a' : '#94a3b8' }}>
-                        {kelurahan || (kecamatan ? '-- Pilih atau Cari Kelurahan --' : '-- Pilih Kecamatan Terlebih Dahulu --')}
+                      <span
+                        style={{ color: kelurahan ? "#0f172a" : "#94a3b8" }}
+                      >
+                        {kelurahan ||
+                          (kecamatan
+                            ? "-- Pilih atau Cari Kelurahan --"
+                            : "-- Pilih Kecamatan Terlebih Dahulu --")}
                       </span>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
                     </div>
 
                     {showKelurahanDropdown && kecamatan && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #cbd5e1', borderRadius: '10px', marginTop: '4px', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', maxHeight: '220px', overflowY: 'auto', padding: '8px' }}>
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "100%",
+                          left: 0,
+                          right: 0,
+                          zIndex: 50,
+                          background: "#fff",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "10px",
+                          marginTop: "4px",
+                          boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+                          maxHeight: "220px",
+                          overflowY: "auto",
+                          padding: "8px",
+                        }}
+                      >
                         <input
                           type="text"
                           placeholder="Cari kelurahan..."
                           value={kelurahanSearch}
                           onChange={(e) => setKelurahanSearch(e.target.value)}
                           className="form-input"
-                          style={{ marginBottom: '6px', padding: '8px 12px', fontSize: '0.88rem' }}
+                          style={{
+                            marginBottom: "6px",
+                            padding: "8px 12px",
+                            fontSize: "0.88rem",
+                          }}
                           onClick={(e) => e.stopPropagation()}
                           autoFocus
                         />
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "2px",
+                          }}
+                        >
                           {filteredKelurahan.length === 0 ? (
-                            <div style={{ padding: '10px', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>Tidak ada data — ketik huruf depan (mis. B)</div>
+                            <div
+                              style={{
+                                padding: "10px",
+                                textAlign: "center",
+                                color: "#94a3b8",
+                                fontSize: "0.85rem",
+                              }}
+                            >
+                              Tidak ada data — ketik huruf depan (mis. B)
+                            </div>
                           ) : (
                             filteredKelurahan.map((l) => (
                               <div
                                 key={l.id}
                                 onClick={() => handleSelectKelurahan(l.nama)}
-                                style={{ padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', background: kelurahan === l.nama ? '#f0fdf4' : 'transparent', color: kelurahan === l.nama ? '#15803d' : '#1e293b', fontWeight: kelurahan === l.nama ? '600' : '400' }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = kelurahan === l.nama ? '#f0fdf4' : 'transparent'}
+                                style={{
+                                  padding: "8px 12px",
+                                  borderRadius: "6px",
+                                  cursor: "pointer",
+                                  fontSize: "0.9rem",
+                                  background:
+                                    kelurahan === l.nama
+                                      ? "#f0fdf4"
+                                      : "transparent",
+                                  color:
+                                    kelurahan === l.nama
+                                      ? "#15803d"
+                                      : "#1e293b",
+                                  fontWeight:
+                                    kelurahan === l.nama ? "600" : "400",
+                                }}
+                                onMouseEnter={(e) =>
+                                  (e.currentTarget.style.background = "#f8fafc")
+                                }
+                                onMouseLeave={(e) =>
+                                  (e.currentTarget.style.background =
+                                    kelurahan === l.nama
+                                      ? "#f0fdf4"
+                                      : "transparent")
+                                }
                               >
                                 {l.nama}
                               </div>
@@ -1942,11 +1813,7 @@ export default function AuthPage({
 
               {/* EMAIL */}
               <div className="form-group">
-
-                <label
-                  className="form-label"
-                  htmlFor="email"
-                >
+                <label className="form-label" htmlFor="email">
                   Email
                 </label>
 
@@ -1956,58 +1823,34 @@ export default function AuthPage({
                   required
                   placeholder="email@kelurahan.go.id"
                   value={email}
-                  onChange={(e) =>
-                    setEmail(
-                      e.target.value
-                    )
-                  }
+                  onChange={(e) => setEmail(e.target.value)}
                   className="form-input"
                 />
-
               </div>
 
               {/* PASSWORD */}
               <div className="form-group">
-
-                <label
-                  className="form-label"
-                  htmlFor="password"
-                >
+                <label className="form-label" htmlFor="password">
                   Password
                 </label>
 
                 <div className="password-input-wrap">
-
                   <input
                     id="password"
-                    type={
-                      showPassword
-                        ? 'text'
-                        : 'password'
-                    }
+                    type={showPassword ? "text" : "password"}
                     required
                     placeholder="Minimal 6 karakter"
                     value={password}
-                    onChange={(e) =>
-                      setPassword(
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => setPassword(e.target.value)}
                     className="form-input"
                   />
 
                   <button
                     type="button"
                     className="password-toggle-btn"
-                    onClick={() =>
-                      setShowPassword(
-                        !showPassword
-                      )
-                    }
+                    onClick={() => setShowPassword(!showPassword)}
                     aria-label={
-                      showPassword
-                        ? 'Sembunyikan password'
-                        : 'Lihat password'
+                      showPassword ? "Sembunyikan password" : "Lihat password"
                     }
                   >
                     {showPassword ? (
@@ -2021,12 +1864,7 @@ export default function AuthPage({
                       >
                         <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
 
-                        <line
-                          x1="1"
-                          y1="1"
-                          x2="23"
-                          y2="23"
-                        />
+                        <line x1="1" y1="1" x2="23" y2="23" />
                       </svg>
                     ) : (
                       <svg
@@ -2039,15 +1877,10 @@ export default function AuthPage({
                       >
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
 
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="3"
-                        />
+                        <circle cx="12" cy="12" r="3" />
                       </svg>
                     )}
                   </button>
-
                 </div>
               </div>
 
@@ -2055,18 +1888,15 @@ export default function AuthPage({
               <button
                 type="submit"
                 className="btn-auth-submit"
-                disabled={
-                  isSuccess ||
-                  isLoading
-                }
+                disabled={isSuccess || isLoading}
                 id="auth-submit-btn"
               >
                 <span>
                   {isLoading
-                    ? 'Memproses...'
-                    : activeTab === 'daftar'
-                    ? 'Buat Akun & Masuk'
-                    : 'Masuk ke Dashboard'}
+                    ? "Memproses..."
+                    : activeTab === "daftar"
+                      ? "Buat Akun & Masuk"
+                      : "Masuk ke Dashboard"}
                 </span>
 
                 <svg
@@ -2079,12 +1909,7 @@ export default function AuthPage({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  <line
-                    x1="5"
-                    y1="12"
-                    x2="19"
-                    y2="12"
-                  />
+                  <line x1="5" y1="12" x2="19" y2="12" />
 
                   <polyline points="12 5 19 12 12 19" />
                 </svg>
@@ -2092,14 +1917,14 @@ export default function AuthPage({
             </form>
 
             {/* GANTI & LUPA PASSWORD (HANYA MUNCUL DI LOGIN) */}
-            {activeTab === 'masuk' && (
+            {activeTab === "masuk" && (
               <div
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginTop: '14px',
-                  width: '100%',
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginTop: "14px",
+                  width: "100%",
                 }}
               >
                 <button
@@ -2107,18 +1932,18 @@ export default function AuthPage({
                   className="forgot-password-btn"
                   onClick={() => {
                     setForgotPassword(true);
-                    setResetStep('password');
+                    setResetStep("password");
                     setOtpStatus(null);
                   }}
                   id="btn-ganti-password"
                   style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#136c43',
-                    fontSize: '0.86rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    padding: '0',
+                    background: "none",
+                    border: "none",
+                    color: "#136c43",
+                    fontSize: "0.86rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    padding: "0",
                   }}
                 >
                   Ganti Password
@@ -2130,13 +1955,13 @@ export default function AuthPage({
                   onClick={handleForgotPassword}
                   id="btn-lupa-password"
                   style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#64748b',
-                    fontSize: '0.86rem',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    padding: '0',
+                    background: "none",
+                    border: "none",
+                    color: "#64748b",
+                    fontSize: "0.86rem",
+                    fontWeight: "500",
+                    cursor: "pointer",
+                    padding: "0",
                   }}
                 >
                   Lupa Password?
@@ -2146,56 +1971,37 @@ export default function AuthPage({
 
             {/* SWITCH LOGIN / REGISTER */}
             <div className="auth-switch-link">
-
-              {activeTab === 'daftar' ? (
-
+              {activeTab === "daftar" ? (
                 <span>
-                  Sudah punya akun?{' '}
-
+                  Sudah punya akun?{" "}
                   <button
                     type="button"
                     className="switch-link-btn"
-                    onClick={() =>
-                      setActiveTab(
-                        'masuk'
-                      )
-                    }
+                    onClick={() => setActiveTab("masuk")}
                   >
                     Masuk di sini
                   </button>
                 </span>
-
               ) : (
-
                 <span>
-                  Belum punya akun?{' '}
-
+                  Belum punya akun?{" "}
                   <button
                     type="button"
                     className="switch-link-btn"
-                    onClick={() =>
-                      setActiveTab(
-                        'daftar'
-                      )
-                    }
+                    onClick={() => setActiveTab("daftar")}
                   >
                     Daftar sekarang
                   </button>
                 </span>
-
               )}
-
             </div>
 
             {/* COPYRIGHT */}
             <div className="auth-copyright">
-              &copy; 2025 Dinas Lingkungan Hidup ·
-              SampahPintar v2.4.1
+              &copy; 2025 Dinas Lingkungan Hidup · SampahPintar v2.4.1
             </div>
-
           </div>
         )}
-
       </div>
     </div>
   );

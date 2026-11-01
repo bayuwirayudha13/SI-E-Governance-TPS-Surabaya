@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TPS_SURABAYA_ALL } from '../data/tpsSurabayaData';
+import TpsMapSuperadmin from './TpsMapSuperadmin';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -58,6 +59,16 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
     status: 'Aktif'
   });
   const [editingTpsId, setEditingTpsId] = useState(null);
+  const [tpsSearchQuery, setTpsSearchQuery] = useState('');
+  const [tpsFilterKecamatan, setTpsFilterKecamatan] = useState('');
+  const [tpsFilterKelurahan, setTpsFilterKelurahan] = useState('');
+  const [tpsFilterCapacity, setTpsFilterCapacity] = useState({ min: '', max: '' });
+  const [tpsFilterStatus, setTpsFilterStatus] = useState('');
+  const [tpsFilteredList, setTpsFilteredList] = useState([]);
+  const [availableKelurahan, setAvailableKelurahan] = useState([]);
+  const [showTpsFilterPopover, setShowTpsFilterPopover] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [dashboardStatsLoading, setDashboardStatsLoading] = useState(false);
   const [settings, setSettings] = useState({ website_name: 'SI-PETASAN', website_email: 'admin@sipetasan.com', current_password: '', new_password: '' });
 
   // Load current user
@@ -86,6 +97,7 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
     loadTps();
     loadSettings();
     loadLaporan();
+    loadDashboardStats();
     (async () => {
       try {
         const r = await fetch(`${API_BASE}/api/wilayah/kecamatan`);
@@ -198,10 +210,7 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
 
   const loadTps = async () => {
     try {
-      const token = getToken();
-      const response = await fetch(`${API_BASE}/api/tps/`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-      });
+      const response = await fetch(`${API_BASE}/api/tps/public`);
       if (response.ok) {
         const data = await response.json();
         setTpsList(data);
@@ -213,6 +222,109 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
       console.error('Load TPS error:', err);
     }
   };
+
+  const loadDashboardStats = async () => {
+    setDashboardStatsLoading(true);
+    try {
+      const token = getToken();
+      const response = await fetch(`${API_BASE}/api/dashboard/stats`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setDashboardStats(data);
+      } else {
+        console.error('Load dashboard stats failed:', response.status);
+      }
+    } catch (err) {
+      console.error('Load dashboard stats error:', err);
+    } finally {
+      setDashboardStatsLoading(false);
+    }
+  };
+
+  // Load kelurahan for TPS filter when kecamatan changes
+  useEffect(() => {
+    if (!tpsFilterKecamatan) {
+      setAvailableKelurahan([]);
+      return;
+    }
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE}/api/wilayah/kelurahan?kecamatan=${encodeURIComponent(tpsFilterKecamatan)}`);
+        if (r.ok) {
+          const d = await r.json();
+          setAvailableKelurahan(Array.isArray(d) ? d.map(x => x.nama || x) : []);
+        }
+      } catch {}
+    })();
+  }, [tpsFilterKecamatan]);
+
+  // Filter TPS based on search and filters
+  useEffect(() => {
+    let result = [...tpsList];
+    
+    // Search filter
+    if (tpsSearchQuery.trim()) {
+      const q = tpsSearchQuery.toLowerCase();
+      result = result.filter(t => 
+        (t.nama && t.nama.toLowerCase().includes(q)) ||
+        (t.nama_lama && t.nama_lama.toLowerCase().includes(q)) ||
+        (t.lokasi && t.lokasi.toLowerCase().includes(q)) ||
+        (t.kecamatan && t.kecamatan.toLowerCase().includes(q))
+      );
+    }
+    
+    // Kecamatan filter
+    if (tpsFilterKecamatan) {
+      result = result.filter(t => t.kecamatan === tpsFilterKecamatan);
+    }
+    
+    // Kelurahan filter
+    if (tpsFilterKelurahan) {
+      result = result.filter(t => 
+        t.kelurahans && Array.isArray(t.kelurahans) && 
+        t.kelurahans.some(k => k.nama === tpsFilterKelurahan)
+      );
+    }
+    
+    // Status filter
+    if (tpsFilterStatus) {
+      result = result.filter(t => t.status === tpsFilterStatus);
+    }
+    
+    // Capacity filter
+    if (tpsFilterCapacity.min !== '') {
+      result = result.filter(t => t.daya_tampung_m3 != null && t.daya_tampung_m3 >= parseFloat(tpsFilterCapacity.min));
+    }
+    if (tpsFilterCapacity.max !== '') {
+      result = result.filter(t => t.daya_tampung_m3 != null && t.daya_tampung_m3 <= parseFloat(tpsFilterCapacity.max));
+    }
+    
+    setTpsFilteredList(result);
+  }, [tpsList, tpsSearchQuery, tpsFilterKecamatan, tpsFilterKelurahan, tpsFilterStatus, tpsFilterCapacity]);
+
+  const resetTpsFilters = () => {
+    setTpsSearchQuery('');
+    setTpsFilterKecamatan('');
+    setTpsFilterKelurahan('');
+    setTpsFilterStatus('');
+    setTpsFilterCapacity({ min: '', max: '' });
+  };
+
+  // Close filter popover when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      const popoverEl = document.querySelector('[data-tps-filter-popover]');
+      if (popoverEl && !popoverEl.contains(e.target)) {
+        setShowTpsFilterPopover(false);
+      }
+    };
+    if (showTpsFilterPopover) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showTpsFilterPopover]);
 
   const handleAddTps = async (e) => {
     e.preventDefault();
@@ -691,12 +803,21 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
 
         {/* DASHBOARD EKSEKUTIF SUPERADMIN */}
         {activeMenu === 'dashboard' && (() => {
-          const totalTpsCount = TPS_SURABAYA_ALL.length;
-          const criticalTpsList = TPS_SURABAYA_ALL.filter(t => (t.kapasitasPersen || t.capacity || 0) >= 80);
-          const avgCapacityPercent = Math.round(
-            TPS_SURABAYA_ALL.reduce((acc, t) => acc + (t.kapasitasPersen || t.capacity || 50), 0) / (totalTpsCount || 1)
-          );
+          // Use API data if available, fallback to static data
+          const totalTpsCount = dashboardStats?.total_tps || tpsList.length;
           const pendingReports = laporanList.filter(l => l.status_tindak_lanjut !== 'Selesai');
+          
+          // No actual fill volume data available - criticalTpsList empty
+          const criticalTpsList = [];
+          
+          // Mapping from database wilayah_kota to display names
+          const wilayahMap = {
+            'Surabaya Pusat': 'Surabaya Pusat',
+            'Surabaya Timur': 'Surabaya Timur',
+            'Surabaya Barat': 'Surabaya Barat',
+            'Surabaya Utara': 'Surabaya Utara',
+            'Surabaya Selatan': 'Surabaya Selatan'
+          };
 
           const REGIONS = [
             { name: 'Surabaya Pusat', icon: '🏛️', desc: 'Tegalsari, Genteng, Bubutan, Simokerto' },
@@ -706,20 +827,43 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
             { name: 'Surabaya Selatan', icon: '🌳', desc: 'Wonokromo, Wonocolo, Sawahan, Gayungan' }
           ];
 
+          // Build region stats from API data
           const regionStats = REGIONS.map(reg => {
-            const list = TPS_SURABAYA_ALL.filter(t => t.wilayahKota === reg.name);
-            const count = list.length || 1;
-            const avg = Math.round(list.reduce((acc, t) => acc + (t.kapasitasPersen || t.capacity || 50), 0) / count);
-            const crit = list.filter(t => (t.kapasitasPersen || t.capacity || 0) >= 80).length;
+            let regData = dashboardStats?.regions?.find(r => r.wilayah_kota === reg.name);
+            
+            if (!regData) {
+              // Fallback: use tpsList
+              const list = tpsList.filter(t => t.wilayah_kota === reg.name);
+              regData = {
+                wilayah_kota: reg.name,
+                total_tps: list.length,
+                avg_capacity: list.length > 0 ? 
+                  Math.round(list.reduce((acc, t) => acc + (parseFloat(t.daya_tampung_m3) || 0), 0) / list.length) : 0,
+                has_capacity_data: list.some(t => t.daya_tampung_m3)
+              };
+            }
+
+            // Calculate status based on avg_capacity (m3)
+            // Display as percentage would need actual filled volume (not available)
+            // For now: show avg capacity in m3 and capacity data availability
+            const avgCapacityValue = regData.avg_capacity || 0;
+            const statusText = regData.has_capacity_data ? 'Data Tersedia' : 'Data Kapasitas Belum Lengkap';
+            const statusColor = regData.has_capacity_data ? '#10b981' : '#94a3b8';
+            
             return {
               ...reg,
-              totalTps: list.length,
-              avgPct: avg,
-              criticalCount: crit,
-              statusText: avg >= 80 ? 'Kritis' : avg >= 65 ? 'Waspada' : 'Aman',
-              statusColor: avg >= 80 ? '#ef4444' : avg >= 65 ? '#f59e0b' : '#10b981'
+              totalTps: regData.total_tps || 0,
+              avgCapacity: Math.round(avgCapacityValue * 10) / 10, // avg daya_tampung in m3
+              criticalCount: 0, // Cannot determine without actual volume data
+              statusText,
+              statusColor,
+              hasCapacityData: regData.has_capacity_data
             };
           });
+
+          // Average capacity across all TPS (in m3)
+          const avgCapacityAll = dashboardStats?.avg_capacity_all || 
+            (tpsList.length > 0 ? Math.round(tpsList.reduce((acc, t) => acc + (parseFloat(t.daya_tampung_m3) || 0), 0) / tpsList.length * 10) / 10 : 0);
 
           return (
             <div className="admin-content-view" style={{ paddingBottom: '40px' }}>
@@ -767,7 +911,7 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                     Executive Waste Governance Control Center
                   </h2>
                   <p style={{ margin: 0, fontSize: '0.86rem', opacity: 0.9, maxWidth: '680px' }}>
-                    Akses kontrol eksekutif superadmin: pemantauan operasional 231 TPS, neraca volume sampah 5 wilayah, radar dump truck darurat, dan penanganan aduan warga kota.
+                    Akses kontrol eksekutif superadmin: pemantauan operasional {totalTpsCount} TPS, neraca volume sampah 5 wilayah, radar dump truck darurat, dan penanganan aduan warga kota.
                   </p>
                 </div>
 
@@ -813,32 +957,32 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                     <div className="stat-icon-wrap icon-gold">📈</div>
                     <span className="stat-badge-live">KOTA</span>
                   </div>
-                  <div className="stat-card-number">{avgCapacityPercent}%</div>
-                  <div className="stat-card-label">Rata-rata Beban TPS Kota</div>
+                  <div className="stat-card-number">{avgCapacityAll.toFixed(1)} m³</div>
+                  <div className="stat-card-label">Rata-rata Kapasitas TPS Kota</div>
                   <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 700, marginTop: '6px' }}>
-                    231 TPS &bull; Target &lt; 75%
+                    {totalTpsCount} TPS &bull; Daya Tampung
                   </div>
                 </div>
 
                 {/* KPI 3 */}
-                <div className="admin-stat-card" style={{ border: criticalTpsList.length > 0 ? '1.5px solid #fecaca' : '1px solid #e2e8f0' }}>
+                <div className="admin-stat-card" style={{ border: '1px solid #e2e8f0' }}>
                   <div className="stat-card-header">
-                    <div className="stat-icon-wrap icon-orange" style={{ background: '#fee2e2', color: '#dc2626' }}>⚠️</div>
+                    <div className="stat-icon-wrap icon-orange" style={{ background: '#fee2e2', color: '#dc2626' }}>ℹ️</div>
                     <span style={{
-                      background: '#ef4444',
+                      background: '#6366f1',
                       color: '#ffffff',
                       fontSize: '0.65rem',
                       fontWeight: 800,
                       padding: '2px 7px',
                       borderRadius: '6px'
                     }}>
-                      OVERLOAD
+                      INFO
                     </span>
                   </div>
-                  <div className="stat-card-number" style={{ color: '#dc2626' }}>{criticalTpsList.length} TPS</div>
-                  <div className="stat-card-label">TPS Kritis (&ge; 80%)</div>
-                  <div style={{ fontSize: '0.74rem', color: '#dc2626', fontWeight: 700, marginTop: '6px' }}>
-                    Perlu Dispatch Dump Truck
+                  <div className="stat-card-number" style={{ color: '#6366f1' }}>-</div>
+                  <div className="stat-card-label">Status Beban TPS</div>
+                  <div style={{ fontSize: '0.74rem', color: '#6366f1', fontWeight: 700, marginTop: '6px' }}>
+                    Data Volume Belum Tersedia
                   </div>
                 </div>
 
@@ -891,7 +1035,7 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                     fontWeight: 700,
                     color: '#475569'
                   }}>
-                    Total 231 TPS Aktif
+                    Total {totalTpsCount} TPS Aktif
                   </span>
                 </div>
 
@@ -923,7 +1067,7 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                             fontWeight: 800,
                             padding: '2px 6px',
                             borderRadius: '4px',
-                            background: reg.statusColor === '#ef4444' ? '#fef2f2' : reg.statusColor === '#f59e0b' ? '#fffbeb' : '#f0fdf4',
+                            background: reg.statusColor === '#10b981' ? '#f0fdf4' : '#f1f5f9',
                             color: reg.statusColor
                           }}>
                             {reg.statusText}
@@ -937,20 +1081,23 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '6px' }}>
                           <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 600 }}>
-                            {reg.totalTps} TPS ({reg.criticalCount} Kritis)
+                            {reg.totalTps} TPS
                           </span>
                           <strong style={{ fontSize: '1.1rem', fontWeight: 900, color: reg.statusColor }}>
-                            {reg.avgPct}%
+                            {reg.avgCapacity} m³
                           </strong>
                         </div>
                         <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
                           <div style={{
-                            width: `${reg.avgPct}%`,
+                            width: `${Math.min((reg.avgCapacity / 20) * 100, 100)}%`,
                             height: '100%',
                             background: reg.statusColor,
                             borderRadius: '999px',
                             transition: 'width 0.4s ease'
                           }} />
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px' }}>
+                          {reg.statusText}
                         </div>
                       </div>
                     </div>
@@ -1286,21 +1433,233 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
         {/* TPS CRUD */}
         {activeMenu === 'tps' && (
           <div className="admin-content-view">
+            {/* Peta Lokasi TPS */}
+            <TpsMapSuperadmin 
+              tpsList={tpsList} 
+              onTpsClick={(tps) => {
+                // Scroll ke tabel dan highlight TPS yang dipilih
+                const tableCard = document.querySelector('.full-table-card');
+                if (tableCard) {
+                  tableCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }} 
+            />
+
             <div className="admin-card full-table-card">
-              <div className="table-header-row">
-                <h3 className="admin-card-title">Kelola Data TPS</h3>
-                <button
-                  type="button"
-                  className="btn-add-primary"
-                  onClick={() => {
-                    setEditingTpsId(null);
-                    setNewTps({ nama: '', kecamatan: '', wilayah_kota: 'Surabaya Pusat', lokasi: '', jenis_tps: 'TPS Resmi', latitude: '', longitude: '', jumlah_container: '', daya_tampung_m3: '', status: 'Aktif' });
-                    setShowAddTpsModal(true);
-                  }}
-                >
-                  + Tambah TPS
-                </button>
+              <div className="table-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <h3 className="admin-card-title" style={{ margin: 0 }}>Kelola Data TPS</h3>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  {/* Search Input (Orange style) */}
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      placeholder="Cari TPS..."
+                      value={tpsSearchQuery}
+                      onChange={(e) => setTpsSearchQuery(e.target.value)}
+                      style={{
+                        padding: '8px 12px 8px 34px',
+                        borderRadius: '6px',
+                        border: '1.5px solid #f97316',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        width: '200px',
+                        color: '#1e293b'
+                      }}
+                    />
+                    <span style={{ position: 'absolute', left: '10px', color: '#f97316', fontSize: '0.9rem' }}>🔍</span>
+                    {tpsSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setTpsSearchQuery('')}
+                        style={{ position: 'absolute', right: '8px', border: 'none', background: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.9rem' }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filter Button (Red style with Popover) */}
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowTpsFilterPopover(!showTpsFilterPopover);
+                      }}
+                      style={{
+                        background: (tpsFilterKecamatan || tpsFilterKelurahan || tpsFilterStatus || tpsFilterCapacity.min || tpsFilterCapacity.max) ? '#dc2626' : '#ef4444',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '8px 14px',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <span>🌪️ Filter</span>
+                      {(tpsFilterKecamatan || tpsFilterKelurahan || tpsFilterStatus || tpsFilterCapacity.min || tpsFilterCapacity.max) && (
+                        <span style={{ background: '#ffffff', color: '#dc2626', borderRadius: '50%', width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>!</span>
+                      )}
+                    </button>
+
+                    {/* Filter Popover */}
+                    {showTpsFilterPopover && (
+                      <div 
+                        data-tps-filter-popover
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          position: 'absolute',
+                          top: '100%',
+                          right: 0,
+                          marginTop: '8px',
+                          background: '#ffffff',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '10px',
+                          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15)',
+                          padding: '16px',
+                          width: '280px',
+                          zIndex: 100
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
+                          <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>Filter TPS</h4>
+                          <button
+                            type="button"
+                            onClick={() => setShowTpsFilterPopover(false)}
+                            style={{ border: 'none', background: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.9rem' }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Kecamatan</label>
+                            <select
+                              value={tpsFilterKecamatan}
+                              onChange={(e) => {
+                                setTpsFilterKecamatan(e.target.value);
+                                setTpsFilterKelurahan('');
+                              }}
+                              style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
+                            >
+                              <option value="">Semua Kecamatan</option>
+                              {kecamatanOptions.map(k => (
+                                <option key={k} value={k}>{k}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {tpsFilterKecamatan && availableKelurahan.length > 0 && (
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Kelurahan</label>
+                              <select
+                                value={tpsFilterKelurahan}
+                                onChange={(e) => setTpsFilterKelurahan(e.target.value)}
+                                style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
+                              >
+                                <option value="">Semua Kelurahan</option>
+                                {availableKelurahan.map(k => (
+                                  <option key={k} value={k}>{k}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Status</label>
+                            <select
+                              value={tpsFilterStatus}
+                              onChange={(e) => setTpsFilterStatus(e.target.value)}
+                              style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
+                            >
+                              <option value="">Semua Status</option>
+                              <option value="Aktif">Aktif</option>
+                              <option value="Tidak Aktif">Tidak Aktif</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Daya Tampung (m³)</label>
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                              <input
+                                type="number"
+                                placeholder="Min"
+                                value={tpsFilterCapacity.min}
+                                onChange={(e) => setTpsFilterCapacity({ ...tpsFilterCapacity, min: e.target.value })}
+                                style={{ width: '50%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
+                              />
+                              <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>-</span>
+                              <input
+                                type="number"
+                                placeholder="Max"
+                                value={tpsFilterCapacity.max}
+                                onChange={(e) => setTpsFilterCapacity({ ...tpsFilterCapacity, max: e.target.value })}
+                                style={{ width: '50%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
+                              />
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowTpsFilterPopover(false);
+                              }}
+                              style={{ flex: 1, background: '#dc2626', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '6px 10px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Terapkan
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                resetTpsFilters();
+                                setShowTpsFilterPopover(false);
+                              }}
+                              style={{ flex: 1, background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '6px', padding: '6px 10px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Reset
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tambah TPS Button (Green style) */}
+                  <button
+                    type="button"
+                    className="btn-add-primary"
+                    onClick={() => {
+                      setEditingTpsId(null);
+                      setNewTps({ nama: '', kecamatan: '', wilayah_kota: 'Surabaya Pusat', lokasi: '', jenis_tps: 'TPS Resmi', latitude: '', longitude: '', jumlah_container: '', daya_tampung_m3: '', status: 'Aktif' });
+                      setShowAddTpsModal(true);
+                    }}
+                  >
+                    + Tambah TPS
+                  </button>
+                </div>
               </div>
+
+              {/* Result Stats Bar */}
+              <div style={{ padding: '8px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '0.8rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Menampilkan <strong>{tpsFilteredList.length}</strong> dari total <strong>{tpsList.length}</strong> TPS</span>
+                {(tpsSearchQuery || tpsFilterKecamatan || tpsFilterKelurahan || tpsFilterStatus || tpsFilterCapacity.min || tpsFilterCapacity.max) && (
+                  <button
+                    type="button"
+                    onClick={resetTpsFilters}
+                    style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    Reset Filter
+                  </button>
+                )}
+              </div>
+
               <div className="admin-table-wrap">
                 <table className="admin-table">
                   <thead>
@@ -1317,37 +1676,46 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                     </tr>
                   </thead>
                   <tbody>
-                    {tpsList.map(t => (
-                      <tr key={t.id}>
-                        <td><strong>{t.nama}</strong></td>
-                        <td>{t.kecamatan}</td>
-                        <td>{t.wilayah_kota}</td>
-                        <td className="text-muted">{t.lokasi || '—'}</td>
-                        <td className="text-muted" style={{ fontSize: '0.8rem' }}>{t.latitude && t.longitude ? `${t.latitude}, ${t.longitude}` : '—'}</td>
-                        <td>{t.jumlah_container || '—'}</td>
-                        <td>{t.daya_tampung_m3 ?? '—'}</td>
-                        <td><span className={`status-pill ${t.status === 'Aktif' ? 'status-aktif' : ''}`}>{t.status}</span></td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                              type="button"
-                              className="btn-table-edit"
-                              style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}
-                              onClick={() => handleEditTps(t)}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-table-delete"
-                              onClick={() => handleDeleteTps(t.id)}
-                            >
-                              &times; Hapus
-                            </button>
-                          </div>
+                    {tpsFilteredList.length === 0 ? (
+                      <tr>
+                        <td colSpan="9" style={{ textAlign: 'center', padding: '32px 16px', color: '#64748b' }}>
+                          <div style={{ fontSize: '1.2rem', marginBottom: '4px' }}>🔍</div>
+                          <div>Tidak ada data TPS yang sesuai dengan filter/pencarian.</div>
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      tpsFilteredList.map(t => (
+                        <tr key={t.id}>
+                          <td><strong>{t.nama}</strong></td>
+                          <td>{t.kecamatan}</td>
+                          <td>{t.wilayah_kota}</td>
+                          <td className="text-muted">{t.lokasi || '—'}</td>
+                          <td className="text-muted" style={{ fontSize: '0.8rem' }}>{t.latitude && t.longitude ? `${t.latitude}, ${t.longitude}` : '—'}</td>
+                          <td>{t.jumlah_container || '—'}</td>
+                          <td>{t.daya_tampung_m3 ?? '—'}</td>
+                          <td><span className={`status-pill ${t.status === 'Aktif' ? 'status-aktif' : ''}`}>{t.status}</span></td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                type="button"
+                                className="btn-table-edit"
+                                style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}
+                                onClick={() => handleEditTps(t)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-table-delete"
+                                onClick={() => handleDeleteTps(t.id)}
+                              >
+                                &times; Hapus
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

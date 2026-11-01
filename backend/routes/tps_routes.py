@@ -5,6 +5,7 @@ from typing import List, Optional
 from core.database import get_db
 from core.security import get_current_user, require_admin, require_superadmin
 from models.tps import TPS
+from models.wilayah import Kelurahan
 from models.users import User
 from schemas.tps_schema import TPSCreate, TPSUpdate, TPSResponse
 from services.tps_service import get_active_public_tps
@@ -25,19 +26,37 @@ def get_public_tps(db: Session = Depends(get_db)):
 def list_tps(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
+    search: Optional[str] = None,
     kecamatan: Optional[str] = None,
     wilayah_kota: Optional[str] = None,
     status: Optional[str] = None,
+    kelurahan: Optional[str] = None,
+    min_kapasitas: Optional[float] = None,
+    max_kapasitas: Optional[float] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Get TPS dengan filter:
+    - search: cari berdasarkan nama, nama_lama, lokasi
     - kecamatan: filter berdasarkan kecamatan
+    - kelurahan: filter berdasarkan kelurahan (dari tps_kelurahan)
     - wilayah_kota: filter berdasarkan wilayah kota
     - status: filter berdasarkan status (Aktif/Tidak Aktif)
+    - min_kapasitas, max_kapasitas: filter berdasarkan daya_tampung_m3
     """
-    query = db.query(TPS)
+    query = db.query(TPS).options(db.joinedload(TPS.kelurahans))
+    
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            and_(
+                TPS.nama.like(search_pattern) |
+                TPS.nama_lama.like(search_pattern) |
+                TPS.lokasi.like(search_pattern) |
+                TPS.kecamatan.like(search_pattern)
+            )
+        )
     
     if kecamatan:
         query = query.filter(TPS.kecamatan == kecamatan)
@@ -45,6 +64,18 @@ def list_tps(
         query = query.filter(TPS.wilayah_kota == wilayah_kota)
     if status:
         query = query.filter(TPS.status == status)
+    if min_kapasitas is not None:
+        query = query.filter(TPS.daya_tampung_m3 >= min_kapasitas)
+    if max_kapasitas is not None:
+        query = query.filter(TPS.daya_tampung_m3 <= max_kapasitas)
+    
+    # Kelurahan filter: join tps_kelurahan table
+    if kelurahan:
+        from models.tps_kelurahan import TPSKelurahan
+        query = query.join(TPSKelurahan, TPS.id == TPSKelurahan.tps_id) \
+                    .join(Kelurahan, TPSKelurahan.kelurahan_id == Kelurahan.id) \
+                    .filter(Kelurahan.nama == kelurahan) \
+                    .distinct()
     
     return query.offset(skip).limit(limit).all()
 

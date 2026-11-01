@@ -1,48 +1,53 @@
-import React, { useState, useEffect } from 'react';
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import About from './components/About';
-import Features from './components/Features';
-import NewsSection from './components/NewsSection';
-import WasteTypes from './components/WasteTypes';
-import Footer from './components/Footer';
+import React, { useState, useEffect } from "react";
+import Navbar from "./components/Navbar";
+import Hero from "./components/Hero";
+import About from "./components/About";
+import Features from "./components/Features";
+import NewsSection from "./components/NewsSection";
+import WasteTypes from "./components/WasteTypes";
+import Footer from "./components/Footer";
 
-import ArticleModal from './components/ArticleModal';
-import RewardCalculatorModal from './components/RewardCalculatorModal';
-import TpsMapModal from './components/TpsMapModal';
-import TpsDetailModal from './components/TpsDetailModal';
-import LaporanWargaModal from './components/LaporanWargaModal';
-import WasteGuideModal from './components/WasteGuideModal';
-import AuthPage from './components/AuthPage';
-import AdminPanel from './components/AdminPanelNew';
-import SuperadminPanel from './components/SuperadminPanel';
-import WargaPanel from './components/WargaPanel';
-import PetugasPanel from './components/PetugasPanel';
-import PetugasTpsPanel from './components/PetugasTpsPanel';
-import ProtectedRoute from './components/ProtectedRoute';
-import MainLayout from './components/MainLayout';
-import { authService } from './api/client';
+import ArticleModal from "./components/ArticleModal";
+import RewardCalculatorModal from "./components/RewardCalculatorModal";
+import TpsMapModal from "./components/TpsMapModal";
+import TpsDetailModal from "./components/TpsDetailModal";
+import LaporanWargaModal from "./components/LaporanWargaModal";
+import WasteGuideModal from "./components/WasteGuideModal";
+import AuthPage from "./components/AuthPage";
+import AdminPanel from "./components/AdminPanelNew";
+import SuperadminPanel from "./components/SuperadminPanel";
+import WargaPanel from "./components/WargaPanel";
+import PetugasPanel from "./components/PetugasPanel";
+import PetugasTpsPanel from "./components/PetugasTpsPanel";
+import ProtectedRoute from "./components/ProtectedRoute";
+import MainLayout from "./components/MainLayout";
+import { authService } from "./api/client";
+import useInactivityLogout from "./api/useInactivityLogout";
+import { INACTIVITY_LOGOUT_MESSAGE, broadcastLogout } from "./api/inactivity";
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('landing'); // 'landing' | 'auth' | 'admin' | 'warga' | 'petugas'
-  const [authTab, setAuthTab] = useState('masuk'); // 'masuk' | 'daftar'
-  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
+  const [currentPage, setCurrentPage] = useState("landing"); // 'landing' | 'auth' | 'admin' | 'warga' | 'petugas'
+  const [authTab, setAuthTab] = useState("masuk"); // 'masuk' | 'daftar'
+  const [currentUser, setCurrentUser] = useState(() =>
+    authService.getCurrentUser(),
+  );
+  const [sessionNotice, setSessionNotice] = useState("");
 
   // Listen to global auth state changes
   useEffect(() => {
     const handleAuthChange = () => {
       const u = authService.getCurrentUser();
       setCurrentUser(u);
-      if (!u && (currentPage === 'admin' || currentPage === 'petugas')) {
-        setCurrentPage('auth');
-        window.location.hash = 'auth';
+      if (!u && (currentPage === "admin" || currentPage === "petugas")) {
+        setCurrentPage("auth");
+        window.location.hash = "auth";
       }
     };
-    window.addEventListener('auth:change', handleAuthChange);
-    window.addEventListener('auth:unauthorized', handleAuthChange);
+    window.addEventListener("auth:change", handleAuthChange);
+    window.addEventListener("auth:unauthorized", handleAuthChange);
     return () => {
-      window.removeEventListener('auth:change', handleAuthChange);
-      window.removeEventListener('auth:unauthorized', handleAuthChange);
+      window.removeEventListener("auth:change", handleAuthChange);
+      window.removeEventListener("auth:unauthorized", handleAuthChange);
     };
   }, [currentPage]);
 
@@ -55,67 +60,69 @@ export default function App() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [reportTargetTps, setReportTargetTps] = useState(null);
 
-
   // Sync hash routing (support #auth, #masuk, #daftar, #admin, #warga, #petugas, #driver)
   // Restore session on mount
   useEffect(() => {
-    if (window.location.search.includes('demo=warga')) {
+    if (window.location.search.includes("demo=warga")) {
       const demoWarga = {
         id: 12,
-        nama_lengkap: 'Raditya',
-        nama: 'Raditya',
-        email: 'raditya@sipetasan.com',
-        role: 'warga',
-        kelurahan: 'Tembok Dukuh',
-        kecamatan: 'Bubutan',
-        poin: 650
+        nama_lengkap: "Raditya",
+        nama: "Raditya",
+        email: "raditya@sipetasan.com",
+        role: "warga",
+        kelurahan: "Tembok Dukuh",
+        kecamatan: "Bubutan",
+        poin: 650,
       };
-      authService.setSession('demo_token', demoWarga);
+      authService.setSession("demo_token", demoWarga);
       setCurrentUser(demoWarga);
-      setCurrentPage('warga');
-      window.location.hash = 'warga';
+      setCurrentPage("warga");
+      window.location.hash = "warga";
       return;
     }
 
-    if (window.location.search.includes('demo=petugas-tps') || window.location.search.includes('demo=tps')) {
+    if (
+      window.location.search.includes("demo=petugas-tps") ||
+      window.location.search.includes("demo=tps")
+    ) {
       const demoPetugasTps = {
         id: 8,
-        nama_lengkap: 'Budi',
-        nama: 'Budi',
-        email: 'budi@sipetasan.com',
-        role: 'petugas',
-        kelurahan: 'Sukamaju',
-        wilayah_kelurahan: 'Sukamaju',
-        wilayah_kecamatan: 'Gubeng',
-        wilayah_kota: 'Surabaya'
+        nama_lengkap: "Budi",
+        nama: "Budi",
+        email: "budi@sipetasan.com",
+        role: "petugas",
+        kelurahan: "Sukamaju",
+        wilayah_kelurahan: "Sukamaju",
+        wilayah_kecamatan: "Gubeng",
+        wilayah_kota: "Surabaya",
       };
-      authService.setSession('demo_token', demoPetugasTps);
+      authService.setSession("demo_token", demoPetugasTps);
       setCurrentUser(demoPetugasTps);
-      setCurrentPage('petugas-tps');
+      setCurrentPage("petugas-tps");
       const h = window.location.hash.toLowerCase();
-      if (!h || h === '#beranda' || h === '#landing') {
-        window.location.hash = 'petugas-tps';
+      if (!h || h === "#beranda" || h === "#landing") {
+        window.location.hash = "petugas-tps";
       }
       return;
     }
 
-    if (window.location.search.includes('demo=petugas')) {
+    if (window.location.search.includes("demo=petugas")) {
       const demoPetugas = {
         id: 5,
-        nama_lengkap: 'Hendra',
-        nama: 'Hendra',
-        email: 'hendra@sipetasan.com',
-        role: 'petugas',
-        wilayah_kelurahan: 'Sukamaju',
-        wilayah_kecamatan: 'Gubeng',
-        wilayah_kota: 'Surabaya'
+        nama_lengkap: "Hendra",
+        nama: "Hendra",
+        email: "hendra@sipetasan.com",
+        role: "petugas",
+        wilayah_kelurahan: "Sukamaju",
+        wilayah_kecamatan: "Gubeng",
+        wilayah_kota: "Surabaya",
       };
-      authService.setSession('demo_token', demoPetugas);
+      authService.setSession("demo_token", demoPetugas);
       setCurrentUser(demoPetugas);
-      setCurrentPage('petugas');
+      setCurrentPage("petugas");
       const h = window.location.hash.toLowerCase();
-      if (!h || h === '#beranda' || h === '#landing') {
-        window.location.hash = 'petugas';
+      if (!h || h === "#beranda" || h === "#landing") {
+        window.location.hash = "petugas";
       }
       return;
     }
@@ -124,29 +131,33 @@ export default function App() {
     const user = authService.getCurrentUser();
     const initialHash = window.location.hash.toLowerCase();
 
-    if (initialHash === '#beranda' || initialHash === '#landing') {
-      setCurrentPage('landing');
+    if (initialHash === "#beranda" || initialHash === "#landing") {
+      setCurrentPage("landing");
       if (token && user) setCurrentUser(user);
       return;
     }
 
     if (token && user) {
       setCurrentUser(user);
-      if (user.role === 'superadmin' || user.role === 'admin') {
-        setCurrentPage('admin');
-        window.location.hash = user.role === 'superadmin' ? 'superadmin' : 'admin';
-      } else if (user.role === 'petugas_kelurahan') {
-        setCurrentPage('petugas-tps');
-        window.location.hash = 'petugas-tps';
-      } else if (user.role === 'petugas' || user.role === 'petugas_pengangkut') {
-        setCurrentPage('petugas');
-        window.location.hash = 'petugas';
-      } else if (user.role === 'driver') {
-        setCurrentPage('petugas');
-        window.location.hash = 'petugas';
+      if (user.role === "superadmin" || user.role === "admin") {
+        setCurrentPage("admin");
+        window.location.hash =
+          user.role === "superadmin" ? "superadmin" : "admin";
+      } else if (user.role === "petugas_kelurahan") {
+        setCurrentPage("petugas-tps");
+        window.location.hash = "petugas-tps";
+      } else if (
+        user.role === "petugas" ||
+        user.role === "petugas_pengangkut"
+      ) {
+        setCurrentPage("petugas");
+        window.location.hash = "petugas";
+      } else if (user.role === "driver") {
+        setCurrentPage("petugas");
+        window.location.hash = "petugas";
       } else {
-        setCurrentPage('warga');
-        window.location.hash = 'warga';
+        setCurrentPage("warga");
+        window.location.hash = "warga";
       }
     }
   }, []);
@@ -156,165 +167,210 @@ export default function App() {
     const handleHashChange = () => {
       let hash = window.location.hash.toLowerCase();
       // Remove leading slash if present (e.g., #/warga -> #warga)
-      hash = hash.replace(/^#\//, '#');
+      hash = hash.replace(/^#\//, "#");
 
-      if (hash === '#admin' || hash === '#superadmin') {
-        setCurrentPage('admin');
+      if (hash === "#admin" || hash === "#superadmin") {
+        setCurrentPage("admin");
       } else if (
-        hash.startsWith('#petugas-tps') ||
-        hash.startsWith('#tps') ||
-        hash === '#petugas_tps' ||
-        hash === '#kelurahan' ||
-        hash === '#petugas-kelurahan' ||
-        hash === '#dasbor-tps'
+        hash.startsWith("#petugas-tps") ||
+        hash.startsWith("#tps") ||
+        hash === "#petugas_tps" ||
+        hash === "#kelurahan" ||
+        hash === "#petugas-kelurahan" ||
+        hash === "#dasbor-tps"
       ) {
         if (!authService.getCurrentUser()) {
           const demoPetugasTps = {
             id: 8,
-            nama_lengkap: 'Budi',
-            nama: 'Budi',
-            email: 'budi@sipetasan.com',
-            role: 'petugas',
-            kelurahan: 'Sukamaju',
-            wilayah_kelurahan: 'Sukamaju',
-            wilayah_kecamatan: 'Gubeng',
-            wilayah_kota: 'Surabaya'
+            nama_lengkap: "Budi",
+            nama: "Budi",
+            email: "budi@sipetasan.com",
+            role: "petugas",
+            kelurahan: "Sukamaju",
+            wilayah_kelurahan: "Sukamaju",
+            wilayah_kecamatan: "Gubeng",
+            wilayah_kota: "Surabaya",
           };
-          authService.setSession('demo_token', demoPetugasTps);
+          authService.setSession("demo_token", demoPetugasTps);
           setCurrentUser(demoPetugasTps);
         }
-        setCurrentPage('petugas-tps');
-      } else if (hash === '#warga' || hash === '#portal-warga' || hash === '#warga-dashboard' || hash === '#qr' || hash === '#qr-status' || hash === '#validasi' || hash === '#tracking' || hash === '#chat' || hash === '#chat-admin' || hash === '#riwayat-pengambilan') {
-        setCurrentPage('warga');
+        setCurrentPage("petugas-tps");
       } else if (
-        hash === '#petugas' ||
-        hash === '#petugas-pengangkut' ||
-        hash === '#petugas-lapangan' ||
-        hash === '#tugas' ||
-        hash === '#tugas-hari-ini' ||
-        hash === '#scan' ||
-        hash === '#scan-qr' ||
-        hash === '#riwayat' ||
-        hash === '#riwayat-petugas'
+        hash === "#warga" ||
+        hash === "#portal-warga" ||
+        hash === "#warga-dashboard" ||
+        hash === "#qr" ||
+        hash === "#qr-status" ||
+        hash === "#validasi" ||
+        hash === "#tracking" ||
+        hash === "#chat" ||
+        hash === "#chat-admin" ||
+        hash === "#riwayat-pengambilan"
       ) {
-        setCurrentPage('petugas');
-      } else if (hash === '#auth' || hash === '#masuk' || hash === '#signin') {
-        setCurrentPage('auth');
-        setAuthTab('masuk');
-      } else if (hash === '#daftar' || hash === '#register') {
-        setCurrentPage('auth');
-        setAuthTab('daftar');
-      } else if (hash === '#ganti-password' || hash === '#reset-password') {
-        setCurrentPage('auth');
-        setAuthTab('ganti-password');
-      } else if (hash === '#beranda' || hash === '' || hash === '#landing') {
-        setCurrentPage('landing');
+        setCurrentPage("warga");
+      } else if (
+        hash === "#petugas" ||
+        hash === "#petugas-pengangkut" ||
+        hash === "#petugas-lapangan" ||
+        hash === "#tugas" ||
+        hash === "#tugas-hari-ini" ||
+        hash === "#scan" ||
+        hash === "#scan-qr" ||
+        hash === "#riwayat" ||
+        hash === "#riwayat-petugas"
+      ) {
+        setCurrentPage("petugas");
+      } else if (hash === "#auth" || hash === "#masuk" || hash === "#signin") {
+        setCurrentPage("auth");
+        setAuthTab("masuk");
+      } else if (hash === "#daftar" || hash === "#register") {
+        setCurrentPage("auth");
+        setAuthTab("daftar");
+      } else if (hash === "#ganti-password" || hash === "#reset-password") {
+        setCurrentPage("auth");
+        setAuthTab("ganti-password");
+      } else if (hash === "#beranda" || hash === "" || hash === "#landing") {
+        setCurrentPage("landing");
       }
     };
 
-    window.addEventListener('hashchange', handleHashChange);
+    window.addEventListener("hashchange", handleHashChange);
     handleHashChange(); // check initial hash
 
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
   }, [currentPage]);
 
-  const handleOpenAuth = (tab = 'masuk') => {
+  const handleOpenAuth = (tab = "masuk") => {
+    setSessionNotice("");
     setAuthTab(tab);
-    setCurrentPage('auth');
-    window.location.hash = tab === 'daftar' ? 'daftar' : 'masuk';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setCurrentPage("auth");
+    window.location.hash = tab === "daftar" ? "daftar" : "masuk";
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleBackToHome = () => {
-    setCurrentPage('landing');
-    window.location.hash = 'beranda';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setSessionNotice("");
+    setCurrentPage("landing");
+    window.location.hash = "beranda";
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleLoginSuccess = (user) => {
-    localStorage.setItem('auth_user', JSON.stringify(user));
+    setSessionNotice("");
+    localStorage.setItem("auth_user", JSON.stringify(user));
     setCurrentUser(user);
-    localStorage.setItem('user_role', user.role || 'warga');
-    localStorage.setItem('user_email', user.email || '');
-    if (user.role === 'superadmin') {
-      setCurrentPage('admin');
-      window.location.hash = 'superadmin';
-    } else if (user.role === 'admin') {
-      setCurrentPage('admin');
-      window.location.hash = 'admin';
-    } else if (user.role === 'petugas_kelurahan') {
-      setCurrentPage('petugas-tps');
-      window.location.hash = 'petugas-tps';
-    } else if (user.role === 'petugas' || user.role === 'petugas_pengangkut') {
-      setCurrentPage('petugas');
-      window.location.hash = 'petugas';
-    } else if (user.role === 'driver') {
-      setCurrentPage('petugas');
-      window.location.hash = 'petugas';
+    localStorage.setItem("user_role", user.role || "warga");
+    localStorage.setItem("user_email", user.email || "");
+    if (user.role === "superadmin") {
+      setCurrentPage("admin");
+      window.location.hash = "superadmin";
+    } else if (user.role === "admin") {
+      setCurrentPage("admin");
+      window.location.hash = "admin";
+    } else if (user.role === "petugas_kelurahan") {
+      setCurrentPage("petugas-tps");
+      window.location.hash = "petugas-tps";
+    } else if (user.role === "petugas" || user.role === "petugas_pengangkut") {
+      setCurrentPage("petugas");
+      window.location.hash = "petugas";
+    } else if (user.role === "driver") {
+      setCurrentPage("petugas");
+      window.location.hash = "petugas";
     } else {
-      setCurrentPage('warga');
-      window.location.hash = 'warga';
+      setCurrentPage("warga");
+      window.location.hash = "warga";
     }
   };
 
   const handleLogout = async () => {
+    // Beritahu tab Warga lain agar ikut keluar (role lain tidak terpengaruh)
+    if (currentUser?.role === "warga") broadcastLogout("manual");
     try {
       await authService.logout();
     } catch {
       authService.clearSession();
     }
     setCurrentUser(null);
-    setCurrentPage('landing');
-    window.location.hash = 'beranda';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setCurrentPage("landing");
+    window.location.hash = "beranda";
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // ---- Auto logout karena inaktivitas (khusus role Warga) ----
+  const showLoginWithNotice = (message) => {
+    setSessionNotice(message);
+    setCurrentUser(null);
+    setAuthTab("masuk");
+    setCurrentPage("auth");
+    window.location.hash = "masuk";
+    window.scrollTo({ top: 0 });
+  };
+
+  const handleInactivityExpire = () => {
+    // Pakai logout yang sudah ada (revoke refresh token + clearSession).
+    // Bagian sinkron dari logout() sudah membaca refresh token sebelum state berubah.
+    authService.logout().catch(() => authService.clearSession());
+    showLoginWithNotice(INACTIVITY_LOGOUT_MESSAGE);
+  };
+
+  const handleRemoteLogout = (reason) => {
+    authService.clearSession(); // sessionStorage tab ini tidak ikut terhapus oleh tab lain
+    if (reason === "inactivity") {
+      showLoginWithNotice(INACTIVITY_LOGOUT_MESSAGE);
+    } else {
+      setCurrentUser(null);
+      setCurrentPage("landing");
+      window.location.hash = "beranda";
+    }
+  };
+
+  useInactivityLogout({
+    enabled: currentUser?.role === "warga",
+    onExpire: handleInactivityExpire,
+    onRemoteLogout: handleRemoteLogout,
+  });
 
   // If user is inside Admin Panel (Protected by RBAC: admin & superadmin)
-  if (currentPage === 'admin') {
+  if (currentPage === "admin") {
     // Check role to show correct panel
-    if (currentUser?.role === 'superadmin') {
+    if (currentUser?.role === "superadmin") {
       return (
-        <ProtectedRoute allowedRoles={['superadmin', 'admin']}>
+        <ProtectedRoute allowedRoles={["superadmin", "admin"]}>
           <SuperadminPanel onLogout={handleLogout} currentUser={currentUser} />
         </ProtectedRoute>
       );
     }
     return (
-      <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+      <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
         <AdminPanel onLogout={handleLogout} currentUser={currentUser} />
       </ProtectedRoute>
     );
   }
 
   // If user is inside Petugas TPS / Kelurahan Panel
-  if (currentPage === 'petugas-tps') {
+  if (currentPage === "petugas-tps") {
     return (
-      <ProtectedRoute allowedRoles={['petugas_kelurahan', 'admin', 'superadmin']}>
-        <PetugasTpsPanel
-          onLogout={handleLogout}
-          currentUser={currentUser}
-        />
+      <ProtectedRoute
+        allowedRoles={["petugas_kelurahan", "admin", "superadmin"]}
+      >
+        <PetugasTpsPanel onLogout={handleLogout} currentUser={currentUser} />
       </ProtectedRoute>
     );
   }
 
   // If user is inside Petugas Lapangan/Pengangkut Panel (Protected by RBAC: petugas & driver)
-  if (currentPage === 'petugas') {
+  if (currentPage === "petugas") {
     return (
-      <ProtectedRoute allowedRoles={['petugas', 'driver']}>
-        <PetugasPanel
-          onLogout={handleLogout}
-          currentUser={currentUser}
-        />
+      <ProtectedRoute allowedRoles={["petugas", "driver"]}>
+        <PetugasPanel onLogout={handleLogout} currentUser={currentUser} />
       </ProtectedRoute>
     );
   }
 
   // If user is inside Warga Portal (Protected by RBAC: warga)
-  if (currentPage === 'warga') {
+  if (currentPage === "warga") {
     return (
-      <ProtectedRoute allowedRoles={['warga']}>
+      <ProtectedRoute allowedRoles={["warga"]}>
         <WargaPanel
           onLogout={handleLogout}
           wargaId={currentUser?.id}
@@ -325,12 +381,13 @@ export default function App() {
   }
 
   // If user navigates to Auth Page (SampahPintar Login / Daftar)
-  if (currentPage === 'auth') {
+  if (currentPage === "auth") {
     return (
       <AuthPage
         initialTab={authTab}
         onBackToHome={handleBackToHome}
         onLoginSuccess={handleLoginSuccess}
+        notice={sessionNotice}
       />
     );
   }
@@ -339,7 +396,7 @@ export default function App() {
   return (
     <MainLayout
       currentUser={currentUser}
-      onOpenLoginModal={() => handleOpenAuth('masuk')}
+      onOpenLoginModal={() => handleOpenAuth("masuk")}
       onOpenTpsModal={() => setIsTpsModalOpen(true)}
       onOpenRewardModal={() => setIsRewardModalOpen(true)}
     >

@@ -38,6 +38,7 @@ from auth.routes import router as auth_router
 from auth.otp import generate_otp, save_otp
 from services.email_service import send_otp_email
 from routes.tps_routes import router as tps_router
+from routes.dashboard_routes import router as dashboard_router
 from routes.wilayah_routes import router as wilayah_router
 from routes.laporan_routes import router as laporan_router
 from routes.setoran_routes import router as setoran_router
@@ -58,7 +59,7 @@ app = FastAPI(title="SampahPintar API")
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -71,11 +72,11 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 # Database
 try:
     Base.metadata.create_all(bind=engine)
-    print("✓ Berhasil terhubung ke database MySQL (sipk_tps_baru).")
+    print("[OK] Berhasil terhubung ke database MySQL (sipk_tps_baru).")
 except Exception as e:
-    print(f"\n⚠️  [DATABASE ERROR] Tidak dapat terhubung ke MySQL pada port 3306!")
-    print(f"⚠️  Detail error: {e}")
-    print(f"👉 Solusi: Buka XAMPP Control Panel (D:\\xampp\\xampp-control.exe) lalu klik START pada modul MySQL!\n")
+    print(f"\n[!] [DATABASE ERROR] Tidak dapat terhubung ke MySQL pada port 3306!")
+    print(f"[!] Detail error: {e}")
+    print(f"[>] Solusi: Buka XAMPP Control Panel lalu klik START modul MySQL!\n")
 
 # Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -231,6 +232,7 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(qr_router, prefix="/api")
 app.include_router(pengambilan_router, prefix="/api")
 app.include_router(tps_router, prefix="/api")
+app.include_router(dashboard_router, prefix="/api")
 app.include_router(wilayah_router, prefix="/api")
 app.include_router(laporan_router, prefix="/api")
 app.include_router(setoran_router, prefix="/api")
