@@ -81,3 +81,66 @@ def get_dashboard_stats(
         "pending_reports": pending_reports,
         "timestamp": "2026-11-01T16:41:27.970Z"  # static for now
     }
+
+
+@router.get("/stats/public")
+def get_dashboard_stats_public(db: Session = Depends(get_db)):
+    """
+    Public dashboard stats (no auth required)
+    Used by Admin panel and public dashboards
+    """
+    
+    # Total TPS
+    total_tps = db.query(func.count(TPS.id)).scalar() or 0
+    
+    # TPS by status
+    tps_by_status = db.query(
+        TPS.status,
+        func.count(TPS.id).label("count")
+    ).group_by(TPS.status).all()
+    
+    # TPS by wilayah_kota (region)
+    region_stats = db.query(
+        TPS.wilayah_kota,
+        func.count(TPS.id).label("total_tps"),
+        func.count(TPS.id.distinct()).label("unique_tps"),
+        func.avg(TPS.daya_tampung_m3).label("avg_capacity"),
+        func.sum(
+            case(
+                (TPS.daya_tampung_m3 == None, 1),
+                (TPS.daya_tampung_m3 == 0, 1),
+                else_=0
+            )
+        ).label("missing_capacity")
+    ).group_by(TPS.wilayah_kota).all()
+    
+    # Average capacity across all TPS
+    avg_capacity_all = db.query(func.avg(TPS.daya_tampung_m3)).scalar() or 0
+    
+    # Total reports
+    total_reports = db.query(func.count(LaporanWarga.id)).scalar() or 0
+    
+    # Pending reports (not Selesai)
+    pending_reports = db.query(func.count(LaporanWarga.id)).filter(
+        LaporanWarga.status_tindak_lanjut != 'Selesai'
+    ).scalar() or 0
+    
+    # Format region stats
+    region_data = []
+    for region in region_stats:
+        region_data.append({
+            "wilayah_kota": region.wilayah_kota,
+            "total_tps": region.total_tps,
+            "avg_capacity": float(region.avg_capacity) if region.avg_capacity else None,
+            "has_capacity_data": region.missing_capacity < region.total_tps
+        })
+    
+    return {
+        "total_tps": total_tps,
+        "tps_by_status": [{"status": s.status, "count": s.count} for s in tps_by_status],
+        "regions": region_data,
+        "avg_capacity_all": float(avg_capacity_all) if avg_capacity_all else None,
+        "total_reports": total_reports,
+        "pending_reports": pending_reports,
+        "timestamp": "2026-11-02T13:12:41.803Z"
+    }

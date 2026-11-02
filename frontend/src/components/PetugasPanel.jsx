@@ -189,6 +189,17 @@ export default function PetugasPanel({ onLogout, officerName = 'Hendra', officer
         });
       } catch (err) {
         console.error('Gagal ambil data petugas:', err);
+        setQueueList([]);
+        setHistoryList([]);
+        setStats({
+          targetPengambilan: 0,
+          sudahDiambil: 0,
+          persentaseSelesai: 0,
+          totalMuatanKg: 0,
+          kapasitasTruk: 50
+        });
+        setScanError('Gagal memuat data tugas. Silakan coba lagi.');
+        setTimeout(() => setScanError(''), 4000);
       } finally {
         setLoading(false);
       }

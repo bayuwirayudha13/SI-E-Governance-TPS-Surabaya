@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
-import { TPS_SURABAYA_ALL } from '../data/tpsSurabayaData';
+import { fetchPublicTps } from '../api/tps';
 
 export default function LaporanWargaModal({ isOpen, onClose, targetTps, currentUser }) {
   if (!isOpen) return null;
 
-  const [tpsNama, setTpsNama] = useState(() => targetTps?.nama || 'TPS Mawar');
-  const [tpsId, setTpsId] = useState(() => targetTps?.id || 1);
+  const [tpsList, setTpsList] = useState([]);
+  const [isLoadingTps, setIsLoadingTps] = useState(true);
+  const [tpsNama, setTpsNama] = useState(() => targetTps?.nama || '');
+  const [tpsId, setTpsId] = useState(() => targetTps?.id || null);
   const [jenisLaporan, setJenisLaporan] = useState('Penuh');
   const [deskripsi, setDeskripsi] = useState('');
   const [namaPelapor, setNamaPelapor] = useState(() => currentUser?.nama_lengkap || currentUser?.nama || '');
@@ -16,6 +18,29 @@ export default function LaporanWargaModal({ isOpen, onClose, targetTps, currentU
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Fetch TPS list from API on mount
+  useEffect(() => {
+    const loadTpsList = async () => {
+      setIsLoadingTps(true);
+      try {
+        const data = await fetchPublicTps();
+        setTpsList(data);
+        // Set first TPS as default if no targetTps provided
+        if (!targetTps && data.length > 0) {
+          setTpsNama(data[0].nama);
+          setTpsId(data[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to load TPS list:', error);
+        setTpsList([]);
+      } finally {
+        setIsLoadingTps(false);
+      }
+    };
+
+    loadTpsList();
+  }, [targetTps]);
 
   const handleFotoChange = (e) => {
     const file = e.target.files?.[0];
@@ -176,17 +201,39 @@ export default function LaporanWargaModal({ isOpen, onClose, targetTps, currentU
                   }}>
                     📍 {targetTps.nama} &bull; Kec. {targetTps.kecamatan || '—'}
                   </div>
+                ) : isLoadingTps ? (
+                  <div style={{
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.9rem',
+                    color: '#64748b'
+                  }}>
+                    Memuat daftar TPS...
+                  </div>
+                ) : tpsList.length === 0 ? (
+                  <div style={{
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    fontSize: '0.9rem',
+                    color: '#b91c1c'
+                  }}>
+                    Tidak ada data TPS tersedia
+                  </div>
                 ) : (
                   <select
                     value={tpsNama}
                     onChange={(e) => {
                       setTpsNama(e.target.value);
-                      const found = TPS_SURABAYA_ALL.find(x => x.nama === e.target.value);
+                      const found = tpsList.find(x => x.nama === e.target.value);
                       if (found) setTpsId(found.id);
                     }}
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
                   >
-                    {TPS_SURABAYA_ALL.slice(0, 30).map(t => (
+                    {tpsList.map(t => (
                       <option key={t.id} value={t.nama}>
                         {t.nama} — Kec. {t.kecamatan}
                       </option>

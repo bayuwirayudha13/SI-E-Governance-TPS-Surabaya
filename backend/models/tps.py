@@ -24,6 +24,6 @@ class TPS(Base):
     catatan = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=get_wib_now)
     updated_at = Column(DateTime, default=get_wib_now, onupdate=get_wib_now)
-
-    # Relationships
-    kelurahans = relationship("TPSKelurahan", back_populates="tps", cascade="all, delete-orphan")
+    
+    # Lazy relationship to match back_populates in TPSKelurahan
+    kelurahans = relationship("TPSKelurahan", back_populates="tps", lazy="noload")

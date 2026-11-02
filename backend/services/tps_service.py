@@ -56,3 +56,32 @@ def get_active_public_tps(db: Session) -> List[TPS]:
     return db.query(TPS).filter(
         TPS.status == 'Aktif'
     ).all()
+
+
+def get_active_public_tps_with_coords(db: Session) -> List[dict]:
+    """Get all active TPS with coordinates for public display (for maps)."""
+    tps_list = db.query(TPS).filter(
+        TPS.status == 'Aktif',
+        TPS.latitude.isnot(None),
+        TPS.longitude.isnot(None)
+    ).all()
+    return [
+        {
+            "id": tps.id,
+            "nama": tps.nama,
+            "nama_lama": tps.nama_lama,
+            "lokasi": tps.lokasi,
+            "kecamatan": tps.kecamatan,
+            "wilayah_kota": tps.wilayah_kota,
+            "latitude": str(tps.latitude) if tps.latitude else None,
+            "longitude": str(tps.longitude) if tps.longitude else None,
+            "jenis_tps": tps.jenis_tps,
+            "jumlah_container": tps.jumlah_container,
+            "daya_tampung_m3": str(tps.daya_tampung_m3) if tps.daya_tampung_m3 else None,
+            "status": tps.status,
+            "sumber_data": tps.sumber_data,
+            "tanggal_update": tps.tanggal_update,
+            "catatan": tps.catatan
+        }
+        for tps in tps_list
+    ]

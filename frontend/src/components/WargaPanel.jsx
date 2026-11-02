@@ -684,7 +684,10 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
       }
     } catch (err) {
       console.error('Load warga data error:', err);
+      setUserData(null);
       setPoints((prev) => (prev > 0 ? prev : 1050));
+      setErrorMsg('Gagal memuat data warga. Silakan coba lagi.');
+      setTimeout(() => setErrorMsg(''), 4000);
     }
   };
 
@@ -700,6 +703,10 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
       }
     } catch (err) {
       console.error('Load setoran data error:', err);
+      setTotalSetoran(0);
+      setTotalKg(0);
+      setErrorMsg('Gagal memuat data setoran. Silakan coba lagi.');
+      setTimeout(() => setErrorMsg(''), 4000);
     }
   };
 
@@ -714,9 +721,14 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
         // Find latest pending or processing, or just latest if all completed
         const active = sorted.find(s => s.status === 'Menunggu Penjemputan' || s.status === 'Sedang Diproses') || sorted[0];
         setCurrentSetoran(active);
+      } else {
+        setCurrentSetoran(null);
       }
     } catch (err) {
       console.error('Load current setoran error:', err);
+      setCurrentSetoran(null);
+      setErrorMsg('Gagal memuat status validasi. Silakan coba lagi.');
+      setTimeout(() => setErrorMsg(''), 4000);
     }
   };
 
@@ -727,9 +739,14 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
       const response = await api.get(`/api/setoran/?warga_id=${actualWargaId}`);
       if (response.data && Array.isArray(response.data)) {
         setSetoranHistory(response.data.sort((a, b) => b.id - a.id));
+      } else {
+        setSetoranHistory([]);
       }
     } catch (err) {
       console.error('Load setoran history error:', err);
+      setSetoranHistory([]);
+      setErrorMsg('Gagal memuat riwayat pengambilan. Silakan coba lagi.');
+      setTimeout(() => setErrorMsg(''), 4000);
     }
   };
 
@@ -770,9 +787,14 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
           };
         });
         setScheduleItems(formatted);
+      } else {
+        setScheduleItems([]);
       }
     } catch (err) {
       console.error('Load jadwal data error:', err);
+      setScheduleItems([]);
+      setErrorMsg('Gagal memuat jadwal pengambilan. Silakan coba lagi.');
+      setTimeout(() => setErrorMsg(''), 4000);
     }
   };
 

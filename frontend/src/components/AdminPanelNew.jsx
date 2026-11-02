@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import AdminChat from './AdminChat';
-import { TPS_SURABAYA_ALL } from '../data/tpsSurabayaData';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -15,6 +14,16 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [activeTps, setActiveTps] = useState([]);
+  const [tpsStats, setTpsStats] = useState({});
+  const [dashboardStats, setDashboardStats] = useState({
+    total_tps: 0,
+    tps_by_status: [],
+    regions: [],
+    avg_capacity_all: 0,
+    total_reports: 0,
+    pending_reports: 0
+  });
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem('sipetasan_sidebar_collapsed') === 'true';
@@ -48,6 +57,48 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
     }
   }, []);
 
+  // Fetch dashboard stats from API
+  useEffect(() => {
+    const loadDashboardStats = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/dashboard/stats/public`);
+        if (response.ok) {
+          const data = await response.json();
+          setDashboardStats(data);
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard stats:', err);
+      }
+    };
+
+    const loadTpsData = async () => {
+      try {
+        // We still need individual TPS for the "Radar" and other detailed views
+        const response = await fetch(`${API_BASE}/api/tps/public`);
+        if (response.ok) {
+          const tpsData = await response.json();
+          setActiveTps(tpsData);
+          
+          // Calculate stats for backward compatibility in some components if needed
+          const totalCapacity = tpsData.reduce((acc, tps) => acc + (parseFloat(tps.daya_tampung_m3) || 0), 0);
+          const avgCap = tpsData.length > 0 ? (totalCapacity / tpsData.length).toFixed(1) : 0;
+          
+          setTpsStats({
+            total: tpsData.length,
+            active: tpsData.filter(t => t.status === 'Aktif').length,
+            avgCapacity: avgCap,
+            criticalCount: tpsData.filter(t => (parseFloat(t.daya_tampung_m3) || 0) > 40).length // Mock threshold
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load TPS data:', err);
+      }
+    };
+
+    loadDashboardStats();
+    loadTpsData();
+  }, []);
+
   useEffect(() => {
     if (activeMenu === 'warga' || activeMenu === 'dashboard') {
       loadWargas();
@@ -73,14 +124,20 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
           return;
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error('Load laporan API error:', err);
+      setError('Gagal memuat laporan terbaru dari server.');
+      setTimeout(() => setError(''), 4000);
+    }
     try {
       const saved = JSON.parse(localStorage.getItem('sipetasan_laporan_warga') || '[]');
       if (saved.length > 0) {
         setLaporanList(saved);
         return;
       }
-    } catch {}
+    } catch (err) {
+      console.error('Load laporan localStorage error:', err);
+    }
     setLaporanList([
       { id: 101, tps_nama: 'TPS PRINGADI', jenis_laporan: 'Penuh', deskripsi: 'Kontainer meluber ke badan jalan, bau menyengat.', status_tindak_lanjut: 'Menunggu', tanggal_lapor: '10 menit lalu' },
       { id: 102, tps_nama: 'TPS KEPUTRAN', jenis_laporan: 'Rusak', deskripsi: 'Roda kontainer patah dan penutup tidak bisa dibuka.', status_tindak_lanjut: 'Proses', tanggal_lapor: '35 menit lalu' },
@@ -110,9 +167,14 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
       if (response.ok) {
         const data = await response.json();
         setRiwayat(data);
+      } else {
+        setRiwayat([]);
       }
     } catch (err) {
       console.error('Load riwayat error:', err);
+      setRiwayat([]);
+      setError('Gagal memuat riwayat pengambilan. Silakan coba lagi.');
+      setTimeout(() => setError(''), 4000);
     }
   };
 
@@ -126,9 +188,14 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
       if (response.ok) {
         const data = await response.json();
         setWargas(data);
+      } else {
+        setWargas([]);
       }
     } catch (err) {
       console.error('Load wargas error:', err);
+      setWargas([]);
+      setError('Gagal memuat data warga. Silakan coba lagi.');
+      setTimeout(() => setError(''), 4000);
     }
   };
 
@@ -138,9 +205,14 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
       if (response.ok) {
         const data = await response.json();
         setJadwals(data);
+      } else {
+        setJadwals([]);
       }
     } catch (err) {
       console.error('Load jadwals error:', err);
+      setJadwals([]);
+      setError('Gagal memuat jadwal pengambilan. Silakan coba lagi.');
+      setTimeout(() => setError(''), 4000);
     }
   };
 
@@ -360,11 +432,11 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
 
         {/* DASHBOARD EKSEKUTIF ADMIN */}
         {activeMenu === 'dashboard' && (() => {
-          const totalTpsCount = TPS_SURABAYA_ALL.length;
-          const criticalTpsList = TPS_SURABAYA_ALL.filter(t => (t.kapasitasPersen || t.capacity || 0) >= 80);
-          const avgCapacityPercent = Math.round(
-            TPS_SURABAYA_ALL.reduce((acc, t) => acc + (t.kapasitasPersen || t.capacity || 50), 0) / (totalTpsCount || 1)
-          );
+          const totalTpsCount = activeTps.length || tpsStats.totalCount || 0;
+          const criticalTpsList = tpsStats.criticalTps || activeTps.filter(t => (t.kapasitasPersen || t.capacity || 0) >= 80);
+          const avgCapacityPercent = tpsStats.avgCapacityPercent || (totalTpsCount > 0
+            ? Math.round(activeTps.reduce((acc, t) => acc + (t.kapasitasPersen || t.capacity || 50), 0) / totalTpsCount)
+            : 0);
           const pendingReports = laporanList.filter(l => l.status_tindak_lanjut !== 'Selesai');
 
           const REGIONS = [
@@ -376,7 +448,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
           ];
 
           const regionStats = REGIONS.map(reg => {
-            const list = TPS_SURABAYA_ALL.filter(t => t.wilayahKota === reg.name);
+            const list = activeTps.filter(t => t.wilayahKota === reg.name);
             const count = list.length || 1;
             const avg = Math.round(list.reduce((acc, t) => acc + (t.kapasitasPersen || t.capacity || 50), 0) / count);
             const crit = list.filter(t => (t.kapasitasPersen || t.capacity || 0) >= 80).length;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TPS_SURABAYA_ALL } from '../data/tpsSurabayaData';
+import { fetchAllTps, extractRegionsFromTps } from '../api/tpsStats';
 import TpsMapSuperadmin from './TpsMapSuperadmin';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -109,6 +109,21 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
     })();
   }, []);
 
+  // Fetch TPS data from API
+  useEffect(() => {
+    const loadTpsData = async () => {
+      try {
+        const data = await fetchAllTps();
+        setTpsList(data);
+      } catch (err) {
+        console.error('Failed to load TPS data:', err);
+        setTpsList([]);
+      }
+    };
+
+    loadTpsData();
+  }, []);
+
   // load kelurahan saat kecamatan newUser / editUser berubah (dropdown tingkat 2)
   useEffect(() => {
     const kec = editUser ? editUser.wilayah_kecamatan : newUser.wilayah_kecamatan;
@@ -153,9 +168,16 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
         const data = await response.json();
         setUsers(data);
         setPetugasList(data.filter(u => u.role === 'petugas' || u.role === 'admin' || u.role === 'superadmin' || u.role === 'driver' || u.role === 'petugas_kelurahan' || u.role === 'petugas_pengangkut'));
+      } else {
+        setUsers([]);
+        setPetugasList([]);
       }
     } catch (err) {
       console.error('Load users error:', err);
+      setUsers([]);
+      setPetugasList([]);
+      setError('Gagal memuat data pengguna. Silakan coba lagi.');
+      setTimeout(() => setError(''), 4000);
     }
   };
 
@@ -165,9 +187,14 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
       if (response.ok) {
         const data = await response.json();
         setJadwals(data);
+      } else {
+        setJadwals([]);
       }
     } catch (err) {
       console.error('Load jadwals error:', err);
+      setJadwals([]);
+      setError('Gagal memuat jadwal pengambilan. Silakan coba lagi.');
+      setTimeout(() => setError(''), 4000);
     }
   };
 
@@ -181,14 +208,20 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
           return;
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error('Load laporan API error:', err);
+      setError('Gagal memuat laporan dari server.');
+      setTimeout(() => setError(''), 4000);
+    }
     try {
       const saved = JSON.parse(localStorage.getItem('sipetasan_laporan_warga') || '[]');
       if (saved.length > 0) {
         setLaporanList(saved);
         return;
       }
-    } catch {}
+    } catch (err) {
+      console.error('Load laporan localStorage error:', err);
+    }
     setLaporanList([
       { id: 101, tps_nama: 'TPS PRINGADI', jenis_laporan: 'Penuh', deskripsi: 'Kontainer meluber ke badan jalan, bau menyengat.', status_tindak_lanjut: 'Menunggu', tanggal_lapor: '10 menit lalu' },
       { id: 102, tps_nama: 'TPS KEPUTRAN', jenis_laporan: 'Rusak', deskripsi: 'Roda kontainer patah dan penutup tidak bisa dibuka.', status_tindak_lanjut: 'Proses', tanggal_lapor: '35 menit lalu' },
@@ -217,9 +250,15 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
       } else {
         const txt = await response.text();
         console.error('Load TPS failed:', response.status, txt);
+        setTpsList([]);
+        setError('Gagal memuat data TPS dari server.');
+        setTimeout(() => setError(''), 4000);
       }
     } catch (err) {
       console.error('Load TPS error:', err);
+      setTpsList([]);
+      setError('Gagal memuat data TPS. Silakan coba lagi.');
+      setTimeout(() => setError(''), 4000);
     }
   };
 
@@ -235,9 +274,13 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
         setDashboardStats(data);
       } else {
         console.error('Load dashboard stats failed:', response.status);
+        setDashboardStats(null);
       }
     } catch (err) {
       console.error('Load dashboard stats error:', err);
+      setDashboardStats(null);
+      setError('Gagal memuat statistik dashboard. Silakan coba lagi.');
+      setTimeout(() => setError(''), 4000);
     } finally {
       setDashboardStatsLoading(false);
     }
@@ -334,12 +377,38 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
       const token = getToken();
       if (!token) throw new Error('Token tidak ditemukan, login ulang sebagai superadmin');
       
+      // Helper to safely parse coordinate strings/numbers
+      const parseCoord = (val) => {
+        if (val === '' || val === null || val === undefined) return null;
+        const str = String(val).replace(',', '.');
+        return parseFloat(str);
+      };
+      
+      // Validate coordinates format before sending
+      const latVal = parseCoord(newTps.latitude);
+      const lngVal = parseCoord(newTps.longitude);
+      
+      if (newTps.latitude && (isNaN(latVal) || !/^-?\d+\.?\d*$/.test(String(newTps.latitude).replace(',', '.')))) {
+        throw new Error('Format latitude tidak valid. Gunakan desimal seperti: -7.2575');
+      }
+      if (newTps.longitude && (isNaN(lngVal) || !/^-?\d+\.?\d*$/.test(String(newTps.longitude).replace(',', '.')))) {
+        throw new Error('Format longitude tidak valid. Gunakan desimal seperti: 112.7521');
+      }
+      
       const payload = {
         ...newTps,
-        latitude: newTps.latitude ? parseFloat(newTps.latitude) : null,
-        longitude: newTps.longitude ? parseFloat(newTps.longitude) : null,
+        latitude: latVal,
+        longitude: lngVal,
         daya_tampung_m3: newTps.daya_tampung_m3 ? parseFloat(newTps.daya_tampung_m3) : null
       };
+
+      // Validate latitude/longitude ranges before sending
+      if (payload.latitude !== null && (payload.latitude < -90 || payload.latitude > 90)) {
+        throw new Error('Latitude harus antara -90 dan 90');
+      }
+      if (payload.longitude !== null && (payload.longitude < -180 || payload.longitude > 180)) {
+        throw new Error('Longitude harus antara -180 dan 180');
+      }
 
       const url = editingTpsId ? `${API_BASE}/api/tps/${editingTpsId}` : `${API_BASE}/api/tps/`;
       const method = editingTpsId ? 'PUT' : 'POST';
@@ -2158,8 +2227,8 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                 <div className="form-group">
                   <label className="form-label">Latitude</label>
                   <input
-                    type="number"
-                    step="any"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="-7.2575"
                     className="settings-input"
                     value={newTps.latitude}
@@ -2169,8 +2238,8 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                 <div className="form-group">
                   <label className="form-label">Longitude</label>
                   <input
-                    type="number"
-                    step="any"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="112.7521"
                     className="settings-input"
                     value={newTps.longitude}
