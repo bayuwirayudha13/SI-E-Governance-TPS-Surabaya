@@ -257,10 +257,11 @@ export default function App() {
 
   const handleLoginSuccess = (user) => {
     setSessionNotice("");
-    localStorage.setItem("auth_user", JSON.stringify(user));
+    // Simpan context user per-tab agar tidak menimpa tab lain
+    sessionStorage.setItem("auth_user", JSON.stringify(user));
+    sessionStorage.setItem("user_role", user.role || "warga");
+    sessionStorage.setItem("user_email", user.email || "");
     setCurrentUser(user);
-    localStorage.setItem("user_role", user.role || "warga");
-    localStorage.setItem("user_email", user.email || "");
     if (user.role === "superadmin") {
       setCurrentPage("admin");
       window.location.hash = "superadmin";

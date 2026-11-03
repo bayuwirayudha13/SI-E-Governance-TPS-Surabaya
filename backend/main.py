@@ -57,9 +57,16 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 app = FastAPI(title="SampahPintar API")
 
 # CORS
+cors_origins_env = os.getenv(
+    "CORS_ALLOW_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173",
+)
+allow_origins = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=allow_origins,
+    allow_origin_regex=r"^https://.*\.trycloudflare\.com$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -99,7 +106,7 @@ class UserResponse(BaseModel):
 def get_current_user(token: str = None, db: Session = Depends(get_db)):
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
+
     if token.startswith("demo-token-"):
         if "admin" in token:
             user = db.query(User).filter(User.role.in_(["admin", "superadmin"])).first()
@@ -149,7 +156,7 @@ def get_current_user(token: str = None, db: Session = Depends(get_db)):
             raise HTTPException(status_code=401, detail="Invalid token")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
-    
+
     # Cek Warga dulu jika role = warga
     if role == "warga":
         warga = db.query(Warga).filter(Warga.email == email).first()
@@ -166,7 +173,7 @@ def get_current_user(token: str = None, db: Session = Depends(get_db)):
                 "alamat_rumah": warga.alamat_rumah,
                 "total_poin": warga.total_poin
             }
-    
+
     # Cek tabel users (admin/petugas/superadmin)
     user = db.query(User).filter(User.email == email).first()
     if user:
@@ -183,7 +190,7 @@ def get_current_user(token: str = None, db: Session = Depends(get_db)):
             "wilayah_kota": getattr(user, "wilayah_kota", None),
             "foto_url": getattr(user, "foto_url", None),
         }
-    
+
     # Fallback Warga by email
     warga = db.query(Warga).filter(Warga.email == email).first()
     if warga:

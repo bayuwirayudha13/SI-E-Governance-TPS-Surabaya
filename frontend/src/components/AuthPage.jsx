@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { api, authService } from "../api/client";
+import { api, authService, API_BASE_URL } from "../api/client";
 
 const DEFAULT_KECAMATAN = [
   "Asemrowo",
@@ -417,25 +417,22 @@ export default function AuthPage({
     // REGISTER
     // =======================================================
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/auth/register`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            email: email.trim(),
-            password,
-            full_name: fullName.trim(),
-            alamat_rumah: alamatRumah.trim(),
-            kecamatan: kecamatan.trim(),
-            kelurahan: kelurahan.trim(),
-          }),
+      const token = authService.getToken();
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-      );
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          full_name: fullName.trim(),
+          alamat_rumah: alamatRumah.trim(),
+          kecamatan: kecamatan.trim(),
+          kelurahan: kelurahan.trim(),
+        }),
+      });
 
       const data = await response.json();
 
@@ -484,19 +481,16 @@ export default function AuthPage({
     setOtpStatus(null);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/auth/verify-otp`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: email.trim(),
-            otp: enteredOtp,
-          }),
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          email: email.trim(),
+          otp: enteredOtp,
+        }),
+      });
 
       const data = await response.json();
 
@@ -551,18 +545,15 @@ export default function AuthPage({
     setOtpStatus(null);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/auth/resend-otp`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: email.trim(),
-          }),
+      const response = await fetch(`${API_BASE_URL}/api/auth/resend-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          email: email.trim(),
+        }),
+      });
 
       const data = await response.json();
 
@@ -612,18 +603,15 @@ export default function AuthPage({
     setOtpStatus(null);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/auth/forgot-password`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: resetEmail.trim(),
-          }),
+      const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          email: resetEmail.trim(),
+        }),
+      });
 
       const data = await response.json();
 
@@ -673,7 +661,7 @@ export default function AuthPage({
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/auth/verify-reset-otp`,
+        `${API_BASE_URL}/api/auth/verify-reset-otp`,
         {
           method: "POST",
           headers: {
@@ -739,19 +727,16 @@ export default function AuthPage({
     setOtpStatus(null);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/auth/reset-password`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: resetEmail.trim(),
-            new_password: newPassword,
-          }),
+      const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          email: resetEmail.trim(),
+          new_password: newPassword,
+        }),
+      });
 
       const data = await response.json();
 

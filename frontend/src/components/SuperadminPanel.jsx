@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { fetchAllTps, extractRegionsFromTps } from '../api/tpsStats';
-import TpsMapSuperadmin from './TpsMapSuperadmin';
+import React, { useState, useEffect } from "react";
+import { fetchAllTps, extractRegionsFromTps } from "../api/tpsStats";
+import { API_BASE_URL } from "../api/client";
+import TpsMapSuperadmin from "./TpsMapSuperadmin";
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = API_BASE_URL;
 
-export default function SuperadminPanel({ onLogout, currentUser: userFromProp }) {
-  const [activeMenu, setActiveMenu] = useState('dashboard');
+export default function SuperadminPanel({
+  onLogout,
+  currentUser: userFromProp,
+}) {
+  const [activeMenu, setActiveMenu] = useState("dashboard");
   const [currentUser, setCurrentUser] = useState(userFromProp);
   const [users, setUsers] = useState([]);
   const [petugasList, setPetugasList] = useState([]);
@@ -17,65 +21,118 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
   const [showAddJadwalModal, setShowAddJadwalModal] = useState(false);
   const [showAddTpsModal, setShowAddTpsModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    return localStorage.getItem('sipetasan_sidebar_collapsed') === 'true';
+    return localStorage.getItem("sipetasan_sidebar_collapsed") === "true";
   });
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed((prev) => {
       const next = !prev;
-      localStorage.setItem('sipetasan_sidebar_collapsed', String(next));
+      localStorage.setItem("sipetasan_sidebar_collapsed", String(next));
       return next;
     });
   };
 
   // Form states — dropdown kecamatan/kelurahan seperti register warga
   const KEC_DEFAULT = [
-    'Asemrowo','Benowo','Bubutan','Bulak','Dukuh Pakis','Gayungan','Genteng','Gubeng','Gunung Anyar','Jambangan','Karang Pilang','Kenjeran','Krembangan','Lakarsantri','Mulyorejo','Pabean Cantian','Pakal','Rungkut','Sambikerep','Sawahan','Semampir','Simokerto','Sukolilo','Sukomanunggal','Tambaksari','Tandes','Tegalsari','Tenggilis Mejoyo','Wiyung','Wonocolo','Wonokromo'
+    "Asemrowo",
+    "Benowo",
+    "Bubutan",
+    "Bulak",
+    "Dukuh Pakis",
+    "Gayungan",
+    "Genteng",
+    "Gubeng",
+    "Gunung Anyar",
+    "Jambangan",
+    "Karang Pilang",
+    "Kenjeran",
+    "Krembangan",
+    "Lakarsantri",
+    "Mulyorejo",
+    "Pabean Cantian",
+    "Pakal",
+    "Rungkut",
+    "Sambikerep",
+    "Sawahan",
+    "Semampir",
+    "Simokerto",
+    "Sukolilo",
+    "Sukomanunggal",
+    "Tambaksari",
+    "Tandes",
+    "Tegalsari",
+    "Tenggilis Mejoyo",
+    "Wiyung",
+    "Wonocolo",
+    "Wonokromo",
   ];
-  const [newUser, setNewUser] = useState({ nama_lengkap: '', email: '', password: '', role: 'petugas', wilayah_kecamatan: '', wilayah_kelurahan: '', foto_url: '' });
+  const [newUser, setNewUser] = useState({
+    nama_lengkap: "",
+    email: "",
+    password: "",
+    role: "petugas",
+    wilayah_kecamatan: "",
+    wilayah_kelurahan: "",
+    foto_url: "",
+  });
   const [editUser, setEditUser] = useState(null); // {id, ...} saat klik Edit (hijau) / View (merah)
   const [viewUser, setViewUser] = useState(null);
   const [kecamatanOptions, setKecamatanOptions] = useState(KEC_DEFAULT);
   const [kelurahanOptions, setKelurahanOptions] = useState([]);
   const [newUserFotoFile, setNewUserFotoFile] = useState(null);
-  const [newUserFotoPreview, setNewUserFotoPreview] = useState('');
+  const [newUserFotoPreview, setNewUserFotoPreview] = useState("");
   const [editFotoFile, setEditFotoFile] = useState(null);
-  const [editFotoPreview, setEditFotoPreview] = useState('');
-  const [newJadwal, setNewJadwal] = useState({ hari: '', waktu_mulai: '', waktu_selesai: '', area: '', petugas: '', tipe: 'Rutin' });
+  const [editFotoPreview, setEditFotoPreview] = useState("");
+  const [newJadwal, setNewJadwal] = useState({
+    hari: "",
+    waktu_mulai: "",
+    waktu_selesai: "",
+    area: "",
+    petugas: "",
+    tipe: "Rutin",
+  });
   const [newTps, setNewTps] = useState({
-    nama: '',
-    kecamatan: '',
-    wilayah_kota: 'Surabaya Pusat',
-    lokasi: '',
-    jenis_tps: 'TPS Resmi',
-    latitude: '',
-    longitude: '',
-    jumlah_container: '',
-    daya_tampung_m3: '',
-    status: 'Aktif'
+    nama: "",
+    kecamatan: "",
+    wilayah_kota: "Surabaya Pusat",
+    lokasi: "",
+    jenis_tps: "TPS Resmi",
+    latitude: "",
+    longitude: "",
+    jumlah_container: "",
+    daya_tampung_m3: "",
+    status: "Aktif",
   });
   const [editingTpsId, setEditingTpsId] = useState(null);
-  const [tpsSearchQuery, setTpsSearchQuery] = useState('');
-  const [tpsFilterKecamatan, setTpsFilterKecamatan] = useState('');
-  const [tpsFilterKelurahan, setTpsFilterKelurahan] = useState('');
-  const [tpsFilterCapacity, setTpsFilterCapacity] = useState({ min: '', max: '' });
-  const [tpsFilterStatus, setTpsFilterStatus] = useState('');
+  const [tpsSearchQuery, setTpsSearchQuery] = useState("");
+  const [tpsFilterKecamatan, setTpsFilterKecamatan] = useState("");
+  const [tpsFilterKelurahan, setTpsFilterKelurahan] = useState("");
+  const [tpsFilterCapacity, setTpsFilterCapacity] = useState({
+    min: "",
+    max: "",
+  });
+  const [tpsFilterStatus, setTpsFilterStatus] = useState("");
   const [tpsFilteredList, setTpsFilteredList] = useState([]);
   const [availableKelurahan, setAvailableKelurahan] = useState([]);
   const [showTpsFilterPopover, setShowTpsFilterPopover] = useState(false);
   const [dashboardStats, setDashboardStats] = useState(null);
   const [dashboardStatsLoading, setDashboardStatsLoading] = useState(false);
-  const [settings, setSettings] = useState({ website_name: 'SI-PETASAN', website_email: 'admin@sipetasan.com', current_password: '', new_password: '' });
+  const [settings, setSettings] = useState({
+    website_name: "SI-PETASAN",
+    website_email: "admin@sipetasan.com",
+    current_password: "",
+    new_password: "",
+  });
 
   // Load current user
   useEffect(() => {
-    const token = sessionStorage.getItem('access_token');
-    const userData = sessionStorage.getItem('user_role');
-    const authUser = sessionStorage.getItem('auth_user');
+    const token = sessionStorage.getItem("access_token");
+    const userData = sessionStorage.getItem("user_role");
+    const authUser = sessionStorage.getItem("auth_user");
 
     if (token) {
       if (authUser) {
@@ -83,8 +140,9 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
       } else {
         setCurrentUser({
           role: userData,
-          email: sessionStorage.getItem('user_email') || 'superadmin@sipetasan.com',
-          nama_lengkap: 'Super Admin'
+          email:
+            sessionStorage.getItem("user_email") || "superadmin@sipetasan.com",
+          nama_lengkap: "Super Admin",
         });
       }
     }
@@ -103,7 +161,8 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
         const r = await fetch(`${API_BASE}/api/wilayah/kecamatan`);
         if (r.ok) {
           const d = await r.json();
-          if (Array.isArray(d) && d.length) setKecamatanOptions(d.map(x => x.nama || x));
+          if (Array.isArray(d) && d.length)
+            setKecamatanOptions(d.map((x) => x.nama || x));
         }
       } catch {}
     })();
@@ -116,7 +175,7 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
         const data = await fetchAllTps();
         setTpsList(data);
       } catch (err) {
-        console.error('Failed to load TPS data:', err);
+        console.error("Failed to load TPS data:", err);
         setTpsList([]);
       }
     };
@@ -126,58 +185,96 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
 
   // load kelurahan saat kecamatan newUser / editUser berubah (dropdown tingkat 2)
   useEffect(() => {
-    const kec = editUser ? editUser.wilayah_kecamatan : newUser.wilayah_kecamatan;
-    if (!kec) { setKelurahanOptions([]); return; }
+    const kec = editUser
+      ? editUser.wilayah_kecamatan
+      : newUser.wilayah_kecamatan;
+    if (!kec) {
+      setKelurahanOptions([]);
+      return;
+    }
     (async () => {
       try {
-        const r = await fetch(`${API_BASE}/api/wilayah/kelurahan?kecamatan=${encodeURIComponent(kec)}`);
-        if (r.ok) { const d = await r.json(); setKelurahanOptions((d||[]).map(x=>x.nama||x)); }
-      } catch { setKelurahanOptions([]); }
+        const r = await fetch(
+          `${API_BASE}/api/wilayah/kelurahan?kecamatan=${encodeURIComponent(kec)}`,
+        );
+        if (r.ok) {
+          const d = await r.json();
+          setKelurahanOptions((d || []).map((x) => x.nama || x));
+        }
+      } catch {
+        setKelurahanOptions([]);
+      }
     })();
   }, [newUser.wilayah_kecamatan, editUser?.wilayah_kecamatan]);
 
   // Get current date
   const getCurrentDate = () => {
-    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const days = [
+      "Minggu",
+      "Senin",
+      "Selasa",
+      "Rabu",
+      "Kamis",
+      "Jumat",
+      "Sabtu",
+    ];
     const date = new Date();
     const dayName = days[date.getDay()];
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = date.toLocaleString('id-ID', { month: 'long' });
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = date.toLocaleString("id-ID", { month: "long" });
     const year = date.getFullYear();
     return `${dayName}, ${day} ${month} ${year}`;
   };
 
   // Check if day is passed
   const isDayPassed = (day) => {
-    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const days = [
+      "Minggu",
+      "Senin",
+      "Selasa",
+      "Rabu",
+      "Kamis",
+      "Jumat",
+      "Sabtu",
+    ];
     const todayIndex = new Date().getDay();
     const targetIndex = days.indexOf(day);
     if (targetIndex === -1) return false;
     return targetIndex < todayIndex;
   };
 
-  const getToken = () => sessionStorage.getItem('access_token');
+  const getToken = () => sessionStorage.getItem("access_token");
 
   const loadUsers = async () => {
     try {
       const token = getToken();
       const response = await fetch(`${API_BASE}/api/admin/users`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         const data = await response.json();
         setUsers(data);
-        setPetugasList(data.filter(u => u.role === 'petugas' || u.role === 'admin' || u.role === 'superadmin' || u.role === 'driver' || u.role === 'petugas_kelurahan' || u.role === 'petugas_pengangkut'));
+        setPetugasList(
+          data.filter(
+            (u) =>
+              u.role === "petugas" ||
+              u.role === "admin" ||
+              u.role === "superadmin" ||
+              u.role === "driver" ||
+              u.role === "petugas_kelurahan" ||
+              u.role === "petugas_pengangkut",
+          ),
+        );
       } else {
         setUsers([]);
         setPetugasList([]);
       }
     } catch (err) {
-      console.error('Load users error:', err);
+      console.error("Load users error:", err);
       setUsers([]);
       setPetugasList([]);
-      setError('Gagal memuat data pengguna. Silakan coba lagi.');
-      setTimeout(() => setError(''), 4000);
+      setError("Gagal memuat data pengguna. Silakan coba lagi.");
+      setTimeout(() => setError(""), 4000);
     }
   };
 
@@ -191,10 +288,10 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
         setJadwals([]);
       }
     } catch (err) {
-      console.error('Load jadwals error:', err);
+      console.error("Load jadwals error:", err);
       setJadwals([]);
-      setError('Gagal memuat jadwal pengambilan. Silakan coba lagi.');
-      setTimeout(() => setError(''), 4000);
+      setError("Gagal memuat jadwal pengambilan. Silakan coba lagi.");
+      setTimeout(() => setError(""), 4000);
     }
   };
 
@@ -209,36 +306,67 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
         }
       }
     } catch (err) {
-      console.error('Load laporan API error:', err);
-      setError('Gagal memuat laporan dari server.');
-      setTimeout(() => setError(''), 4000);
+      console.error("Load laporan API error:", err);
+      setError("Gagal memuat laporan dari server.");
+      setTimeout(() => setError(""), 4000);
     }
     try {
-      const saved = JSON.parse(localStorage.getItem('sipetasan_laporan_warga') || '[]');
+      const saved = JSON.parse(
+        localStorage.getItem("sipetasan_laporan_warga") || "[]",
+      );
       if (saved.length > 0) {
         setLaporanList(saved);
         return;
       }
     } catch (err) {
-      console.error('Load laporan localStorage error:', err);
+      console.error("Load laporan localStorage error:", err);
     }
     setLaporanList([
-      { id: 101, tps_nama: 'TPS PRINGADI', jenis_laporan: 'Penuh', deskripsi: 'Kontainer meluber ke badan jalan, bau menyengat.', status_tindak_lanjut: 'Menunggu', tanggal_lapor: '10 menit lalu' },
-      { id: 102, tps_nama: 'TPS KEPUTRAN', jenis_laporan: 'Rusak', deskripsi: 'Roda kontainer patah dan penutup tidak bisa dibuka.', status_tindak_lanjut: 'Proses', tanggal_lapor: '35 menit lalu' },
-      { id: 103, tps_nama: 'TPS KALISARI', jenis_laporan: 'Penuh', deskripsi: 'Tumpukan sampah plastik memenuhi bak kontainer.', status_tindak_lanjut: 'Menunggu', tanggal_lapor: '1 jam lalu' }
+      {
+        id: 101,
+        tps_nama: "TPS PRINGADI",
+        jenis_laporan: "Penuh",
+        deskripsi: "Kontainer meluber ke badan jalan, bau menyengat.",
+        status_tindak_lanjut: "Menunggu",
+        tanggal_lapor: "10 menit lalu",
+      },
+      {
+        id: 102,
+        tps_nama: "TPS KEPUTRAN",
+        jenis_laporan: "Rusak",
+        deskripsi: "Roda kontainer patah dan penutup tidak bisa dibuka.",
+        status_tindak_lanjut: "Proses",
+        tanggal_lapor: "35 menit lalu",
+      },
+      {
+        id: 103,
+        tps_nama: "TPS KALISARI",
+        jenis_laporan: "Penuh",
+        deskripsi: "Tumpukan sampah plastik memenuhi bak kontainer.",
+        status_tindak_lanjut: "Menunggu",
+        tanggal_lapor: "1 jam lalu",
+      },
     ]);
   };
 
   const handleDispatchTruck = (tps) => {
     setDispatchedTpsList((prev) => [...prev, tps.id]);
-    setSuccess(`Instruksi Disposisi Terkirim! Truk Armada DLH SBY-${Math.floor(10 + Math.random() * 89)} segera meluncur ke ${tps.nama} (Kecamatan ${tps.kecamatan}).`);
-    setTimeout(() => setSuccess(''), 5000);
+    setSuccess(
+      `Instruksi Disposisi Terkirim! Truk Armada DLH SBY-${Math.floor(10 + Math.random() * 89)} segera meluncur ke ${tps.nama} (Kecamatan ${tps.kecamatan}).`,
+    );
+    setTimeout(() => setSuccess(""), 5000);
   };
 
   const handleResolveLaporan = (id) => {
-    setLaporanList((prev) => prev.map(item => item.id === id ? { ...item, status_tindak_lanjut: 'Selesai' } : item));
-    setSuccess(`Laporan aduan #${id} berhasil divalidasi dan ditandai selesai ditangani.`);
-    setTimeout(() => setSuccess(''), 4500);
+    setLaporanList((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, status_tindak_lanjut: "Selesai" } : item,
+      ),
+    );
+    setSuccess(
+      `Laporan aduan #${id} berhasil divalidasi dan ditandai selesai ditangani.`,
+    );
+    setTimeout(() => setSuccess(""), 4500);
   };
 
   const loadTps = async () => {
@@ -249,16 +377,16 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
         setTpsList(data);
       } else {
         const txt = await response.text();
-        console.error('Load TPS failed:', response.status, txt);
+        console.error("Load TPS failed:", response.status, txt);
         setTpsList([]);
-        setError('Gagal memuat data TPS dari server.');
-        setTimeout(() => setError(''), 4000);
+        setError("Gagal memuat data TPS dari server.");
+        setTimeout(() => setError(""), 4000);
       }
     } catch (err) {
-      console.error('Load TPS error:', err);
+      console.error("Load TPS error:", err);
       setTpsList([]);
-      setError('Gagal memuat data TPS. Silakan coba lagi.');
-      setTimeout(() => setError(''), 4000);
+      setError("Gagal memuat data TPS. Silakan coba lagi.");
+      setTimeout(() => setError(""), 4000);
     }
   };
 
@@ -267,20 +395,20 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
     try {
       const token = getToken();
       const response = await fetch(`${API_BASE}/api/dashboard/stats`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (response.ok) {
         const data = await response.json();
         setDashboardStats(data);
       } else {
-        console.error('Load dashboard stats failed:', response.status);
+        console.error("Load dashboard stats failed:", response.status);
         setDashboardStats(null);
       }
     } catch (err) {
-      console.error('Load dashboard stats error:', err);
+      console.error("Load dashboard stats error:", err);
       setDashboardStats(null);
-      setError('Gagal memuat statistik dashboard. Silakan coba lagi.');
-      setTimeout(() => setError(''), 4000);
+      setError("Gagal memuat statistik dashboard. Silakan coba lagi.");
+      setTimeout(() => setError(""), 4000);
     } finally {
       setDashboardStatsLoading(false);
     }
@@ -294,10 +422,14 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
     }
     (async () => {
       try {
-        const r = await fetch(`${API_BASE}/api/wilayah/kelurahan?kecamatan=${encodeURIComponent(tpsFilterKecamatan)}`);
+        const r = await fetch(
+          `${API_BASE}/api/wilayah/kelurahan?kecamatan=${encodeURIComponent(tpsFilterKecamatan)}`,
+        );
         if (r.ok) {
           const d = await r.json();
-          setAvailableKelurahan(Array.isArray(d) ? d.map(x => x.nama || x) : []);
+          setAvailableKelurahan(
+            Array.isArray(d) ? d.map((x) => x.nama || x) : [],
+          );
         }
       } catch {}
     })();
@@ -306,135 +438,188 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
   // Filter TPS based on search and filters
   useEffect(() => {
     let result = [...tpsList];
-    
+
     // Search filter
     if (tpsSearchQuery.trim()) {
       const q = tpsSearchQuery.toLowerCase();
-      result = result.filter(t => 
-        (t.nama && t.nama.toLowerCase().includes(q)) ||
-        (t.nama_lama && t.nama_lama.toLowerCase().includes(q)) ||
-        (t.lokasi && t.lokasi.toLowerCase().includes(q)) ||
-        (t.kecamatan && t.kecamatan.toLowerCase().includes(q))
+      result = result.filter(
+        (t) =>
+          (t.nama && t.nama.toLowerCase().includes(q)) ||
+          (t.nama_lama && t.nama_lama.toLowerCase().includes(q)) ||
+          (t.lokasi && t.lokasi.toLowerCase().includes(q)) ||
+          (t.kecamatan && t.kecamatan.toLowerCase().includes(q)),
       );
     }
-    
+
     // Kecamatan filter
     if (tpsFilterKecamatan) {
-      result = result.filter(t => t.kecamatan === tpsFilterKecamatan);
+      result = result.filter((t) => t.kecamatan === tpsFilterKecamatan);
     }
-    
+
     // Kelurahan filter
     if (tpsFilterKelurahan) {
-      result = result.filter(t => 
-        t.kelurahans && Array.isArray(t.kelurahans) && 
-        t.kelurahans.some(k => k.nama === tpsFilterKelurahan)
+      result = result.filter(
+        (t) =>
+          t.kelurahans &&
+          Array.isArray(t.kelurahans) &&
+          t.kelurahans.some((k) => k.nama === tpsFilterKelurahan),
       );
     }
-    
+
     // Status filter
     if (tpsFilterStatus) {
-      result = result.filter(t => t.status === tpsFilterStatus);
+      result = result.filter((t) => t.status === tpsFilterStatus);
     }
-    
+
     // Capacity filter
-    if (tpsFilterCapacity.min !== '') {
-      result = result.filter(t => t.daya_tampung_m3 != null && t.daya_tampung_m3 >= parseFloat(tpsFilterCapacity.min));
+    if (tpsFilterCapacity.min !== "") {
+      result = result.filter(
+        (t) =>
+          t.daya_tampung_m3 != null &&
+          t.daya_tampung_m3 >= parseFloat(tpsFilterCapacity.min),
+      );
     }
-    if (tpsFilterCapacity.max !== '') {
-      result = result.filter(t => t.daya_tampung_m3 != null && t.daya_tampung_m3 <= parseFloat(tpsFilterCapacity.max));
+    if (tpsFilterCapacity.max !== "") {
+      result = result.filter(
+        (t) =>
+          t.daya_tampung_m3 != null &&
+          t.daya_tampung_m3 <= parseFloat(tpsFilterCapacity.max),
+      );
     }
-    
+
     setTpsFilteredList(result);
-  }, [tpsList, tpsSearchQuery, tpsFilterKecamatan, tpsFilterKelurahan, tpsFilterStatus, tpsFilterCapacity]);
+  }, [
+    tpsList,
+    tpsSearchQuery,
+    tpsFilterKecamatan,
+    tpsFilterKelurahan,
+    tpsFilterStatus,
+    tpsFilterCapacity,
+  ]);
 
   const resetTpsFilters = () => {
-    setTpsSearchQuery('');
-    setTpsFilterKecamatan('');
-    setTpsFilterKelurahan('');
-    setTpsFilterStatus('');
-    setTpsFilterCapacity({ min: '', max: '' });
+    setTpsSearchQuery("");
+    setTpsFilterKecamatan("");
+    setTpsFilterKelurahan("");
+    setTpsFilterStatus("");
+    setTpsFilterCapacity({ min: "", max: "" });
   };
 
   // Close filter popover when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
-      const popoverEl = document.querySelector('[data-tps-filter-popover]');
+      const popoverEl = document.querySelector("[data-tps-filter-popover]");
       if (popoverEl && !popoverEl.contains(e.target)) {
         setShowTpsFilterPopover(false);
       }
     };
     if (showTpsFilterPopover) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
     }
   }, [showTpsFilterPopover]);
 
   const handleAddTps = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
     try {
       const token = getToken();
-      if (!token) throw new Error('Token tidak ditemukan, login ulang sebagai superadmin');
-      
+      if (!token)
+        throw new Error(
+          "Token tidak ditemukan, login ulang sebagai superadmin",
+        );
+
       // Helper to safely parse coordinate strings/numbers
       const parseCoord = (val) => {
-        if (val === '' || val === null || val === undefined) return null;
-        const str = String(val).replace(',', '.');
+        if (val === "" || val === null || val === undefined) return null;
+        const str = String(val).replace(",", ".");
         return parseFloat(str);
       };
-      
+
       // Validate coordinates format before sending
       const latVal = parseCoord(newTps.latitude);
       const lngVal = parseCoord(newTps.longitude);
-      
-      if (newTps.latitude && (isNaN(latVal) || !/^-?\d+\.?\d*$/.test(String(newTps.latitude).replace(',', '.')))) {
-        throw new Error('Format latitude tidak valid. Gunakan desimal seperti: -7.2575');
+
+      if (
+        newTps.latitude &&
+        (isNaN(latVal) ||
+          !/^-?\d+\.?\d*$/.test(String(newTps.latitude).replace(",", ".")))
+      ) {
+        throw new Error(
+          "Format latitude tidak valid. Gunakan desimal seperti: -7.2575",
+        );
       }
-      if (newTps.longitude && (isNaN(lngVal) || !/^-?\d+\.?\d*$/.test(String(newTps.longitude).replace(',', '.')))) {
-        throw new Error('Format longitude tidak valid. Gunakan desimal seperti: 112.7521');
+      if (
+        newTps.longitude &&
+        (isNaN(lngVal) ||
+          !/^-?\d+\.?\d*$/.test(String(newTps.longitude).replace(",", ".")))
+      ) {
+        throw new Error(
+          "Format longitude tidak valid. Gunakan desimal seperti: 112.7521",
+        );
       }
-      
+
       const payload = {
         ...newTps,
         latitude: latVal,
         longitude: lngVal,
-        daya_tampung_m3: newTps.daya_tampung_m3 ? parseFloat(newTps.daya_tampung_m3) : null
+        daya_tampung_m3: newTps.daya_tampung_m3
+          ? parseFloat(newTps.daya_tampung_m3)
+          : null,
       };
 
       // Validate latitude/longitude ranges before sending
-      if (payload.latitude !== null && (payload.latitude < -90 || payload.latitude > 90)) {
-        throw new Error('Latitude harus antara -90 dan 90');
+      if (
+        payload.latitude !== null &&
+        (payload.latitude < -90 || payload.latitude > 90)
+      ) {
+        throw new Error("Latitude harus antara -90 dan 90");
       }
-      if (payload.longitude !== null && (payload.longitude < -180 || payload.longitude > 180)) {
-        throw new Error('Longitude harus antara -180 dan 180');
+      if (
+        payload.longitude !== null &&
+        (payload.longitude < -180 || payload.longitude > 180)
+      ) {
+        throw new Error("Longitude harus antara -180 dan 180");
       }
 
-      const url = editingTpsId ? `${API_BASE}/api/tps/${editingTpsId}` : `${API_BASE}/api/tps/`;
-      const method = editingTpsId ? 'PUT' : 'POST';
+      const url = editingTpsId
+        ? `${API_BASE}/api/tps/${editingTpsId}`
+        : `${API_BASE}/api/tps/`;
+      const method = editingTpsId ? "PUT" : "POST";
       const response = await fetch(url, {
         method: method,
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(payload)
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
       });
       let resText = await response.text();
       if (!response.ok) {
         let msg = resText;
-        try { const j = JSON.parse(resText); msg = j.detail || resText; } catch {}
-        throw new Error(msg || (editingTpsId ? 'Gagal mengupdate TPS' : 'Gagal menambah TPS'));
+        try {
+          const j = JSON.parse(resText);
+          msg = j.detail || resText;
+        } catch {}
+        throw new Error(
+          msg || (editingTpsId ? "Gagal mengupdate TPS" : "Gagal menambah TPS"),
+        );
       }
-      setSuccess(editingTpsId ? 'TPS berhasil diupdate' : 'TPS berhasil ditambahkan');
+      setSuccess(
+        editingTpsId ? "TPS berhasil diupdate" : "TPS berhasil ditambahkan",
+      );
       setNewTps({
-        nama: '',
-        kecamatan: '',
-        wilayah_kota: 'Surabaya Pusat',
-        lokasi: '',
-        jenis_tps: 'TPS Resmi',
-        latitude: '',
-        longitude: '',
-        jumlah_container: '',
-        daya_tampung_m3: '',
-        status: 'Aktif'
+        nama: "",
+        kecamatan: "",
+        wilayah_kota: "Surabaya Pusat",
+        lokasi: "",
+        jenis_tps: "TPS Resmi",
+        latitude: "",
+        longitude: "",
+        jumlah_container: "",
+        daya_tampung_m3: "",
+        status: "Aktif",
       });
       setEditingTpsId(null);
       setShowAddTpsModal(false);
@@ -449,43 +634,60 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
   const handleEditTps = (tps) => {
     setEditingTpsId(tps.id);
     setNewTps({
-      nama: tps.nama || '',
-      kecamatan: tps.kecamatan || '',
-      wilayah_kota: tps.wilayah_kota || 'Surabaya Pusat',
-      lokasi: tps.lokasi || '',
-      jenis_tps: tps.jenis_tps || 'TPS Resmi',
-      latitude: tps.latitude !== null && tps.latitude !== undefined ? tps.latitude : '',
-      longitude: tps.longitude !== null && tps.longitude !== undefined ? tps.longitude : '',
-      jumlah_container: tps.jumlah_container || '',
-      daya_tampung_m3: tps.daya_tampung_m3 !== null && tps.daya_tampung_m3 !== undefined ? tps.daya_tampung_m3 : '',
-      status: tps.status || 'Aktif'
+      nama: tps.nama || "",
+      kecamatan: tps.kecamatan || "",
+      wilayah_kota: tps.wilayah_kota || "Surabaya Pusat",
+      lokasi: tps.lokasi || "",
+      jenis_tps: tps.jenis_tps || "TPS Resmi",
+      latitude:
+        tps.latitude !== null && tps.latitude !== undefined ? tps.latitude : "",
+      longitude:
+        tps.longitude !== null && tps.longitude !== undefined
+          ? tps.longitude
+          : "",
+      jumlah_container: tps.jumlah_container || "",
+      daya_tampung_m3:
+        tps.daya_tampung_m3 !== null && tps.daya_tampung_m3 !== undefined
+          ? tps.daya_tampung_m3
+          : "",
+      status: tps.status || "Aktif",
     });
     setShowAddTpsModal(true);
   };
 
   const handleDeleteTps = async (tpsId) => {
-    if (!window.confirm('Yakin ingin menghapus TPS ini?')) return;
-    setError('');
-    setSuccess('');
+    if (!window.confirm("Yakin ingin menghapus TPS ini?")) return;
+    setError("");
+    setSuccess("");
     try {
       const token = getToken();
-      if (!token) throw new Error('Token tidak ditemukan, login ulang sebagai superadmin');
+      if (!token)
+        throw new Error(
+          "Token tidak ditemukan, login ulang sebagai superadmin",
+        );
       const response = await fetch(`${API_BASE}/api/tps/${tpsId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       });
-      let body = '';
-      try { body = await response.text(); } catch {}
+      let body = "";
+      try {
+        body = await response.text();
+      } catch {}
       if (!response.ok) {
         let msg = body;
-        try { const j = JSON.parse(body); msg = j.detail || body; } catch {}
+        try {
+          const j = JSON.parse(body);
+          msg = j.detail || body;
+        } catch {}
         throw new Error(msg || `Gagal menghapus TPS (${response.status})`);
       }
-      setSuccess('TPS berhasil dihapus');
+      setSuccess("TPS berhasil dihapus");
       loadTps();
     } catch (err) {
-      if (err.message === 'Failed to fetch') {
-        setError('Gagal terhubung ke server (http://localhost:8000). Pastikan backend nyala.');
+      if (err.message === "Failed to fetch") {
+        setError(
+          `Gagal terhubung ke server (${API_BASE}). Pastikan backend nyala.`,
+        );
       } else {
         setError(err.message);
       }
@@ -495,13 +697,13 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
   const uploadPetugasFoto = async (userId, file) => {
     if (!file) return null;
     const fd = new FormData();
-    fd.append('foto', file);
+    fd.append("foto", file);
     const r = await fetch(`${API_BASE}/api/admin/users/${userId}/foto`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${getToken()}` },
-      body: fd
+      method: "POST",
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: fd,
     });
-    if (!r.ok) throw new Error((await r.text()) || 'Gagal upload foto');
+    if (!r.ok) throw new Error((await r.text()) || "Gagal upload foto");
     const j = await r.json();
     return j.foto_url;
   };
@@ -509,39 +711,58 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
   const handleAddUser = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
     try {
       const token = getToken();
       const response = await fetch(`${API_BASE}/api/admin/users`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           nama_lengkap: newUser.nama_lengkap,
           email: newUser.email,
           password: newUser.password,
           role: newUser.role,
-          username: newUser.email.split('@')[0],
+          username: newUser.email.split("@")[0],
           wilayah_kecamatan: newUser.wilayah_kecamatan || null,
           wilayah_kelurahan: newUser.wilayah_kelurahan || null,
-          wilayah_kota: 'Surabaya',
-        })
+          wilayah_kota: "Surabaya",
+        }),
       });
       let txt = await response.text();
       if (!response.ok) {
-        let msg = txt; try { msg = JSON.parse(txt).detail || txt; } catch {}
-        throw new Error(msg || 'Gagal menambah user');
+        let msg = txt;
+        try {
+          msg = JSON.parse(txt).detail || txt;
+        } catch {}
+        throw new Error(msg || "Gagal menambah user");
       }
-      let created = null; try { created = JSON.parse(txt); } catch {}
+      let created = null;
+      try {
+        created = JSON.parse(txt);
+      } catch {}
       const uid = created?.id;
       if (uid && newUserFotoFile) {
-        try { await uploadPetugasFoto(uid, newUserFotoFile); } catch (fe) { console.warn(fe); }
+        try {
+          await uploadPetugasFoto(uid, newUserFotoFile);
+        } catch (fe) {
+          console.warn(fe);
+        }
       }
-      setSuccess('User berhasil ditambahkan');
-      setNewUser({ nama_lengkap: '', email: '', password: '', role: 'petugas', wilayah_kecamatan: '', wilayah_kelurahan: '', foto_url: '' });
-      setNewUserFotoFile(null); setNewUserFotoPreview('');
+      setSuccess("User berhasil ditambahkan");
+      setNewUser({
+        nama_lengkap: "",
+        email: "",
+        password: "",
+        role: "petugas",
+        wilayah_kecamatan: "",
+        wilayah_kelurahan: "",
+        foto_url: "",
+      });
+      setNewUserFotoFile(null);
+      setNewUserFotoPreview("");
       setShowAddUserModal(false);
       loadUsers();
     } catch (err) {
@@ -552,50 +773,95 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
   };
 
   const openEditUser = (u) => {
-    setEditUser({ id: u.id, nama_lengkap: u.nama_lengkap, email: u.email, role: u.role, wilayah_kecamatan: u.wilayah_kecamatan || '', wilayah_kelurahan: u.wilayah_kelurahan || '', foto_url: u.foto_url || '' });
-    setEditFotoFile(null); setEditFotoPreview(u.foto_url ? `${API_BASE}${u.foto_url}` : '');
+    setEditUser({
+      id: u.id,
+      nama_lengkap: u.nama_lengkap,
+      email: u.email,
+      role: u.role,
+      wilayah_kecamatan: u.wilayah_kecamatan || "",
+      wilayah_kelurahan: u.wilayah_kelurahan || "",
+      foto_url: u.foto_url || "",
+    });
+    setEditFotoFile(null);
+    setEditFotoPreview(u.foto_url ? `${API_BASE}${u.foto_url}` : "");
   };
   const handleUpdateUser = async (e) => {
     e.preventDefault();
     if (!editUser) return;
-    setIsLoading(true); setError('');
+    setIsLoading(true);
+    setError("");
     try {
       const token = getToken();
       // upload foto dulu jika ada file baru
       let fotoUrl = editUser.foto_url;
-      if (editFotoFile) fotoUrl = await uploadPetugasFoto(editUser.id, editFotoFile);
+      if (editFotoFile)
+        fotoUrl = await uploadPetugasFoto(editUser.id, editFotoFile);
       const r = await fetch(`${API_BASE}/api/admin/users/${editUser.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ nama_lengkap: editUser.nama_lengkap, role: editUser.role, wilayah_kecamatan: editUser.wilayah_kecamatan || '', wilayah_kelurahan: editUser.wilayah_kelurahan || '', wilayah_kota: 'Surabaya', foto_url: fotoUrl })
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          nama_lengkap: editUser.nama_lengkap,
+          role: editUser.role,
+          wilayah_kecamatan: editUser.wilayah_kecamatan || "",
+          wilayah_kelurahan: editUser.wilayah_kelurahan || "",
+          wilayah_kota: "Surabaya",
+          foto_url: fotoUrl,
+        }),
       });
       let txt = await r.text();
-      if (!r.ok) { let m=txt; try{m=JSON.parse(txt).detail||txt;}catch{} throw new Error(m); }
-      setSuccess('Petugas berhasil diperbarui');
-      setEditUser(null); setEditFotoFile(null); setEditFotoPreview('');
+      if (!r.ok) {
+        let m = txt;
+        try {
+          m = JSON.parse(txt).detail || txt;
+        } catch {}
+        throw new Error(m);
+      }
+      setSuccess("Petugas berhasil diperbarui");
+      setEditUser(null);
+      setEditFotoFile(null);
+      setEditFotoPreview("");
       loadUsers();
-    } catch (err) { setError(err.message); } finally { setIsLoading(false); }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
   const openViewUser = async (u) => {
     try {
-      const r = await fetch(`${API_BASE}/api/admin/users/${u.id}`, { headers: { 'Authorization': `Bearer ${getToken()}` } });
-      if (r.ok) setViewUser(await r.json()); else setViewUser(u);
-    } catch { setViewUser(u); }
+      const r = await fetch(`${API_BASE}/api/admin/users/${u.id}`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (r.ok) setViewUser(await r.json());
+      else setViewUser(u);
+    } catch {
+      setViewUser(u);
+    }
   };
 
   const handleAddJadwal = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
     try {
       const response = await fetch(`${API_BASE}/api/jadwal/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newJadwal)
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newJadwal),
       });
-      if (!response.ok) throw new Error('Gagal menambah jadwal');
-      setSuccess('Jadwal berhasil ditambahkan');
-      setNewJadwal({ hari: '', waktu_mulai: '', waktu_selesai: '', area: '', petugas: '', tipe: 'Rutin' });
+      if (!response.ok) throw new Error("Gagal menambah jadwal");
+      setSuccess("Jadwal berhasil ditambahkan");
+      setNewJadwal({
+        hari: "",
+        waktu_mulai: "",
+        waktu_selesai: "",
+        area: "",
+        petugas: "",
+        tipe: "Rutin",
+      });
       setShowAddJadwalModal(false);
       loadJadwals();
     } catch (err) {
@@ -606,15 +872,15 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!window.confirm('Yakin ingin menghapus user ini?')) return;
+    if (!window.confirm("Yakin ingin menghapus user ini?")) return;
     try {
       const token = getToken();
       const response = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!response.ok) throw new Error('Gagal menghapus user');
-      setSuccess('User berhasil dihapus');
+      if (!response.ok) throw new Error("Gagal menghapus user");
+      setSuccess("User berhasil dihapus");
       loadUsers();
     } catch (err) {
       setError(err.message);
@@ -622,13 +888,13 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
   };
 
   const handleDeleteJadwal = async (jadwalId) => {
-    if (!window.confirm('Yakin ingin menghapus jadwal ini?')) return;
+    if (!window.confirm("Yakin ingin menghapus jadwal ini?")) return;
     try {
       const response = await fetch(`${API_BASE}/api/jadwal/${jadwalId}`, {
-        method: 'DELETE'
+        method: "DELETE",
       });
-      if (!response.ok) throw new Error('Gagal menghapus jadwal');
-      setSuccess('Jadwal berhasil dihapus');
+      if (!response.ok) throw new Error("Gagal menghapus jadwal");
+      setSuccess("Jadwal berhasil dihapus");
       loadJadwals();
     } catch (err) {
       setError(err.message);
@@ -639,53 +905,55 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
     try {
       const token = getToken();
       const response = await fetch(`${API_BASE}/api/admin/settings`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         const data = await response.json();
-        setSettings({ 
-          website_name: data.website_name, 
+        setSettings({
+          website_name: data.website_name,
           website_email: data.website_email,
-          current_password: '',
-          new_password: ''
+          current_password: "",
+          new_password: "",
         });
       }
     } catch (err) {
-      console.error('Load settings error:', err);
+      console.error("Load settings error:", err);
     }
   };
 
   const handleUpdateSettings = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
     try {
       const token = getToken();
       const updateData = {
         website_name: settings.website_name,
-        website_email: settings.website_email
+        website_email: settings.website_email,
       };
       if (settings.new_password) {
         if (!settings.current_password) {
-          throw new Error('Password saat ini wajib diisi untuk mengganti password');
+          throw new Error(
+            "Password saat ini wajib diisi untuk mengganti password",
+          );
         }
         updateData.current_password = settings.current_password;
         updateData.new_password = settings.new_password;
       }
       const response = await fetch(`${API_BASE}/api/admin/settings`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(updateData)
+        body: JSON.stringify(updateData),
       });
       if (!response.ok) {
         const errData = await response.json();
-        throw new Error(errData.detail || 'Gagal mengupdate pengaturan');
+        throw new Error(errData.detail || "Gagal mengupdate pengaturan");
       }
-      setSuccess('Pengaturan berhasil diperbarui');
-      setSettings({ ...settings, current_password: '', new_password: '' });
+      setSuccess("Pengaturan berhasil diperbarui");
+      setSettings({ ...settings, current_password: "", new_password: "" });
       loadSettings();
     } catch (err) {
       setError(err.message);
@@ -697,10 +965,14 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
   return (
     <div className="admin-container">
       {/* SIDEBAR */}
-      <aside className={`admin-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+      <aside
+        className={`admin-sidebar ${isSidebarCollapsed ? "collapsed" : ""}`}
+      >
         <div className="admin-logo-badge">
           <div className="admin-logo-left">
-            <div className="admin-logo-icon" title="SI-PETASAN">SA</div>
+            <div className="admin-logo-icon" title="SI-PETASAN">
+              SA
+            </div>
             {!isSidebarCollapsed && (
               <div className="admin-brand-info">
                 <div className="admin-brand-name">SI-PETASAN</div>
@@ -716,11 +988,29 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
             aria-label="Toggle Sidebar"
           >
             {isSidebarCollapsed ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <polyline points="9 18 15 12 9 6" />
               </svg>
             ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <polyline points="15 18 9 12 15 6" />
               </svg>
             )}
@@ -728,15 +1018,24 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
         </div>
 
         <div className="admin-nav-section">
-          {!isSidebarCollapsed && <div className="admin-nav-label">MENU UTAMA</div>}
+          {!isSidebarCollapsed && (
+            <div className="admin-nav-label">MENU UTAMA</div>
+          )}
           <nav className="admin-nav-menu">
             <button
               type="button"
-              className={`admin-nav-item ${activeMenu === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveMenu('dashboard')}
+              className={`admin-nav-item ${activeMenu === "dashboard" ? "active" : ""}`}
+              onClick={() => setActiveMenu("dashboard")}
               title="Dashboard"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <rect x="3" y="3" width="7" height="7"></rect>
                 <rect x="14" y="3" width="7" height="7"></rect>
                 <rect x="14" y="14" width="7" height="7"></rect>
@@ -747,11 +1046,18 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
 
             <button
               type="button"
-              className={`admin-nav-item ${activeMenu === 'pengguna' ? 'active' : ''}`}
-              onClick={() => setActiveMenu('pengguna')}
+              className={`admin-nav-item ${activeMenu === "pengguna" ? "active" : ""}`}
+              onClick={() => setActiveMenu("pengguna")}
               title="Data Pengguna & Warga"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                 <circle cx="9" cy="7" r="4"></circle>
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -762,25 +1068,39 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
 
             <button
               type="button"
-              className={`admin-nav-item ${activeMenu === 'petugas' ? 'active' : ''}`}
-              onClick={() => setActiveMenu('petugas')}
+              className={`admin-nav-item ${activeMenu === "petugas" ? "active" : ""}`}
+              onClick={() => setActiveMenu("petugas")}
               title="Kelola Petugas / Admin"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <polyline points="16 11 18 13 22 9"/>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <polyline points="16 11 18 13 22 9" />
               </svg>
               {!isSidebarCollapsed && <span>Kelola Petugas / Admin</span>}
             </button>
 
             <button
               type="button"
-              className={`admin-nav-item ${activeMenu === 'tps' ? 'active' : ''}`}
-              onClick={() => setActiveMenu('tps')}
+              className={`admin-nav-item ${activeMenu === "tps" ? "active" : ""}`}
+              onClick={() => setActiveMenu("tps")}
               title="Kelola TPS"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                 <circle cx="12" cy="10" r="3"></circle>
               </svg>
@@ -789,11 +1109,18 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
 
             <button
               type="button"
-              className={`admin-nav-item ${activeMenu === 'jadwal' ? 'active' : ''}`}
-              onClick={() => setActiveMenu('jadwal')}
+              className={`admin-nav-item ${activeMenu === "jadwal" ? "active" : ""}`}
+              onClick={() => setActiveMenu("jadwal")}
               title="Jadwal Pengambilan"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="16" y1="2" x2="16" y2="6"></line>
                 <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -804,11 +1131,18 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
 
             <button
               type="button"
-              className={`admin-nav-item ${activeMenu === 'pengaturan' ? 'active' : ''}`}
-              onClick={() => setActiveMenu('pengaturan')}
+              className={`admin-nav-item ${activeMenu === "pengaturan" ? "active" : ""}`}
+              onClick={() => setActiveMenu("pengaturan")}
               title="Pengaturan"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <circle cx="12" cy="12" r="3"></circle>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
               </svg>
@@ -819,21 +1153,50 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
 
         {/* Bottom profile */}
         <div className="admin-bottom-profile">
-          <div className="admin-profile-card" title={`${currentUser?.nama_lengkap || currentUser?.nama || 'Superadmin'} (${currentUser?.role || 'Super Admin'})`}>
+          <div
+            className="admin-profile-card"
+            title={`${currentUser?.nama_lengkap || currentUser?.nama || "Superadmin"} (${currentUser?.role || "Super Admin"})`}
+          >
             <div className="admin-profile-avatar">
-              {(currentUser?.nama_lengkap || currentUser?.nama || 'SA').charAt(0).toUpperCase()}
+              {(currentUser?.nama_lengkap || currentUser?.nama || "SA")
+                .charAt(0)
+                .toUpperCase()}
             </div>
             {!isSidebarCollapsed && (
               <div className="admin-profile-info">
-                <div className="admin-profile-name">{currentUser?.nama_lengkap || currentUser?.nama || 'Superadmin'}</div>
-                <div className="admin-profile-role" style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'capitalize' }}>
-                  {currentUser?.role || 'Super Admin'}
+                <div className="admin-profile-name">
+                  {currentUser?.nama_lengkap ||
+                    currentUser?.nama ||
+                    "Superadmin"}
+                </div>
+                <div
+                  className="admin-profile-role"
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "#64748b",
+                    textTransform: "capitalize",
+                  }}
+                >
+                  {currentUser?.role || "Super Admin"}
                 </div>
               </div>
             )}
           </div>
-          <button type="button" className="admin-logout-btn" onClick={onLogout} title="Keluar">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+          <button
+            type="button"
+            className="admin-logout-btn"
+            onClick={onLogout}
+            title="Keluar"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              style={{ flexShrink: 0 }}
+            >
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
@@ -848,576 +1211,1015 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
         <header className="admin-top-header">
           <div>
             <h1 className="admin-page-title">
-              {activeMenu === 'dashboard' && 'Dashboard Superadmin'}
-              {activeMenu === 'pengguna' && 'Data Pengguna & Warga'}
-              {activeMenu === 'petugas' && 'Kelola Petugas & Admin'}
-              {activeMenu === 'tps' && 'Kelola TPS'}
-              {activeMenu === 'jadwal' && 'Jadwal Pengambilan Sampah'}
-              {activeMenu === 'pengaturan' && 'Pengaturan Website'}
+              {activeMenu === "dashboard" && "Dashboard Superadmin"}
+              {activeMenu === "pengguna" && "Data Pengguna & Warga"}
+              {activeMenu === "petugas" && "Kelola Petugas & Admin"}
+              {activeMenu === "tps" && "Kelola TPS"}
+              {activeMenu === "jadwal" && "Jadwal Pengambilan Sampah"}
+              {activeMenu === "pengaturan" && "Pengaturan Website"}
             </h1>
             <div className="admin-page-date">{getCurrentDate()}</div>
           </div>
         </header>
 
         {success && (
-          <div style={{ padding: '12px 16px', background: '#dcfce7', color: '#166534', borderRadius: '8px', marginBottom: '16px' }}>
+          <div
+            style={{
+              padding: "12px 16px",
+              background: "#dcfce7",
+              color: "#166534",
+              borderRadius: "8px",
+              marginBottom: "16px",
+            }}
+          >
             ✓ {success}
           </div>
         )}
         {error && (
-          <div style={{ padding: '12px 16px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '16px' }}>
+          <div
+            style={{
+              padding: "12px 16px",
+              background: "#fee2e2",
+              color: "#b91c1c",
+              borderRadius: "8px",
+              marginBottom: "16px",
+            }}
+          >
             ✕ {error}
           </div>
         )}
 
         {/* DASHBOARD EKSEKUTIF SUPERADMIN */}
-        {activeMenu === 'dashboard' && (() => {
-          // Use API data if available, fallback to static data
-          const totalTpsCount = dashboardStats?.total_tps || tpsList.length;
-          const pendingReports = laporanList.filter(l => l.status_tindak_lanjut !== 'Selesai');
-          
-          // No actual fill volume data available - criticalTpsList empty
-          const criticalTpsList = [];
-          
-          // Mapping from database wilayah_kota to display names
-          const wilayahMap = {
-            'Surabaya Pusat': 'Surabaya Pusat',
-            'Surabaya Timur': 'Surabaya Timur',
-            'Surabaya Barat': 'Surabaya Barat',
-            'Surabaya Utara': 'Surabaya Utara',
-            'Surabaya Selatan': 'Surabaya Selatan'
-          };
+        {activeMenu === "dashboard" &&
+          (() => {
+            // Use API data if available, fallback to static data
+            const totalTpsCount = dashboardStats?.total_tps || tpsList.length;
+            const pendingReports = laporanList.filter(
+              (l) => l.status_tindak_lanjut !== "Selesai",
+            );
 
-          const REGIONS = [
-            { name: 'Surabaya Pusat', icon: '🏛️', desc: 'Tegalsari, Genteng, Bubutan, Simokerto' },
-            { name: 'Surabaya Timur', icon: '🎓', desc: 'Gubeng, Sukolilo, Rungkut, Mulyorejo' },
-            { name: 'Surabaya Barat', icon: '🏢', desc: 'Tandes, Sambikerep, Benowo, Sukomanunggal' },
-            { name: 'Surabaya Utara', icon: '⚓', desc: 'Krembangan, Semampir, Pabean Cantian, Kenjeran' },
-            { name: 'Surabaya Selatan', icon: '🌳', desc: 'Wonokromo, Wonocolo, Sawahan, Gayungan' }
-          ];
+            // No actual fill volume data available - criticalTpsList empty
+            const criticalTpsList = [];
 
-          // Build region stats from API data
-          const regionStats = REGIONS.map(reg => {
-            let regData = dashboardStats?.regions?.find(r => r.wilayah_kota === reg.name);
-            
-            if (!regData) {
-              // Fallback: use tpsList
-              const list = tpsList.filter(t => t.wilayah_kota === reg.name);
-              regData = {
-                wilayah_kota: reg.name,
-                total_tps: list.length,
-                avg_capacity: list.length > 0 ? 
-                  Math.round(list.reduce((acc, t) => acc + (parseFloat(t.daya_tampung_m3) || 0), 0) / list.length) : 0,
-                has_capacity_data: list.some(t => t.daya_tampung_m3)
-              };
-            }
-
-            // Calculate status based on avg_capacity (m3)
-            // Display as percentage would need actual filled volume (not available)
-            // For now: show avg capacity in m3 and capacity data availability
-            const avgCapacityValue = regData.avg_capacity || 0;
-            const statusText = regData.has_capacity_data ? 'Data Tersedia' : 'Data Kapasitas Belum Lengkap';
-            const statusColor = regData.has_capacity_data ? '#10b981' : '#94a3b8';
-            
-            return {
-              ...reg,
-              totalTps: regData.total_tps || 0,
-              avgCapacity: Math.round(avgCapacityValue * 10) / 10, // avg daya_tampung in m3
-              criticalCount: 0, // Cannot determine without actual volume data
-              statusText,
-              statusColor,
-              hasCapacityData: regData.has_capacity_data
+            // Mapping from database wilayah_kota to display names
+            const wilayahMap = {
+              "Surabaya Pusat": "Surabaya Pusat",
+              "Surabaya Timur": "Surabaya Timur",
+              "Surabaya Barat": "Surabaya Barat",
+              "Surabaya Utara": "Surabaya Utara",
+              "Surabaya Selatan": "Surabaya Selatan",
             };
-          });
 
-          // Average capacity across all TPS (in m3)
-          const avgCapacityAll = dashboardStats?.avg_capacity_all || 
-            (tpsList.length > 0 ? Math.round(tpsList.reduce((acc, t) => acc + (parseFloat(t.daya_tampung_m3) || 0), 0) / tpsList.length * 10) / 10 : 0);
+            const REGIONS = [
+              {
+                name: "Surabaya Pusat",
+                icon: "🏛️",
+                desc: "Tegalsari, Genteng, Bubutan, Simokerto",
+              },
+              {
+                name: "Surabaya Timur",
+                icon: "🎓",
+                desc: "Gubeng, Sukolilo, Rungkut, Mulyorejo",
+              },
+              {
+                name: "Surabaya Barat",
+                icon: "🏢",
+                desc: "Tandes, Sambikerep, Benowo, Sukomanunggal",
+              },
+              {
+                name: "Surabaya Utara",
+                icon: "⚓",
+                desc: "Krembangan, Semampir, Pabean Cantian, Kenjeran",
+              },
+              {
+                name: "Surabaya Selatan",
+                icon: "🌳",
+                desc: "Wonokromo, Wonocolo, Sawahan, Gayungan",
+              },
+            ];
 
-          return (
-            <div className="admin-content-view" style={{ paddingBottom: '40px' }}>
-              {/* Executive Welcome Hero Banner */}
-              <div style={{
-                background: 'linear-gradient(135deg, #064e3b 0%, #047857 55%, #059669 100%)',
-                color: '#ffffff',
-                borderRadius: '16px',
-                padding: '24px 28px',
-                marginBottom: '24px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '16px',
-                boxShadow: '0 8px 24px rgba(4, 120, 87, 0.22)',
-                position: 'relative',
-                overflow: 'hidden'
-              }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                    <span style={{
-                      background: 'rgba(255,255,255,0.2)',
-                      padding: '3px 10px',
-                      borderRadius: '999px',
-                      fontSize: '0.72rem',
-                      fontWeight: 800,
-                      letterSpacing: '0.5px',
-                      textTransform: 'uppercase'
-                    }}>
-                      SUPERADMIN COMMAND CENTER DLH SURABAYA
-                    </span>
-                    <span style={{
-                      background: '#22c55e',
-                      color: '#ffffff',
-                      padding: '3px 10px',
-                      borderRadius: '999px',
-                      fontSize: '0.72rem',
-                      fontWeight: 800
-                    }}>
-                      ● LIVE MONITORING
-                    </span>
-                  </div>
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: 900, margin: '0 0 6px', color: '#ffffff' }}>
-                    Executive Waste Governance Control Center
-                  </h2>
-                  <p style={{ margin: 0, fontSize: '0.86rem', opacity: 0.9, maxWidth: '680px' }}>
-                    Akses kontrol eksekutif superadmin: pemantauan operasional {totalTpsCount} TPS, neraca volume sampah 5 wilayah, radar dump truck darurat, dan penanganan aduan warga kota.
-                  </p>
-                </div>
+            // Build region stats from API data
+            const regionStats = REGIONS.map((reg) => {
+              let regData = dashboardStats?.regions?.find(
+                (r) => r.wilayah_kota === reg.name,
+              );
 
-                <div style={{
-                  background: 'rgba(255,255,255,0.12)',
-                  border: '1px solid rgba(255,255,255,0.25)',
-                  borderRadius: '12px',
-                  padding: '12px 20px',
-                  textAlign: 'center',
-                  backdropFilter: 'blur(8px)',
-                  minWidth: '150px'
-                }}>
-                  <div style={{ fontSize: '0.72rem', opacity: 0.85, textTransform: 'uppercase', fontWeight: 700 }}>
-                    Indeks Kebersihan Kota
-                  </div>
-                  <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#fef08a', marginTop: '2px' }}>
-                    94.8%
-                  </div>
-                  <span style={{ fontSize: '0.7rem', color: '#bbf7d0', fontWeight: 700 }}>
-                    Grade A &bull; Sangat Baik
-                  </span>
-                </div>
-              </div>
+              if (!regData) {
+                // Fallback: use tpsList
+                const list = tpsList.filter((t) => t.wilayah_kota === reg.name);
+                regData = {
+                  wilayah_kota: reg.name,
+                  total_tps: list.length,
+                  avg_capacity:
+                    list.length > 0
+                      ? Math.round(
+                          list.reduce(
+                            (acc, t) =>
+                              acc + (parseFloat(t.daya_tampung_m3) || 0),
+                            0,
+                          ) / list.length,
+                        )
+                      : 0,
+                  has_capacity_data: list.some((t) => t.daya_tampung_m3),
+                };
+              }
 
-              {/* 4 Executive KPI Cards */}
-              <div className="admin-stats-row">
-                {/* KPI 1 */}
-                <div className="admin-stat-card">
-                  <div className="stat-card-header">
-                    <div className="stat-icon-wrap icon-blue">👥</div>
-                    <span className="stat-badge-live">USERS</span>
-                  </div>
-                  <div className="stat-card-number">{users.length}</div>
-                  <div className="stat-card-label">Total Pengguna Terdaftar</div>
-                  <div style={{ fontSize: '0.74rem', color: '#0284c7', fontWeight: 700, marginTop: '6px' }}>
-                    Warga &bull; Petugas &bull; Admin
-                  </div>
-                </div>
+              // Calculate status based on avg_capacity (m3)
+              // Display as percentage would need actual filled volume (not available)
+              // For now: show avg capacity in m3 and capacity data availability
+              const avgCapacityValue = regData.avg_capacity || 0;
+              const statusText = regData.has_capacity_data
+                ? "Data Tersedia"
+                : "Data Kapasitas Belum Lengkap";
+              const statusColor = regData.has_capacity_data
+                ? "#10b981"
+                : "#94a3b8";
 
-                {/* KPI 2 */}
-                <div className="admin-stat-card">
-                  <div className="stat-card-header">
-                    <div className="stat-icon-wrap icon-gold">📈</div>
-                    <span className="stat-badge-live">KOTA</span>
-                  </div>
-                  <div className="stat-card-number">{avgCapacityAll.toFixed(1)} m³</div>
-                  <div className="stat-card-label">Rata-rata Kapasitas TPS Kota</div>
-                  <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 700, marginTop: '6px' }}>
-                    {totalTpsCount} TPS &bull; Daya Tampung
-                  </div>
-                </div>
+              return {
+                ...reg,
+                totalTps: regData.total_tps || 0,
+                avgCapacity: Math.round(avgCapacityValue * 10) / 10, // avg daya_tampung in m3
+                criticalCount: 0, // Cannot determine without actual volume data
+                statusText,
+                statusColor,
+                hasCapacityData: regData.has_capacity_data,
+              };
+            });
 
-                {/* KPI 3 */}
-                <div className="admin-stat-card" style={{ border: '1px solid #e2e8f0' }}>
-                  <div className="stat-card-header">
-                    <div className="stat-icon-wrap icon-orange" style={{ background: '#fee2e2', color: '#dc2626' }}>ℹ️</div>
-                    <span style={{
-                      background: '#6366f1',
-                      color: '#ffffff',
-                      fontSize: '0.65rem',
-                      fontWeight: 800,
-                      padding: '2px 7px',
-                      borderRadius: '6px'
-                    }}>
-                      INFO
-                    </span>
-                  </div>
-                  <div className="stat-card-number" style={{ color: '#6366f1' }}>-</div>
-                  <div className="stat-card-label">Status Beban TPS</div>
-                  <div style={{ fontSize: '0.74rem', color: '#6366f1', fontWeight: 700, marginTop: '6px' }}>
-                    Data Volume Belum Tersedia
-                  </div>
-                </div>
+            // Average capacity across all TPS (in m3)
+            const avgCapacityAll =
+              dashboardStats?.avg_capacity_all ||
+              (tpsList.length > 0
+                ? Math.round(
+                    (tpsList.reduce(
+                      (acc, t) => acc + (parseFloat(t.daya_tampung_m3) || 0),
+                      0,
+                    ) /
+                      tpsList.length) *
+                      10,
+                  ) / 10
+                : 0);
 
-                {/* KPI 4 */}
-                <div className="admin-stat-card">
-                  <div className="stat-card-header">
-                    <div className="stat-icon-wrap icon-sand" style={{ background: '#fdf4ff', color: '#c026d3' }}>📢</div>
-                    <span style={{
-                      background: '#8b5cf6',
-                      color: '#ffffff',
-                      fontSize: '0.65rem',
-                      fontWeight: 800,
-                      padding: '2px 7px',
-                      borderRadius: '6px'
-                    }}>
-                      ADUAN
-                    </span>
-                  </div>
-                  <div className="stat-card-number">{pendingReports.length} Aduan</div>
-                  <div className="stat-card-label">Laporan Warga Menunggu</div>
-                  <div style={{ fontSize: '0.74rem', color: '#7c3aed', fontWeight: 700, marginTop: '6px' }}>
-                    Respon Tim Lapangan
-                  </div>
-                </div>
-              </div>
-
-              {/* SEBARAN BEBAN 5 WILAYAH KOTA SURABAYA */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '16px',
-                padding: '22px 24px',
-                marginBottom: '28px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+            return (
+              <div
+                className="admin-content-view"
+                style={{ paddingBottom: "40px" }}
+              >
+                {/* Executive Welcome Hero Banner */}
+                <div
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #064e3b 0%, #047857 55%, #059669 100%)",
+                    color: "#ffffff",
+                    borderRadius: "16px",
+                    padding: "24px 28px",
+                    marginBottom: "24px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "16px",
+                    boxShadow: "0 8px 24px rgba(4, 120, 87, 0.22)",
+                    position: "relative",
+                    overflow: "hidden",
+                  }}
+                >
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
-                      🗺️ Sebaran Beban Kapasitas TPS per Wilayah Surabaya
-                    </h3>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                      Distribusi rata-rata tampungan kontainer sampah di 5 zona kota
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        marginBottom: "8px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <span
+                        style={{
+                          background: "rgba(255,255,255,0.2)",
+                          padding: "3px 10px",
+                          borderRadius: "999px",
+                          fontSize: "0.72rem",
+                          fontWeight: 800,
+                          letterSpacing: "0.5px",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        SUPERADMIN COMMAND CENTER DLH SURABAYA
+                      </span>
+                      <span
+                        style={{
+                          background: "#22c55e",
+                          color: "#ffffff",
+                          padding: "3px 10px",
+                          borderRadius: "999px",
+                          fontSize: "0.72rem",
+                          fontWeight: 800,
+                        }}
+                      >
+                        ● LIVE MONITORING
+                      </span>
+                    </div>
+                    <h2
+                      style={{
+                        fontSize: "1.5rem",
+                        fontWeight: 900,
+                        margin: "0 0 6px",
+                        color: "#ffffff",
+                      }}
+                    >
+                      Executive Waste Governance Control Center
+                    </h2>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.86rem",
+                        opacity: 0.9,
+                        maxWidth: "680px",
+                      }}
+                    >
+                      Akses kontrol eksekutif superadmin: pemantauan operasional{" "}
+                      {totalTpsCount} TPS, neraca volume sampah 5 wilayah, radar
+                      dump truck darurat, dan penanganan aduan warga kota.
                     </p>
                   </div>
-                  <span style={{
-                    fontSize: '0.75rem',
-                    background: '#f1f5f9',
-                    padding: '4px 10px',
-                    borderRadius: '8px',
-                    fontWeight: 700,
-                    color: '#475569'
-                  }}>
-                    Total {totalTpsCount} TPS Aktif
-                  </span>
+
+                  <div
+                    style={{
+                      background: "rgba(255,255,255,0.12)",
+                      border: "1px solid rgba(255,255,255,0.25)",
+                      borderRadius: "12px",
+                      padding: "12px 20px",
+                      textAlign: "center",
+                      backdropFilter: "blur(8px)",
+                      minWidth: "150px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "0.72rem",
+                        opacity: 0.85,
+                        textTransform: "uppercase",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Indeks Kebersihan Kota
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "1.75rem",
+                        fontWeight: 900,
+                        color: "#fef08a",
+                        marginTop: "2px",
+                      }}
+                    >
+                      94.8%
+                    </div>
+                    <span
+                      style={{
+                        fontSize: "0.7rem",
+                        color: "#bbf7d0",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Grade A &bull; Sangat Baik
+                    </span>
+                  </div>
                 </div>
 
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: '16px'
-                }}>
-                  {regionStats.map((reg) => (
+                {/* 4 Executive KPI Cards */}
+                <div className="admin-stats-row">
+                  {/* KPI 1 */}
+                  <div className="admin-stat-card">
+                    <div className="stat-card-header">
+                      <div className="stat-icon-wrap icon-blue">👥</div>
+                      <span className="stat-badge-live">USERS</span>
+                    </div>
+                    <div className="stat-card-number">{users.length}</div>
+                    <div className="stat-card-label">
+                      Total Pengguna Terdaftar
+                    </div>
                     <div
-                      key={reg.name}
                       style={{
-                        background: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between'
+                        fontSize: "0.74rem",
+                        color: "#0284c7",
+                        fontWeight: 700,
+                        marginTop: "6px",
+                      }}
+                    >
+                      Warga &bull; Petugas &bull; Admin
+                    </div>
+                  </div>
+
+                  {/* KPI 2 */}
+                  <div className="admin-stat-card">
+                    <div className="stat-card-header">
+                      <div className="stat-icon-wrap icon-gold">📈</div>
+                      <span className="stat-badge-live">KOTA</span>
+                    </div>
+                    <div className="stat-card-number">
+                      {avgCapacityAll.toFixed(1)} m³
+                    </div>
+                    <div className="stat-card-label">
+                      Rata-rata Kapasitas TPS Kota
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.74rem",
+                        color: "#059669",
+                        fontWeight: 700,
+                        marginTop: "6px",
+                      }}
+                    >
+                      {totalTpsCount} TPS &bull; Daya Tampung
+                    </div>
+                  </div>
+
+                  {/* KPI 3 */}
+                  <div
+                    className="admin-stat-card"
+                    style={{ border: "1px solid #e2e8f0" }}
+                  >
+                    <div className="stat-card-header">
+                      <div
+                        className="stat-icon-wrap icon-orange"
+                        style={{ background: "#fee2e2", color: "#dc2626" }}
+                      >
+                        ℹ️
+                      </div>
+                      <span
+                        style={{
+                          background: "#6366f1",
+                          color: "#ffffff",
+                          fontSize: "0.65rem",
+                          fontWeight: 800,
+                          padding: "2px 7px",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        INFO
+                      </span>
+                    </div>
+                    <div
+                      className="stat-card-number"
+                      style={{ color: "#6366f1" }}
+                    >
+                      -
+                    </div>
+                    <div className="stat-card-label">Status Beban TPS</div>
+                    <div
+                      style={{
+                        fontSize: "0.74rem",
+                        color: "#6366f1",
+                        fontWeight: 700,
+                        marginTop: "6px",
+                      }}
+                    >
+                      Data Volume Belum Tersedia
+                    </div>
+                  </div>
+
+                  {/* KPI 4 */}
+                  <div className="admin-stat-card">
+                    <div className="stat-card-header">
+                      <div
+                        className="stat-icon-wrap icon-sand"
+                        style={{ background: "#fdf4ff", color: "#c026d3" }}
+                      >
+                        📢
+                      </div>
+                      <span
+                        style={{
+                          background: "#8b5cf6",
+                          color: "#ffffff",
+                          fontSize: "0.65rem",
+                          fontWeight: 800,
+                          padding: "2px 7px",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        ADUAN
+                      </span>
+                    </div>
+                    <div className="stat-card-number">
+                      {pendingReports.length} Aduan
+                    </div>
+                    <div className="stat-card-label">
+                      Laporan Warga Menunggu
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.74rem",
+                        color: "#7c3aed",
+                        fontWeight: 700,
+                        marginTop: "6px",
+                      }}
+                    >
+                      Respon Tim Lapangan
+                    </div>
+                  </div>
+                </div>
+
+                {/* SEBARAN BEBAN 5 WILAYAH KOTA SURABAYA */}
+                <div
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "16px",
+                    padding: "22px 24px",
+                    marginBottom: "28px",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "18px",
+                    }}
+                  >
+                    <div>
+                      <h3
+                        style={{
+                          margin: 0,
+                          fontSize: "1.1rem",
+                          fontWeight: 800,
+                          color: "#0f172a",
+                        }}
+                      >
+                        🗺️ Sebaran Beban Kapasitas TPS per Wilayah Surabaya
+                      </h3>
+                      <p
+                        style={{
+                          margin: "4px 0 0",
+                          fontSize: "0.8rem",
+                          color: "#64748b",
+                        }}
+                      >
+                        Distribusi rata-rata tampungan kontainer sampah di 5
+                        zona kota
+                      </p>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        background: "#f1f5f9",
+                        padding: "4px 10px",
+                        borderRadius: "8px",
+                        fontWeight: 700,
+                        color: "#475569",
+                      }}
+                    >
+                      Total {totalTpsCount} TPS Aktif
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(200px, 1fr))",
+                      gap: "16px",
+                    }}
+                  >
+                    {regionStats.map((reg) => (
+                      <div
+                        key={reg.name}
+                        style={{
+                          background: "#f8fafc",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "12px",
+                          padding: "16px",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <div>
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              marginBottom: "6px",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: "0.88rem",
+                                fontWeight: 800,
+                                color: "#0f172a",
+                              }}
+                            >
+                              {reg.icon} {reg.name}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "0.7rem",
+                                fontWeight: 800,
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                background:
+                                  reg.statusColor === "#10b981"
+                                    ? "#f0fdf4"
+                                    : "#f1f5f9",
+                                color: reg.statusColor,
+                              }}
+                            >
+                              {reg.statusText}
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.72rem",
+                              color: "#64748b",
+                              marginBottom: "12px",
+                            }}
+                          >
+                            {reg.desc}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "flex-end",
+                              marginBottom: "6px",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: "0.75rem",
+                                color: "#475569",
+                                fontWeight: 600,
+                              }}
+                            >
+                              {reg.totalTps} TPS
+                            </span>
+                            <strong
+                              style={{
+                                fontSize: "1.1rem",
+                                fontWeight: 900,
+                                color: reg.statusColor,
+                              }}
+                            >
+                              {reg.avgCapacity} m³
+                            </strong>
+                          </div>
+                          <div
+                            style={{
+                              width: "100%",
+                              height: "8px",
+                              background: "#e2e8f0",
+                              borderRadius: "999px",
+                              overflow: "hidden",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: `${Math.min((reg.avgCapacity / 20) * 100, 100)}%`,
+                                height: "100%",
+                                background: reg.statusColor,
+                                borderRadius: "999px",
+                                transition: "width 0.4s ease",
+                              }}
+                            />
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.7rem",
+                              color: "#64748b",
+                              marginTop: "4px",
+                            }}
+                          >
+                            {reg.statusText}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* DUA GRID: RADAR TPS OVERLOAD & ADUAN WARGA */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))",
+                    gap: "24px",
+                    marginBottom: "28px",
+                  }}
+                >
+                  {/* 1. RADAR TPS PRIORITAS PENGANGKUTAN */}
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "16px",
+                      padding: "22px 24px",
+                      boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "16px",
                       }}
                     >
                       <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                          <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
-                            {reg.icon} {reg.name}
-                          </span>
-                          <span style={{
-                            fontSize: '0.7rem',
+                        <h3
+                          style={{
+                            margin: 0,
+                            fontSize: "1.05rem",
                             fontWeight: 800,
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            background: reg.statusColor === '#10b981' ? '#f0fdf4' : '#f1f5f9',
-                            color: reg.statusColor
-                          }}>
-                            {reg.statusText}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '12px' }}>
-                          {reg.desc}
-                        </div>
+                            color: "#0f172a",
+                          }}
+                        >
+                          🚨 Radar Prioritas Pengangkutan (TPS Overload &ge;
+                          80%)
+                        </h3>
+                        <p
+                          style={{
+                            margin: "3px 0 0",
+                            fontSize: "0.78rem",
+                            color: "#64748b",
+                          }}
+                        >
+                          TPS membutuhkan penugasan armada dump truck DLH segera
+                        </p>
                       </div>
+                      <span
+                        style={{
+                          background: "#fee2e2",
+                          color: "#dc2626",
+                          fontWeight: 800,
+                          fontSize: "0.72rem",
+                          padding: "3px 8px",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        DARURAT
+                      </span>
+                    </div>
 
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                      }}
+                    >
+                      {criticalTpsList.slice(0, 5).map((tps) => {
+                        const isDispatched = dispatchedTpsList.includes(tps.id);
+                        const pct = tps.kapasitasPersen || tps.capacity || 85;
+                        return (
+                          <div
+                            key={tps.id}
+                            style={{
+                              border: "1px solid #fed7aa",
+                              background: "#fffaf5",
+                              borderRadius: "10px",
+                              padding: "12px 14px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: "12px",
+                            }}
+                          >
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                }}
+                              >
+                                <strong
+                                  style={{
+                                    fontSize: "0.88rem",
+                                    color: "#0f172a",
+                                  }}
+                                >
+                                  {tps.nama}
+                                </strong>
+                                <span
+                                  style={{
+                                    fontSize: "0.68rem",
+                                    fontWeight: 800,
+                                    background: "#ef4444",
+                                    color: "#fff",
+                                    padding: "1px 6px",
+                                    borderRadius: "4px",
+                                  }}
+                                >
+                                  {pct}%
+                                </span>
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "0.75rem",
+                                  color: "#64748b",
+                                  marginTop: "2px",
+                                }}
+                              >
+                                Kec. {tps.kecamatan} &bull; {tps.wilayahKota}{" "}
+                                &bull; Kapasitas: {tps.dayaTampungM3 || 12} m³
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDispatchTruck(tps)}
+                              disabled={isDispatched}
+                              style={{
+                                background: isDispatched
+                                  ? "#059669"
+                                  : "#ea580c",
+                                color: "#ffffff",
+                                border: "none",
+                                borderRadius: "8px",
+                                padding: "8px 12px",
+                                fontSize: "0.76rem",
+                                fontWeight: 700,
+                                cursor: isDispatched ? "default" : "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              <span>{isDispatched ? "✓" : "🚨"}</span>
+                              <span>
+                                {isDispatched
+                                  ? "Truk Ditugaskan"
+                                  : "Disposisi Truk"}
+                              </span>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 2. ADUAN & LAPORAN WARGA TERKINI */}
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "16px",
+                      padding: "22px 24px",
+                      boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "16px",
+                      }}
+                    >
                       <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '6px' }}>
-                          <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 600 }}>
-                            {reg.totalTps} TPS
+                        <h3
+                          style={{
+                            margin: 0,
+                            fontSize: "1.05rem",
+                            fontWeight: 800,
+                            color: "#0f172a",
+                          }}
+                        >
+                          📢 Aduan &amp; Laporan Warga Lapangan
+                        </h3>
+                        <p
+                          style={{
+                            margin: "3px 0 0",
+                            fontSize: "0.78rem",
+                            color: "#64748b",
+                          }}
+                        >
+                          Umpan balik real-time dari aplikasi warga SI-PETASAN
+                        </p>
+                      </div>
+                      <span
+                        style={{
+                          background: "#ede9fe",
+                          color: "#6d28d9",
+                          fontWeight: 800,
+                          fontSize: "0.72rem",
+                          padding: "3px 8px",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        {pendingReports.length} Menunggu
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                      }}
+                    >
+                      {laporanList.slice(0, 4).map((lap) => {
+                        const isDone = lap.status_tindak_lanjut === "Selesai";
+                        return (
+                          <div
+                            key={lap.id}
+                            style={{
+                              border: `1px solid ${isDone ? "#e2e8f0" : "#fed7aa"}`,
+                              background: isDone ? "#f8fafc" : "#ffffff",
+                              borderRadius: "10px",
+                              padding: "12px 14px",
+                              display: "flex",
+                              alignItems: "flex-start",
+                              justifyContent: "space-between",
+                              gap: "12px",
+                            }}
+                          >
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                  marginBottom: "2px",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    fontSize: "0.68rem",
+                                    fontWeight: 800,
+                                    background:
+                                      lap.jenis_laporan === "Penuh"
+                                        ? "#fee2e2"
+                                        : "#fef3c7",
+                                    color:
+                                      lap.jenis_laporan === "Penuh"
+                                        ? "#b91c1c"
+                                        : "#b45309",
+                                    padding: "1px 6px",
+                                    borderRadius: "4px",
+                                  }}
+                                >
+                                  {lap.jenis_laporan}
+                                </span>
+                                <strong
+                                  style={{
+                                    fontSize: "0.84rem",
+                                    color: "#0f172a",
+                                  }}
+                                >
+                                  {lap.tps_nama || "TPS Surabaya"}
+                                </strong>
+                              </div>
+                              <p
+                                style={{
+                                  margin: "4px 0 2px",
+                                  fontSize: "0.78rem",
+                                  color: "#475569",
+                                  lineHeight: 1.35,
+                                }}
+                              >
+                                {lap.deskripsi}
+                              </p>
+                              <span
+                                style={{ fontSize: "0.7rem", color: "#94a3b8" }}
+                              >
+                                Dilaporkan:{" "}
+                                {lap.tanggal_lapor
+                                  ? lap.tanggal_lapor.includes("lalu")
+                                    ? lap.tanggal_lapor
+                                    : new Date(
+                                        lap.tanggal_lapor,
+                                      ).toLocaleDateString("id-ID")
+                                  : "Baru saja"}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleResolveLaporan(lap.id)}
+                              disabled={isDone}
+                              style={{
+                                background: isDone ? "#f1f5f9" : "#059669",
+                                color: isDone ? "#64748b" : "#ffffff",
+                                border: isDone ? "1px solid #cbd5e1" : "none",
+                                borderRadius: "8px",
+                                padding: "6px 10px",
+                                fontSize: "0.74rem",
+                                fontWeight: 700,
+                                cursor: isDone ? "default" : "pointer",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {isDone ? "✓ Selesai" : "Tindak Lanjuti"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* DUA GRID BAWAH: PENGGUNA TERBARU & JADWAL MINGGU INI */}
+                <div className="admin-dashboard-grid">
+                  <div className="admin-card">
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "14px",
+                      }}
+                    >
+                      <h3 className="admin-card-title" style={{ margin: 0 }}>
+                        👥 Pengguna Terbaru Sistem
+                      </h3>
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "#0284c7",
+                          fontWeight: 700,
+                        }}
+                      >
+                        Total: {users.length} Pengguna
+                      </span>
+                    </div>
+                    <div className="recent-users-list">
+                      {users.slice(0, 5).map((user) => (
+                        <div key={user.id} className="recent-user-item">
+                          <div className="recent-user-avatar">
+                            {user.nama_lengkap?.charAt(0) || "U"}
+                          </div>
+                          <div className="recent-user-info">
+                            <div className="recent-user-name">
+                              {user.nama_lengkap}
+                            </div>
+                            <div className="recent-user-email">
+                              {user.email}
+                            </div>
+                          </div>
+                          <span className={`status-pill role-${user.role}`}>
+                            {user.role}
                           </span>
-                          <strong style={{ fontSize: '1.1rem', fontWeight: 900, color: reg.statusColor }}>
-                            {reg.avgCapacity} m³
-                          </strong>
                         </div>
-                        <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
-                          <div style={{
-                            width: `${Math.min((reg.avgCapacity / 20) * 100, 100)}%`,
-                            height: '100%',
-                            background: reg.statusColor,
-                            borderRadius: '999px',
-                            transition: 'width 0.4s ease'
-                          }} />
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px' }}>
-                          {reg.statusText}
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* DUA GRID: RADAR TPS OVERLOAD & ADUAN WARGA */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))',
-                gap: '24px',
-                marginBottom: '28px'
-              }}>
-                {/* 1. RADAR TPS PRIORITAS PENGANGKUTAN */}
-                <div style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '16px',
-                  padding: '22px 24px',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
-                        🚨 Radar Prioritas Pengangkutan (TPS Overload &ge; 80%)
-                      </h3>
-                      <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
-                        TPS membutuhkan penugasan armada dump truck DLH segera
-                      </p>
-                    </div>
-                    <span style={{
-                      background: '#fee2e2',
-                      color: '#dc2626',
-                      fontWeight: 800,
-                      fontSize: '0.72rem',
-                      padding: '3px 8px',
-                      borderRadius: '6px'
-                    }}>
-                      DARURAT
-                    </span>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {criticalTpsList.slice(0, 5).map((tps) => {
-                      const isDispatched = dispatchedTpsList.includes(tps.id);
-                      const pct = tps.kapasitasPersen || tps.capacity || 85;
-                      return (
-                        <div
-                          key={tps.id}
-                          style={{
-                            border: '1px solid #fed7aa',
-                            background: '#fffaf5',
-                            borderRadius: '10px',
-                            padding: '12px 14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: '12px'
-                          }}
-                        >
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <strong style={{ fontSize: '0.88rem', color: '#0f172a' }}>
-                                {tps.nama}
-                              </strong>
-                              <span style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 800,
-                                background: '#ef4444',
-                                color: '#fff',
-                                padding: '1px 6px',
-                                borderRadius: '4px'
-                              }}>
-                                {pct}%
-                              </span>
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
-                              Kec. {tps.kecamatan} &bull; {tps.wilayahKota} &bull; Kapasitas: {tps.dayaTampungM3 || 12} m³
-                            </div>
+                  <div className="admin-card">
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "14px",
+                      }}
+                    >
+                      <h3 className="admin-card-title" style={{ margin: 0 }}>
+                        📅 Jadwal Pengambilan Minggu Ini
+                      </h3>
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "#ea580c",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {jadwals.length} Rute
+                      </span>
+                    </div>
+                    <div className="tps-realtime-list">
+                      {jadwals.slice(0, 5).map((j) => (
+                        <div key={j.id} className="tps-realtime-row">
+                          <div className="tps-name-col">
+                            <span>{j.hari}</span>
                           </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDispatchTruck(tps)}
-                            disabled={isDispatched}
+                          <div
                             style={{
-                              background: isDispatched ? '#059669' : '#ea580c',
-                              color: '#ffffff',
-                              border: 'none',
-                              borderRadius: '8px',
-                              padding: '8px 12px',
-                              fontSize: '0.76rem',
-                              fontWeight: 700,
-                              cursor: isDispatched ? 'default' : 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              whiteSpace: 'nowrap'
+                              flex: 1,
+                              fontSize: "0.85rem",
+                              color: "#64748b",
                             }}
                           >
-                            <span>{isDispatched ? '✓' : '🚨'}</span>
-                            <span>{isDispatched ? 'Truk Ditugaskan' : 'Disposisi Truk'}</span>
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 2. ADUAN & LAPORAN WARGA TERKINI */}
-                <div style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '16px',
-                  padding: '22px 24px',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
-                        📢 Aduan &amp; Laporan Warga Lapangan
-                      </h3>
-                      <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
-                        Umpan balik real-time dari aplikasi warga SI-PETASAN
-                      </p>
-                    </div>
-                    <span style={{
-                      background: '#ede9fe',
-                      color: '#6d28d9',
-                      fontWeight: 800,
-                      fontSize: '0.72rem',
-                      padding: '3px 8px',
-                      borderRadius: '6px'
-                    }}>
-                      {pendingReports.length} Menunggu
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {laporanList.slice(0, 4).map((lap) => {
-                      const isDone = lap.status_tindak_lanjut === 'Selesai';
-                      return (
-                        <div
-                          key={lap.id}
-                          style={{
-                            border: `1px solid ${isDone ? '#e2e8f0' : '#fed7aa'}`,
-                            background: isDone ? '#f8fafc' : '#ffffff',
-                            borderRadius: '10px',
-                            padding: '12px 14px',
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            justifyContent: 'space-between',
-                            gap: '12px'
-                          }}
-                        >
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                              <span style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 800,
-                                background: lap.jenis_laporan === 'Penuh' ? '#fee2e2' : '#fef3c7',
-                                color: lap.jenis_laporan === 'Penuh' ? '#b91c1c' : '#b45309',
-                                padding: '1px 6px',
-                                borderRadius: '4px'
-                              }}>
-                                {lap.jenis_laporan}
-                              </span>
-                              <strong style={{ fontSize: '0.84rem', color: '#0f172a' }}>
-                                {lap.tps_nama || 'TPS Surabaya'}
-                              </strong>
-                            </div>
-                            <p style={{ margin: '4px 0 2px', fontSize: '0.78rem', color: '#475569', lineHeight: 1.35 }}>
-                              {lap.deskripsi}
-                            </p>
-                            <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                              Dilaporkan: {lap.tanggal_lapor ? (lap.tanggal_lapor.includes('lalu') ? lap.tanggal_lapor : new Date(lap.tanggal_lapor).toLocaleDateString('id-ID')) : 'Baru saja'}
-                            </span>
+                            {j.area} &bull; {j.waktu_mulai}
                           </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleResolveLaporan(lap.id)}
-                            disabled={isDone}
-                            style={{
-                              background: isDone ? '#f1f5f9' : '#059669',
-                              color: isDone ? '#64748b' : '#ffffff',
-                              border: isDone ? '1px solid #cbd5e1' : 'none',
-                              borderRadius: '8px',
-                              padding: '6px 10px',
-                              fontSize: '0.74rem',
-                              fontWeight: 700,
-                              cursor: isDone ? 'default' : 'pointer',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            {isDone ? '✓ Selesai' : 'Tindak Lanjuti'}
-                          </button>
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* DUA GRID BAWAH: PENGGUNA TERBARU & JADWAL MINGGU INI */}
-              <div className="admin-dashboard-grid">
-                <div className="admin-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                    <h3 className="admin-card-title" style={{ margin: 0 }}>👥 Pengguna Terbaru Sistem</h3>
-                    <span style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: 700 }}>Total: {users.length} Pengguna</span>
-                  </div>
-                  <div className="recent-users-list">
-                    {users.slice(0, 5).map(user => (
-                      <div key={user.id} className="recent-user-item">
-                        <div className="recent-user-avatar">{user.nama_lengkap?.charAt(0) || 'U'}</div>
-                        <div className="recent-user-info">
-                          <div className="recent-user-name">{user.nama_lengkap}</div>
-                          <div className="recent-user-email">{user.email}</div>
-                        </div>
-                        <span className={`status-pill role-${user.role}`}>{user.role}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="admin-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                    <h3 className="admin-card-title" style={{ margin: 0 }}>📅 Jadwal Pengambilan Minggu Ini</h3>
-                    <span style={{ fontSize: '0.75rem', color: '#ea580c', fontWeight: 700 }}>{jadwals.length} Rute</span>
-                  </div>
-                  <div className="tps-realtime-list">
-                    {jadwals.slice(0, 5).map(j => (
-                      <div key={j.id} className="tps-realtime-row">
-                        <div className="tps-name-col">
-                          <span>{j.hari}</span>
-                        </div>
-                        <div style={{ flex: 1, fontSize: '0.85rem', color: '#64748b' }}>
-                          {j.area} &bull; {j.waktu_mulai}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+            );
+          })()}
 
         {/* PENGGUNA */}
-        {activeMenu === 'pengguna' && (
+        {activeMenu === "pengguna" && (
           <div className="admin-content-view">
             <div className="admin-card full-table-card">
               <div className="table-header-row">
@@ -1434,12 +2236,22 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map(u => (
+                    {users.map((u) => (
                       <tr key={u.id}>
-                        <td><strong>{u.nama_lengkap}</strong></td>
+                        <td>
+                          <strong>{u.nama_lengkap}</strong>
+                        </td>
                         <td className="text-muted">{u.email}</td>
-                        <td><span className={`role-pill role-${u.role}`}>{u.role}</span></td>
-                        <td><span className="status-pill status-aktif">Aktif</span></td>
+                        <td>
+                          <span className={`role-pill role-${u.role}`}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="status-pill status-aktif">
+                            Aktif
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1450,11 +2262,13 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
         )}
 
         {/* PETUGAS & ADMIN CRUD */}
-        {activeMenu === 'petugas' && (
+        {activeMenu === "petugas" && (
           <div className="admin-content-view">
             <div className="admin-card full-table-card">
               <div className="table-header-row">
-                <h3 className="admin-card-title">Kelola Akun Petugas & Admin</h3>
+                <h3 className="admin-card-title">
+                  Kelola Akun Petugas & Admin
+                </h3>
                 <button
                   type="button"
                   className="btn-add-primary"
@@ -1476,18 +2290,110 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                     </tr>
                   </thead>
                   <tbody>
-                    {petugasList.map(p => (
+                    {petugasList.map((p) => (
                       <tr key={p.id}>
-                        <td>{p.foto_url ? <img src={`${API_BASE}${p.foto_url}`} alt={p.nama_lengkap} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'1px solid #e2e8f0'}} /> : <span style={{width:36,height:36,borderRadius:'50%',background:'#e2e8f0',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:'0.75rem',fontWeight:700,color:'#64748b'}}>{p.nama_lengkap?.charAt(0)?.toUpperCase()||'P'}</span>}</td>
-                        <td><strong>{p.nama_lengkap}</strong></td>
-                        <td className="text-muted">{p.email}</td>
-                        <td><span className={`role-pill role-${p.role}`}>{p.role}</span></td>
-                        <td className="text-muted" style={{fontSize:'0.82rem'}}>{[p.wilayah_kecamatan,p.wilayah_kelurahan].filter(Boolean).join(' — ') || <span style={{color:'#94a3b8'}}>Belum diatur</span>}</td>
                         <td>
-                          <div style={{display:'flex',gap:'6px',flexWrap:'wrap'}}>
-                            <button type="button" title="Lihat (merah)" onClick={() => openViewUser(p)} style={{padding:'5px 10px',borderRadius:'6px',border:'1px solid #fecaca',background:'#fef2f2',color:'#b91c1c',cursor:'pointer',fontWeight:600,fontSize:'0.78rem'}}>👁 View</button>
-                            <button type="button" title="Edit (hijau)" onClick={() => openEditUser(p)} style={{padding:'5px 10px',borderRadius:'6px',border:'1px solid #bbf7d0',background:'#f0fdf4',color:'#166534',cursor:'pointer',fontWeight:600,fontSize:'0.78rem'}}>✎ Edit</button>
-                            <button type="button" className="btn-table-delete" onClick={() => handleDeleteUser(p.id)}>× Hapus</button>
+                          {p.foto_url ? (
+                            <img
+                              src={`${API_BASE}${p.foto_url}`}
+                              alt={p.nama_lengkap}
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                                border: "1px solid #e2e8f0",
+                              }}
+                            />
+                          ) : (
+                            <span
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: "50%",
+                                background: "#e2e8f0",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "0.75rem",
+                                fontWeight: 700,
+                                color: "#64748b",
+                              }}
+                            >
+                              {p.nama_lengkap?.charAt(0)?.toUpperCase() || "P"}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          <strong>{p.nama_lengkap}</strong>
+                        </td>
+                        <td className="text-muted">{p.email}</td>
+                        <td>
+                          <span className={`role-pill role-${p.role}`}>
+                            {p.role}
+                          </span>
+                        </td>
+                        <td
+                          className="text-muted"
+                          style={{ fontSize: "0.82rem" }}
+                        >
+                          {[p.wilayah_kecamatan, p.wilayah_kelurahan]
+                            .filter(Boolean)
+                            .join(" — ") || (
+                            <span style={{ color: "#94a3b8" }}>
+                              Belum diatur
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "6px",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <button
+                              type="button"
+                              title="Lihat (merah)"
+                              onClick={() => openViewUser(p)}
+                              style={{
+                                padding: "5px 10px",
+                                borderRadius: "6px",
+                                border: "1px solid #fecaca",
+                                background: "#fef2f2",
+                                color: "#b91c1c",
+                                cursor: "pointer",
+                                fontWeight: 600,
+                                fontSize: "0.78rem",
+                              }}
+                            >
+                              👁 View
+                            </button>
+                            <button
+                              type="button"
+                              title="Edit (hijau)"
+                              onClick={() => openEditUser(p)}
+                              style={{
+                                padding: "5px 10px",
+                                borderRadius: "6px",
+                                border: "1px solid #bbf7d0",
+                                background: "#f0fdf4",
+                                color: "#166534",
+                                cursor: "pointer",
+                                fontWeight: 600,
+                                fontSize: "0.78rem",
+                              }}
+                            >
+                              ✎ Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-table-delete"
+                              onClick={() => handleDeleteUser(p.id)}
+                            >
+                              × Hapus
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1500,48 +2406,92 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
         )}
 
         {/* TPS CRUD */}
-        {activeMenu === 'tps' && (
+        {activeMenu === "tps" && (
           <div className="admin-content-view">
             {/* Peta Lokasi TPS */}
-            <TpsMapSuperadmin 
-              tpsList={tpsList} 
+            <TpsMapSuperadmin
+              tpsList={tpsList}
               onTpsClick={(tps) => {
                 // Scroll ke tabel dan highlight TPS yang dipilih
-                const tableCard = document.querySelector('.full-table-card');
+                const tableCard = document.querySelector(".full-table-card");
                 if (tableCard) {
-                  tableCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  tableCard.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  });
                 }
-              }} 
+              }}
             />
 
             <div className="admin-card full-table-card">
-              <div className="table-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                <h3 className="admin-card-title" style={{ margin: 0 }}>Kelola Data TPS</h3>
-                
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <div
+                className="table-header-row"
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "12px",
+                }}
+              >
+                <h3 className="admin-card-title" style={{ margin: 0 }}>
+                  Kelola Data TPS
+                </h3>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    flexWrap: "wrap",
+                  }}
+                >
                   {/* Search Input (Orange style) */}
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <div
+                    style={{
+                      position: "relative",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
                     <input
                       type="text"
                       placeholder="Cari TPS..."
                       value={tpsSearchQuery}
                       onChange={(e) => setTpsSearchQuery(e.target.value)}
                       style={{
-                        padding: '8px 12px 8px 34px',
-                        borderRadius: '6px',
-                        border: '1.5px solid #f97316',
-                        fontSize: '0.85rem',
-                        outline: 'none',
-                        width: '200px',
-                        color: '#1e293b'
+                        padding: "8px 12px 8px 34px",
+                        borderRadius: "6px",
+                        border: "1.5px solid #f97316",
+                        fontSize: "0.85rem",
+                        outline: "none",
+                        width: "200px",
+                        color: "#1e293b",
                       }}
                     />
-                    <span style={{ position: 'absolute', left: '10px', color: '#f97316', fontSize: '0.9rem' }}>🔍</span>
+                    <span
+                      style={{
+                        position: "absolute",
+                        left: "10px",
+                        color: "#f97316",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      🔍
+                    </span>
                     {tpsSearchQuery && (
                       <button
                         type="button"
-                        onClick={() => setTpsSearchQuery('')}
-                        style={{ position: 'absolute', right: '8px', border: 'none', background: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.9rem' }}
+                        onClick={() => setTpsSearchQuery("")}
+                        style={{
+                          position: "absolute",
+                          right: "8px",
+                          border: "none",
+                          background: "none",
+                          color: "#94a3b8",
+                          cursor: "pointer",
+                          fontSize: "0.9rem",
+                        }}
                       >
                         ✕
                       </button>
@@ -1549,7 +2499,7 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   </div>
 
                   {/* Filter Button (Red style with Popover) */}
-                  <div style={{ position: 'relative' }}>
+                  <div style={{ position: "relative" }}>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -1557,95 +2507,208 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                         setShowTpsFilterPopover(!showTpsFilterPopover);
                       }}
                       style={{
-                        background: (tpsFilterKecamatan || tpsFilterKelurahan || tpsFilterStatus || tpsFilterCapacity.min || tpsFilterCapacity.max) ? '#dc2626' : '#ef4444',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '8px 14px',
-                        fontSize: '0.85rem',
+                        background:
+                          tpsFilterKecamatan ||
+                          tpsFilterKelurahan ||
+                          tpsFilterStatus ||
+                          tpsFilterCapacity.min ||
+                          tpsFilterCapacity.max
+                            ? "#dc2626"
+                            : "#ef4444",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: "6px",
+                        padding: "8px 14px",
+                        fontSize: "0.85rem",
                         fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
                       }}
                     >
                       <span>🌪️ Filter</span>
-                      {(tpsFilterKecamatan || tpsFilterKelurahan || tpsFilterStatus || tpsFilterCapacity.min || tpsFilterCapacity.max) && (
-                        <span style={{ background: '#ffffff', color: '#dc2626', borderRadius: '50%', width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>!</span>
+                      {(tpsFilterKecamatan ||
+                        tpsFilterKelurahan ||
+                        tpsFilterStatus ||
+                        tpsFilterCapacity.min ||
+                        tpsFilterCapacity.max) && (
+                        <span
+                          style={{
+                            background: "#ffffff",
+                            color: "#dc2626",
+                            borderRadius: "50%",
+                            width: "18px",
+                            height: "18px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "0.7rem",
+                            fontWeight: 800,
+                          }}
+                        >
+                          !
+                        </span>
                       )}
                     </button>
 
                     {/* Filter Popover */}
                     {showTpsFilterPopover && (
-                      <div 
+                      <div
                         data-tps-filter-popover
                         onClick={(e) => e.stopPropagation()}
                         style={{
-                          position: 'absolute',
-                          top: '100%',
+                          position: "absolute",
+                          top: "100%",
                           right: 0,
-                          marginTop: '8px',
-                          background: '#ffffff',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '10px',
-                          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15)',
-                          padding: '16px',
-                          width: '280px',
-                          zIndex: 100
+                          marginTop: "8px",
+                          background: "#ffffff",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "10px",
+                          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.15)",
+                          padding: "16px",
+                          width: "280px",
+                          zIndex: 100,
                         }}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
-                          <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>Filter TPS</h4>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "12px",
+                            borderBottom: "1px solid #f1f5f9",
+                            paddingBottom: "8px",
+                          }}
+                        >
+                          <h4
+                            style={{
+                              margin: 0,
+                              fontSize: "0.9rem",
+                              fontWeight: 700,
+                              color: "#0f172a",
+                            }}
+                          >
+                            Filter TPS
+                          </h4>
                           <button
                             type="button"
                             onClick={() => setShowTpsFilterPopover(false)}
-                            style={{ border: 'none', background: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.9rem' }}
+                            style={{
+                              border: "none",
+                              background: "none",
+                              color: "#64748b",
+                              cursor: "pointer",
+                              fontSize: "0.9rem",
+                            }}
                           >
                             ✕
                           </button>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "10px",
+                          }}
+                        >
                           <div>
-                            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Kecamatan</label>
+                            <label
+                              style={{
+                                display: "block",
+                                fontSize: "0.78rem",
+                                fontWeight: 600,
+                                color: "#475569",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              Kecamatan
+                            </label>
                             <select
                               value={tpsFilterKecamatan}
                               onChange={(e) => {
                                 setTpsFilterKecamatan(e.target.value);
-                                setTpsFilterKelurahan('');
+                                setTpsFilterKelurahan("");
                               }}
-                              style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
+                              style={{
+                                width: "100%",
+                                padding: "6px 8px",
+                                borderRadius: "6px",
+                                border: "1px solid #cbd5e1",
+                                fontSize: "0.82rem",
+                              }}
                             >
                               <option value="">Semua Kecamatan</option>
-                              {kecamatanOptions.map(k => (
-                                <option key={k} value={k}>{k}</option>
+                              {kecamatanOptions.map((k) => (
+                                <option key={k} value={k}>
+                                  {k}
+                                </option>
                               ))}
                             </select>
                           </div>
 
-                          {tpsFilterKecamatan && availableKelurahan.length > 0 && (
-                            <div>
-                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Kelurahan</label>
-                              <select
-                                value={tpsFilterKelurahan}
-                                onChange={(e) => setTpsFilterKelurahan(e.target.value)}
-                                style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
-                              >
-                                <option value="">Semua Kelurahan</option>
-                                {availableKelurahan.map(k => (
-                                  <option key={k} value={k}>{k}</option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
+                          {tpsFilterKecamatan &&
+                            availableKelurahan.length > 0 && (
+                              <div>
+                                <label
+                                  style={{
+                                    display: "block",
+                                    fontSize: "0.78rem",
+                                    fontWeight: 600,
+                                    color: "#475569",
+                                    marginBottom: "4px",
+                                  }}
+                                >
+                                  Kelurahan
+                                </label>
+                                <select
+                                  value={tpsFilterKelurahan}
+                                  onChange={(e) =>
+                                    setTpsFilterKelurahan(e.target.value)
+                                  }
+                                  style={{
+                                    width: "100%",
+                                    padding: "6px 8px",
+                                    borderRadius: "6px",
+                                    border: "1px solid #cbd5e1",
+                                    fontSize: "0.82rem",
+                                  }}
+                                >
+                                  <option value="">Semua Kelurahan</option>
+                                  {availableKelurahan.map((k) => (
+                                    <option key={k} value={k}>
+                                      {k}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
 
                           <div>
-                            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Status</label>
+                            <label
+                              style={{
+                                display: "block",
+                                fontSize: "0.78rem",
+                                fontWeight: 600,
+                                color: "#475569",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              Status
+                            </label>
                             <select
                               value={tpsFilterStatus}
-                              onChange={(e) => setTpsFilterStatus(e.target.value)}
-                              style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
+                              onChange={(e) =>
+                                setTpsFilterStatus(e.target.value)
+                              }
+                              style={{
+                                width: "100%",
+                                padding: "6px 8px",
+                                borderRadius: "6px",
+                                border: "1px solid #cbd5e1",
+                                fontSize: "0.82rem",
+                              }}
                             >
                               <option value="">Semua Status</option>
                               <option value="Aktif">Aktif</option>
@@ -1654,33 +2717,91 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                           </div>
 
                           <div>
-                            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Daya Tampung (m³)</label>
-                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <label
+                              style={{
+                                display: "block",
+                                fontSize: "0.78rem",
+                                fontWeight: 600,
+                                color: "#475569",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              Daya Tampung (m³)
+                            </label>
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: "6px",
+                                alignItems: "center",
+                              }}
+                            >
                               <input
                                 type="number"
                                 placeholder="Min"
                                 value={tpsFilterCapacity.min}
-                                onChange={(e) => setTpsFilterCapacity({ ...tpsFilterCapacity, min: e.target.value })}
-                                style={{ width: '50%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
+                                onChange={(e) =>
+                                  setTpsFilterCapacity({
+                                    ...tpsFilterCapacity,
+                                    min: e.target.value,
+                                  })
+                                }
+                                style={{
+                                  width: "50%",
+                                  padding: "6px 8px",
+                                  borderRadius: "6px",
+                                  border: "1px solid #cbd5e1",
+                                  fontSize: "0.82rem",
+                                }}
                               />
-                              <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>-</span>
+                              <span
+                                style={{ fontSize: "0.8rem", color: "#94a3b8" }}
+                              >
+                                -
+                              </span>
                               <input
                                 type="number"
                                 placeholder="Max"
                                 value={tpsFilterCapacity.max}
-                                onChange={(e) => setTpsFilterCapacity({ ...tpsFilterCapacity, max: e.target.value })}
-                                style={{ width: '50%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
+                                onChange={(e) =>
+                                  setTpsFilterCapacity({
+                                    ...tpsFilterCapacity,
+                                    max: e.target.value,
+                                  })
+                                }
+                                style={{
+                                  width: "50%",
+                                  padding: "6px 8px",
+                                  borderRadius: "6px",
+                                  border: "1px solid #cbd5e1",
+                                  fontSize: "0.82rem",
+                                }}
                               />
                             </div>
                           </div>
 
-                          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              marginTop: "8px",
+                            }}
+                          >
                             <button
                               type="button"
                               onClick={() => {
                                 setShowTpsFilterPopover(false);
                               }}
-                              style={{ flex: 1, background: '#dc2626', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '6px 10px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                              style={{
+                                flex: 1,
+                                background: "#dc2626",
+                                color: "#ffffff",
+                                border: "none",
+                                borderRadius: "6px",
+                                padding: "6px 10px",
+                                fontSize: "0.8rem",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                              }}
                             >
                               Terapkan
                             </button>
@@ -1690,7 +2811,17 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                                 resetTpsFilters();
                                 setShowTpsFilterPopover(false);
                               }}
-                              style={{ flex: 1, background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '6px', padding: '6px 10px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                              style={{
+                                flex: 1,
+                                background: "#f1f5f9",
+                                color: "#475569",
+                                border: "none",
+                                borderRadius: "6px",
+                                padding: "6px 10px",
+                                fontSize: "0.8rem",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                              }}
                             >
                               Reset
                             </button>
@@ -1706,7 +2837,18 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                     className="btn-add-primary"
                     onClick={() => {
                       setEditingTpsId(null);
-                      setNewTps({ nama: '', kecamatan: '', wilayah_kota: 'Surabaya Pusat', lokasi: '', jenis_tps: 'TPS Resmi', latitude: '', longitude: '', jumlah_container: '', daya_tampung_m3: '', status: 'Aktif' });
+                      setNewTps({
+                        nama: "",
+                        kecamatan: "",
+                        wilayah_kota: "Surabaya Pusat",
+                        lokasi: "",
+                        jenis_tps: "TPS Resmi",
+                        latitude: "",
+                        longitude: "",
+                        jumlah_container: "",
+                        daya_tampung_m3: "",
+                        status: "Aktif",
+                      });
                       setShowAddTpsModal(true);
                     }}
                   >
@@ -1716,13 +2858,39 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
               </div>
 
               {/* Result Stats Bar */}
-              <div style={{ padding: '8px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '0.8rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>Menampilkan <strong>{tpsFilteredList.length}</strong> dari total <strong>{tpsList.length}</strong> TPS</span>
-                {(tpsSearchQuery || tpsFilterKecamatan || tpsFilterKelurahan || tpsFilterStatus || tpsFilterCapacity.min || tpsFilterCapacity.max) && (
+              <div
+                style={{
+                  padding: "8px 16px",
+                  background: "#f8fafc",
+                  borderBottom: "1px solid #e2e8f0",
+                  fontSize: "0.8rem",
+                  color: "#64748b",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span>
+                  Menampilkan <strong>{tpsFilteredList.length}</strong> dari
+                  total <strong>{tpsList.length}</strong> TPS
+                </span>
+                {(tpsSearchQuery ||
+                  tpsFilterKecamatan ||
+                  tpsFilterKelurahan ||
+                  tpsFilterStatus ||
+                  tpsFilterCapacity.min ||
+                  tpsFilterCapacity.max) && (
                   <button
                     type="button"
                     onClick={resetTpsFilters}
-                    style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#dc2626",
+                      fontSize: "0.78rem",
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                    }}
                   >
                     Reset Filter
                   </button>
@@ -1747,28 +2915,64 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   <tbody>
                     {tpsFilteredList.length === 0 ? (
                       <tr>
-                        <td colSpan="9" style={{ textAlign: 'center', padding: '32px 16px', color: '#64748b' }}>
-                          <div style={{ fontSize: '1.2rem', marginBottom: '4px' }}>🔍</div>
-                          <div>Tidak ada data TPS yang sesuai dengan filter/pencarian.</div>
+                        <td
+                          colSpan="9"
+                          style={{
+                            textAlign: "center",
+                            padding: "32px 16px",
+                            color: "#64748b",
+                          }}
+                        >
+                          <div
+                            style={{ fontSize: "1.2rem", marginBottom: "4px" }}
+                          >
+                            🔍
+                          </div>
+                          <div>
+                            Tidak ada data TPS yang sesuai dengan
+                            filter/pencarian.
+                          </div>
                         </td>
                       </tr>
                     ) : (
-                      tpsFilteredList.map(t => (
+                      tpsFilteredList.map((t) => (
                         <tr key={t.id}>
-                          <td><strong>{t.nama}</strong></td>
+                          <td>
+                            <strong>{t.nama}</strong>
+                          </td>
                           <td>{t.kecamatan}</td>
                           <td>{t.wilayah_kota}</td>
-                          <td className="text-muted">{t.lokasi || '—'}</td>
-                          <td className="text-muted" style={{ fontSize: '0.8rem' }}>{t.latitude && t.longitude ? `${t.latitude}, ${t.longitude}` : '—'}</td>
-                          <td>{t.jumlah_container || '—'}</td>
-                          <td>{t.daya_tampung_m3 ?? '—'}</td>
-                          <td><span className={`status-pill ${t.status === 'Aktif' ? 'status-aktif' : ''}`}>{t.status}</span></td>
+                          <td className="text-muted">{t.lokasi || "—"}</td>
+                          <td
+                            className="text-muted"
+                            style={{ fontSize: "0.8rem" }}
+                          >
+                            {t.latitude && t.longitude
+                              ? `${t.latitude}, ${t.longitude}`
+                              : "—"}
+                          </td>
+                          <td>{t.jumlah_container || "—"}</td>
+                          <td>{t.daya_tampung_m3 ?? "—"}</td>
                           <td>
-                            <div style={{ display: 'flex', gap: '8px' }}>
+                            <span
+                              className={`status-pill ${t.status === "Aktif" ? "status-aktif" : ""}`}
+                            >
+                              {t.status}
+                            </span>
+                          </td>
+                          <td>
+                            <div style={{ display: "flex", gap: "8px" }}>
                               <button
                                 type="button"
                                 className="btn-table-edit"
-                                style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}
+                                style={{
+                                  background: "#0284c7",
+                                  color: "#fff",
+                                  border: "none",
+                                  padding: "4px 8px",
+                                  borderRadius: "4px",
+                                  cursor: "pointer",
+                                }}
                                 onClick={() => handleEditTps(t)}
                               >
                                 Edit
@@ -1793,11 +2997,13 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
         )}
 
         {/* JADWAL CRUD */}
-        {activeMenu === 'jadwal' && (
+        {activeMenu === "jadwal" && (
           <div className="admin-content-view">
             <div className="admin-card full-table-card">
               <div className="table-header-row">
-                <h3 className="admin-card-title">CRUD Jadwal Pengambilan Sampah</h3>
+                <h3 className="admin-card-title">
+                  CRUD Jadwal Pengambilan Sampah
+                </h3>
                 <button
                   type="button"
                   className="btn-add-primary"
@@ -1818,11 +3024,15 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                     </tr>
                   </thead>
                   <tbody>
-                    {jadwals.map(j => (
+                    {jadwals.map((j) => (
                       <tr key={j.id}>
-                        <td><strong>{j.hari}</strong></td>
+                        <td>
+                          <strong>{j.hari}</strong>
+                        </td>
                         <td>{j.area}</td>
-                        <td>{j.waktu_mulai} - {j.waktu_selesai}</td>
+                        <td>
+                          {j.waktu_mulai} - {j.waktu_selesai}
+                        </td>
                         <td>{j.petugas}</td>
                         <td>
                           <button
@@ -1843,18 +3053,23 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
         )}
 
         {/* PENGATURAN */}
-        {activeMenu === 'pengaturan' && (
+        {activeMenu === "pengaturan" && (
           <div className="admin-content-view">
             <div className="admin-card">
               <h3 className="admin-card-title">Pengaturan Website</h3>
-              <form onSubmit={handleUpdateSettings} style={{ marginTop: '24px' }}>
+              <form
+                onSubmit={handleUpdateSettings}
+                style={{ marginTop: "24px" }}
+              >
                 <div className="form-group">
                   <label className="form-label">Nama Website</label>
                   <input
                     type="text"
                     className="settings-input"
                     value={settings.website_name}
-                    onChange={(e) => setSettings({ ...settings, website_name: e.target.value })}
+                    onChange={(e) =>
+                      setSettings({ ...settings, website_name: e.target.value })
+                    }
                   />
                 </div>
 
@@ -1864,12 +3079,32 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                     type="email"
                     className="settings-input"
                     value={settings.website_email}
-                    onChange={(e) => setSettings({ ...settings, website_email: e.target.value })}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        website_email: e.target.value,
+                      })
+                    }
                   />
                 </div>
 
-                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px', marginTop: '20px' }}>
-                  <h4 style={{ marginBottom: '16px', fontSize: '0.95rem', fontWeight: '600', color: '#1e293b' }}>Ganti Password Superadmin</h4>
+                <div
+                  style={{
+                    borderTop: "1px solid #e2e8f0",
+                    paddingTop: "20px",
+                    marginTop: "20px",
+                  }}
+                >
+                  <h4
+                    style={{
+                      marginBottom: "16px",
+                      fontSize: "0.95rem",
+                      fontWeight: "600",
+                      color: "#1e293b",
+                    }}
+                  >
+                    Ganti Password Superadmin
+                  </h4>
 
                   <div className="form-group">
                     <label className="form-label">Password Saat Ini</label>
@@ -1878,7 +3113,12 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                       className="settings-input"
                       placeholder="Masukkan password saat ini"
                       value={settings.current_password}
-                      onChange={(e) => setSettings({ ...settings, current_password: e.target.value })}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          current_password: e.target.value,
+                        })
+                      }
                     />
                   </div>
 
@@ -1889,18 +3129,30 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                       className="settings-input"
                       placeholder="Masukkan password baru (kosongkan jika tidak ingin mengubah)"
                       value={settings.new_password}
-                      onChange={(e) => setSettings({ ...settings, new_password: e.target.value })}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          new_password: e.target.value,
+                        })
+                      }
                     />
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: "12px",
+                    marginTop: "24px",
+                  }}
+                >
                   <button
                     type="submit"
                     className="btn-add-primary"
                     disabled={isLoading}
                   >
-                    {isLoading ? 'Menyimpan...' : 'Simpan Pengaturan'}
+                    {isLoading ? "Menyimpan..." : "Simpan Pengaturan"}
                   </button>
                 </div>
               </form>
@@ -1911,18 +3163,68 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
 
       {/* MODAL: Tambah User + foto + dropdown kecamatan/kelurahan seperti register warga */}
       {showAddUserModal && (
-        <div className="modal-overlay" onClick={() => setShowAddUserModal(false)}>
-          <div className="modal-dialog admin-modal-dialog" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="modal-overlay"
+          onClick={() => setShowAddUserModal(false)}
+        >
+          <div
+            className="modal-dialog admin-modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
               <h3 className="modal-title">Tambah Akun Petugas / Admin</h3>
-              <button type="button" className="modal-close-btn" onClick={() => setShowAddUserModal(false)}>&times;</button>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowAddUserModal(false)}
+              >
+                &times;
+              </button>
             </div>
-            <form onSubmit={handleAddUser} style={{ padding: '24px' }}>
+            <form onSubmit={handleAddUser} style={{ padding: "24px" }}>
               <div className="form-group">
                 <label className="form-label">Foto Petugas</label>
-                <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
-                  {newUserFotoPreview ? <img src={newUserFotoPreview} alt="preview" style={{width:56,height:56,borderRadius:'50%',objectFit:'cover'}} /> : <span style={{width:56,height:56,borderRadius:'50%',background:'#e2e8f0',display:'inline-flex',alignItems:'center',justifyContent:'center',color:'#64748b',fontWeight:700}}>📷</span>}
-                  <input type="file" accept="image/*" onChange={(e)=>{const f=e.target.files?.[0]; if(!f)return; setNewUserFotoFile(f); setNewUserFotoPreview(URL.createObjectURL(f));}} />
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "12px" }}
+                >
+                  {newUserFotoPreview ? (
+                    <img
+                      src={newUserFotoPreview}
+                      alt="preview"
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <span
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: "50%",
+                        background: "#e2e8f0",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#64748b",
+                        fontWeight: 700,
+                      }}
+                    >
+                      📷
+                    </span>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      setNewUserFotoFile(f);
+                      setNewUserFotoPreview(URL.createObjectURL(f));
+                    }}
+                  />
                 </div>
               </div>
               <div className="form-group">
@@ -1932,7 +3234,9 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   required
                   className="settings-input"
                   value={newUser.nama_lengkap}
-                  onChange={(e) => setNewUser({ ...newUser, nama_lengkap: e.target.value })}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, nama_lengkap: e.target.value })
+                  }
                 />
               </div>
               <div className="form-group">
@@ -1942,7 +3246,9 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   required
                   className="settings-input"
                   value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, email: e.target.value })
+                  }
                 />
               </div>
               <div className="form-group">
@@ -1952,7 +3258,9 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   required
                   className="settings-input"
                   value={newUser.password}
-                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, password: e.target.value })
+                  }
                 />
               </div>
               <div className="form-group">
@@ -1960,7 +3268,14 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                 <select
                   className="settings-input"
                   value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value, wilayah_kecamatan: '', wilayah_kelurahan: '' })}
+                  onChange={(e) =>
+                    setNewUser({
+                      ...newUser,
+                      role: e.target.value,
+                      wilayah_kecamatan: "",
+                      wilayah_kelurahan: "",
+                    })
+                  }
                 >
                   <option value="admin">Admin</option>
                   <option value="superadmin">Superadmin</option>
@@ -1970,27 +3285,82 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   <option value="petugas_pengangkut">Petugas Pengangkut</option>
                 </select>
               </div>
-              {(newUser.role === 'petugas' || newUser.role === 'driver' || newUser.role === 'petugas_kelurahan' || newUser.role === 'petugas_pengangkut') && (
-              <>
-              <div className="form-group">
-                <label className="form-label">Kecamatan Tugas</label>
-                <select className="settings-input" value={newUser.wilayah_kecamatan} onChange={(e)=>setNewUser({...newUser, wilayah_kecamatan:e.target.value, wilayah_kelurahan:''})}>
-                  <option value="">— Pilih Kecamatan —</option>
-                  {kecamatanOptions.map(k=><option key={k} value={k}>{k}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Kelurahan Tugas</label>
-                <select className="settings-input" value={newUser.wilayah_kelurahan} onChange={(e)=>setNewUser({...newUser, wilayah_kelurahan:e.target.value})}>
-                  <option value="">— Pilih Kelurahan —</option>
-                  {kelurahanOptions.map(k=><option key={k} value={k}>{k}</option>)}
-                </select>
-              </div>
-              </>
+              {(newUser.role === "petugas" ||
+                newUser.role === "driver" ||
+                newUser.role === "petugas_kelurahan" ||
+                newUser.role === "petugas_pengangkut") && (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Kecamatan Tugas</label>
+                    <select
+                      className="settings-input"
+                      value={newUser.wilayah_kecamatan}
+                      onChange={(e) =>
+                        setNewUser({
+                          ...newUser,
+                          wilayah_kecamatan: e.target.value,
+                          wilayah_kelurahan: "",
+                        })
+                      }
+                    >
+                      <option value="">— Pilih Kecamatan —</option>
+                      {kecamatanOptions.map((k) => (
+                        <option key={k} value={k}>
+                          {k}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Kelurahan Tugas</label>
+                    <select
+                      className="settings-input"
+                      value={newUser.wilayah_kelurahan}
+                      onChange={(e) =>
+                        setNewUser({
+                          ...newUser,
+                          wilayah_kelurahan: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">— Pilih Kelurahan —</option>
+                      {kelurahanOptions.map((k) => (
+                        <option key={k} value={k}>
+                          {k}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
               )}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
-                <button type="button" onClick={() => setShowAddUserModal(false)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Batal</button>
-                <button type="submit" className="btn-add-primary" disabled={isLoading}>Simpan</button>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "12px",
+                  marginTop: "20px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowAddUserModal(false)}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    border: "1px solid #cbd5e1",
+                    background: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn-add-primary"
+                  disabled={isLoading}
+                >
+                  Simpan
+                </button>
               </div>
             </form>
           </div>
@@ -1999,30 +3369,102 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
       {/* MODAL Edit (hijau): form sama kayak tambah + ganti foto + dropdown wilayah */}
       {editUser && (
         <div className="modal-overlay" onClick={() => setEditUser(null)}>
-          <div className="modal-dialog admin-modal-dialog" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal-dialog admin-modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
               <h3 className="modal-title">Edit Petugas / Admin</h3>
-              <button type="button" className="modal-close-btn" onClick={() => setEditUser(null)}>&times;</button>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setEditUser(null)}
+              >
+                &times;
+              </button>
             </div>
-            <form onSubmit={handleUpdateUser} style={{ padding: '24px' }}>
+            <form onSubmit={handleUpdateUser} style={{ padding: "24px" }}>
               <div className="form-group">
                 <label className="form-label">Foto Petugas</label>
-                <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
-                  {editFotoPreview ? <img src={editFotoPreview} alt="preview" style={{width:56,height:56,borderRadius:'50%',objectFit:'cover'}} /> : <span style={{width:56,height:56,borderRadius:'50%',background:'#e2e8f0',display:'inline-flex',alignItems:'center',justifyContent:'center',color:'#64748b',fontWeight:700}}>📷</span>}
-                  <input type="file" accept="image/*" onChange={(e)=>{const f=e.target.files?.[0]; if(!f)return; setEditFotoFile(f); setEditFotoPreview(URL.createObjectURL(f));}} />
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "12px" }}
+                >
+                  {editFotoPreview ? (
+                    <img
+                      src={editFotoPreview}
+                      alt="preview"
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <span
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: "50%",
+                        background: "#e2e8f0",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#64748b",
+                        fontWeight: 700,
+                      }}
+                    >
+                      📷
+                    </span>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      setEditFotoFile(f);
+                      setEditFotoPreview(URL.createObjectURL(f));
+                    }}
+                  />
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Nama Lengkap</label>
-                <input type="text" required className="settings-input" value={editUser.nama_lengkap} onChange={(e)=>setEditUser({...editUser, nama_lengkap:e.target.value})} />
+                <input
+                  type="text"
+                  required
+                  className="settings-input"
+                  value={editUser.nama_lengkap}
+                  onChange={(e) =>
+                    setEditUser({ ...editUser, nama_lengkap: e.target.value })
+                  }
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">Email</label>
-                <input type="email" disabled className="settings-input" value={editUser.email} style={{opacity:.6}} />
+                <input
+                  type="email"
+                  disabled
+                  className="settings-input"
+                  value={editUser.email}
+                  style={{ opacity: 0.6 }}
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">Role</label>
-                <select className="settings-input" value={editUser.role} onChange={(e)=>setEditUser({...editUser, role:e.target.value, wilayah_kecamatan: '', wilayah_kelurahan: ''})}>
+                <select
+                  className="settings-input"
+                  value={editUser.role}
+                  onChange={(e) =>
+                    setEditUser({
+                      ...editUser,
+                      role: e.target.value,
+                      wilayah_kecamatan: "",
+                      wilayah_kelurahan: "",
+                    })
+                  }
+                >
                   <option value="admin">Admin</option>
                   <option value="superadmin">Superadmin</option>
                   <option value="petugas">Petugas</option>
@@ -2031,27 +3473,82 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   <option value="petugas_pengangkut">Petugas Pengangkut</option>
                 </select>
               </div>
-              {(editUser.role === 'petugas' || editUser.role === 'driver' || editUser.role === 'petugas_kelurahan' || editUser.role === 'petugas_pengangkut') && (
-              <>
-              <div className="form-group">
-                <label className="form-label">Kecamatan Tugas</label>
-                <select className="settings-input" value={editUser.wilayah_kecamatan} onChange={(e)=>setEditUser({...editUser, wilayah_kecamatan:e.target.value, wilayah_kelurahan:''})}>
-                  <option value="">— Pilih Kecamatan —</option>
-                  {kecamatanOptions.map(k=><option key={k} value={k}>{k}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Kelurahan Tugas</label>
-                <select className="settings-input" value={editUser.wilayah_kelurahan} onChange={(e)=>setEditUser({...editUser, wilayah_kelurahan:e.target.value})}>
-                  <option value="">— Pilih Kelurahan —</option>
-                  {kelurahanOptions.map(k=><option key={k} value={k}>{k}</option>)}
-                </select>
-              </div>
-              </>
+              {(editUser.role === "petugas" ||
+                editUser.role === "driver" ||
+                editUser.role === "petugas_kelurahan" ||
+                editUser.role === "petugas_pengangkut") && (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Kecamatan Tugas</label>
+                    <select
+                      className="settings-input"
+                      value={editUser.wilayah_kecamatan}
+                      onChange={(e) =>
+                        setEditUser({
+                          ...editUser,
+                          wilayah_kecamatan: e.target.value,
+                          wilayah_kelurahan: "",
+                        })
+                      }
+                    >
+                      <option value="">— Pilih Kecamatan —</option>
+                      {kecamatanOptions.map((k) => (
+                        <option key={k} value={k}>
+                          {k}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Kelurahan Tugas</label>
+                    <select
+                      className="settings-input"
+                      value={editUser.wilayah_kelurahan}
+                      onChange={(e) =>
+                        setEditUser({
+                          ...editUser,
+                          wilayah_kelurahan: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">— Pilih Kelurahan —</option>
+                      {kelurahanOptions.map((k) => (
+                        <option key={k} value={k}>
+                          {k}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
               )}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
-                <button type="button" onClick={() => setEditUser(null)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Batal</button>
-                <button type="submit" className="btn-add-primary" disabled={isLoading}>Simpan</button>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "12px",
+                  marginTop: "20px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setEditUser(null)}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    border: "1px solid #cbd5e1",
+                    background: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn-add-primary"
+                  disabled={isLoading}
+                >
+                  Simpan
+                </button>
               </div>
             </form>
           </div>
@@ -2060,23 +3557,97 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
       {/* MODAL View (merah): lihat data + foto */}
       {viewUser && (
         <div className="modal-overlay" onClick={() => setViewUser(null)}>
-          <div className="modal-dialog admin-modal-dialog" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal-dialog admin-modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
               <h3 className="modal-title">Detail Petugas</h3>
-              <button type="button" className="modal-close-btn" onClick={() => setViewUser(null)}>&times;</button>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setViewUser(null)}
+              >
+                &times;
+              </button>
             </div>
-            <div style={{ padding: '24px', display:'flex', gap:'16px' }}>
-              {viewUser.foto_url ? <img src={`${API_BASE}${viewUser.foto_url}`} alt={viewUser.nama_lengkap} style={{width:96,height:96,borderRadius:'12px',objectFit:'cover',border:'1px solid #e2e8f0'}} /> : <span style={{width:96,height:96,borderRadius:'12px',background:'#e2e8f0',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:'1.5rem',fontWeight:800,color:'#64748b'}}>{viewUser.nama_lengkap?.charAt(0)?.toUpperCase()}</span>}
-              <div style={{fontSize:'0.88rem',lineHeight:1.7}}>
-                <div><b>Nama:</b> {viewUser.nama_lengkap}</div>
-                <div><b>Email:</b> {viewUser.email}</div>
-                <div><b>Role:</b> {viewUser.role}</div>
-                <div><b>Tugas:</b> {[viewUser.wilayah_kecamatan,viewUser.wilayah_kelurahan].filter(Boolean).join(' — ') || 'Belum diatur'}</div>
-                <div><b>Status:</b> {viewUser.is_active ? 'Aktif' : 'Nonaktif'}</div>
+            <div style={{ padding: "24px", display: "flex", gap: "16px" }}>
+              {viewUser.foto_url ? (
+                <img
+                  src={`${API_BASE}${viewUser.foto_url}`}
+                  alt={viewUser.nama_lengkap}
+                  style={{
+                    width: 96,
+                    height: 96,
+                    borderRadius: "12px",
+                    objectFit: "cover",
+                    border: "1px solid #e2e8f0",
+                  }}
+                />
+              ) : (
+                <span
+                  style={{
+                    width: 96,
+                    height: 96,
+                    borderRadius: "12px",
+                    background: "#e2e8f0",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "1.5rem",
+                    fontWeight: 800,
+                    color: "#64748b",
+                  }}
+                >
+                  {viewUser.nama_lengkap?.charAt(0)?.toUpperCase()}
+                </span>
+              )}
+              <div style={{ fontSize: "0.88rem", lineHeight: 1.7 }}>
+                <div>
+                  <b>Nama:</b> {viewUser.nama_lengkap}
+                </div>
+                <div>
+                  <b>Email:</b> {viewUser.email}
+                </div>
+                <div>
+                  <b>Role:</b> {viewUser.role}
+                </div>
+                <div>
+                  <b>Tugas:</b>{" "}
+                  {[viewUser.wilayah_kecamatan, viewUser.wilayah_kelurahan]
+                    .filter(Boolean)
+                    .join(" — ") || "Belum diatur"}
+                </div>
+                <div>
+                  <b>Status:</b> {viewUser.is_active ? "Aktif" : "Nonaktif"}
+                </div>
               </div>
             </div>
-            <div style={{display:'flex',justifyContent:'flex-end',padding:'0 24px 24px'}}>
-              <button type="button" onClick={() => { setViewUser(null); openEditUser(viewUser); }} style={{padding:'8px 16px',borderRadius:'6px',border:'none',background:'#166534',color:'#fff',cursor:'pointer',fontWeight:700}}>Edit</button>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                padding: "0 24px 24px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setViewUser(null);
+                  openEditUser(viewUser);
+                }}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "6px",
+                  border: "none",
+                  background: "#166534",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                }}
+              >
+                Edit
+              </button>
             </div>
           </div>
         </div>
@@ -2084,24 +3655,48 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
 
       {/* MODAL: Tambah Jadwal */}
       {showAddJadwalModal && (
-        <div className="modal-overlay" onClick={() => setShowAddJadwalModal(false)}>
-          <div className="modal-dialog admin-modal-dialog" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="modal-overlay"
+          onClick={() => setShowAddJadwalModal(false)}
+        >
+          <div
+            className="modal-dialog admin-modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
               <h3 className="modal-title">Tambah Jadwal Pengambilan</h3>
-              <button type="button" className="modal-close-btn" onClick={() => setShowAddJadwalModal(false)}>&times;</button>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowAddJadwalModal(false)}
+              >
+                &times;
+              </button>
             </div>
-            <form onSubmit={handleAddJadwal} style={{ padding: '24px' }}>
+            <form onSubmit={handleAddJadwal} style={{ padding: "24px" }}>
               <div className="form-group">
                 <label className="form-label">Hari</label>
                 <select
                   required
                   className="settings-input"
                   value={newJadwal.hari}
-                  onChange={(e) => setNewJadwal({ ...newJadwal, hari: e.target.value })}
+                  onChange={(e) =>
+                    setNewJadwal({ ...newJadwal, hari: e.target.value })
+                  }
                 >
                   <option value="">Pilih Hari</option>
-                  {['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'].map(d => (
-                    <option key={d} value={d}>{d}</option>
+                  {[
+                    "Senin",
+                    "Selasa",
+                    "Rabu",
+                    "Kamis",
+                    "Jumat",
+                    "Sabtu",
+                    "Minggu",
+                  ].map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -2112,7 +3707,9 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   required
                   className="settings-input"
                   value={newJadwal.waktu_mulai}
-                  onChange={(e) => setNewJadwal({ ...newJadwal, waktu_mulai: e.target.value })}
+                  onChange={(e) =>
+                    setNewJadwal({ ...newJadwal, waktu_mulai: e.target.value })
+                  }
                 />
               </div>
               <div className="form-group">
@@ -2122,7 +3719,12 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   required
                   className="settings-input"
                   value={newJadwal.waktu_selesai}
-                  onChange={(e) => setNewJadwal({ ...newJadwal, waktu_selesai: e.target.value })}
+                  onChange={(e) =>
+                    setNewJadwal({
+                      ...newJadwal,
+                      waktu_selesai: e.target.value,
+                    })
+                  }
                 />
               </div>
               <div className="form-group">
@@ -2132,7 +3734,9 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   required
                   className="settings-input"
                   value={newJadwal.area}
-                  onChange={(e) => setNewJadwal({ ...newJadwal, area: e.target.value })}
+                  onChange={(e) =>
+                    setNewJadwal({ ...newJadwal, area: e.target.value })
+                  }
                 />
               </div>
               <div className="form-group">
@@ -2142,12 +3746,39 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   required
                   className="settings-input"
                   value={newJadwal.petugas}
-                  onChange={(e) => setNewJadwal({ ...newJadwal, petugas: e.target.value })}
+                  onChange={(e) =>
+                    setNewJadwal({ ...newJadwal, petugas: e.target.value })
+                  }
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
-                <button type="button" onClick={() => setShowAddJadwalModal(false)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Batal</button>
-                <button type="submit" className="btn-add-primary" disabled={isLoading}>Simpan</button>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "12px",
+                  marginTop: "20px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowAddJadwalModal(false)}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    border: "1px solid #cbd5e1",
+                    background: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn-add-primary"
+                  disabled={isLoading}
+                >
+                  Simpan
+                </button>
               </div>
             </form>
           </div>
@@ -2156,13 +3787,33 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
 
       {/* MODAL: Tambah / Edit TPS */}
       {showAddTpsModal && (
-        <div className="modal-overlay" onClick={() => { setShowAddTpsModal(false); setEditingTpsId(null); }}>
-          <div className="modal-dialog admin-modal-dialog" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setShowAddTpsModal(false);
+            setEditingTpsId(null);
+          }}
+        >
+          <div
+            className="modal-dialog admin-modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
-              <h3 className="modal-title">{editingTpsId ? 'Edit TPS' : 'Tambah TPS Baru'}</h3>
-              <button type="button" className="modal-close-btn" onClick={() => { setShowAddTpsModal(false); setEditingTpsId(null); }}>&times;</button>
+              <h3 className="modal-title">
+                {editingTpsId ? "Edit TPS" : "Tambah TPS Baru"}
+              </h3>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => {
+                  setShowAddTpsModal(false);
+                  setEditingTpsId(null);
+                }}
+              >
+                &times;
+              </button>
             </div>
-            <form onSubmit={handleAddTps} style={{ padding: '24px' }}>
+            <form onSubmit={handleAddTps} style={{ padding: "24px" }}>
               <div className="form-group">
                 <label className="form-label">Nama TPS *</label>
                 <input
@@ -2171,7 +3822,9 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   placeholder="TPS Keputih"
                   className="settings-input"
                   value={newTps.nama}
-                  onChange={(e) => setNewTps({ ...newTps, nama: e.target.value })}
+                  onChange={(e) =>
+                    setNewTps({ ...newTps, nama: e.target.value })
+                  }
                 />
               </div>
               <div className="form-group">
@@ -2182,7 +3835,9 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   placeholder="Sukolilo"
                   className="settings-input"
                   value={newTps.kecamatan}
-                  onChange={(e) => setNewTps({ ...newTps, kecamatan: e.target.value })}
+                  onChange={(e) =>
+                    setNewTps({ ...newTps, kecamatan: e.target.value })
+                  }
                 />
               </div>
               <div className="form-group">
@@ -2191,7 +3846,9 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   required
                   className="settings-input"
                   value={newTps.wilayah_kota}
-                  onChange={(e) => setNewTps({ ...newTps, wilayah_kota: e.target.value })}
+                  onChange={(e) =>
+                    setNewTps({ ...newTps, wilayah_kota: e.target.value })
+                  }
                 >
                   <option value="Surabaya Pusat">Surabaya Pusat</option>
                   <option value="Surabaya Utara">Surabaya Utara</option>
@@ -2207,7 +3864,9 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   placeholder="Jl. Keputih No. 10"
                   className="settings-input"
                   value={newTps.lokasi}
-                  onChange={(e) => setNewTps({ ...newTps, lokasi: e.target.value })}
+                  onChange={(e) =>
+                    setNewTps({ ...newTps, lokasi: e.target.value })
+                  }
                 />
               </div>
               <div className="form-group">
@@ -2215,7 +3874,9 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                 <select
                   className="settings-input"
                   value={newTps.jenis_tps}
-                  onChange={(e) => setNewTps({ ...newTps, jenis_tps: e.target.value })}
+                  onChange={(e) =>
+                    setNewTps({ ...newTps, jenis_tps: e.target.value })
+                  }
                 >
                   <option value="TPS Resmi">TPS Resmi</option>
                   <option value="TPS Liar">TPS Liar</option>
@@ -2223,7 +3884,13 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                   <option value="Depo">Depo</option>
                 </select>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "12px",
+                }}
+              >
                 <div className="form-group">
                   <label className="form-label">Latitude</label>
                   <input
@@ -2232,7 +3899,9 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                     placeholder="-7.2575"
                     className="settings-input"
                     value={newTps.latitude}
-                    onChange={(e) => setNewTps({ ...newTps, latitude: e.target.value })}
+                    onChange={(e) =>
+                      setNewTps({ ...newTps, latitude: e.target.value })
+                    }
                   />
                 </div>
                 <div className="form-group">
@@ -2243,11 +3912,19 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                     placeholder="112.7521"
                     className="settings-input"
                     value={newTps.longitude}
-                    onChange={(e) => setNewTps({ ...newTps, longitude: e.target.value })}
+                    onChange={(e) =>
+                      setNewTps({ ...newTps, longitude: e.target.value })
+                    }
                   />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "12px",
+                }}
+              >
                 <div className="form-group">
                   <label className="form-label">Jumlah Container</label>
                   <input
@@ -2255,7 +3932,9 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                     placeholder="2 (contoh: 50)"
                     className="settings-input"
                     value={newTps.jumlah_container}
-                    onChange={(e) => setNewTps({ ...newTps, jumlah_container: e.target.value })}
+                    onChange={(e) =>
+                      setNewTps({ ...newTps, jumlah_container: e.target.value })
+                    }
                   />
                 </div>
                 <div className="form-group">
@@ -2266,7 +3945,9 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                     placeholder="28.00"
                     className="settings-input"
                     value={newTps.daya_tampung_m3}
-                    onChange={(e) => setNewTps({ ...newTps, daya_tampung_m3: e.target.value })}
+                    onChange={(e) =>
+                      setNewTps({ ...newTps, daya_tampung_m3: e.target.value })
+                    }
                   />
                 </div>
               </div>
@@ -2275,15 +3956,49 @@ export default function SuperadminPanel({ onLogout, currentUser: userFromProp })
                 <select
                   className="settings-input"
                   value={newTps.status}
-                  onChange={(e) => setNewTps({ ...newTps, status: e.target.value })}
+                  onChange={(e) =>
+                    setNewTps({ ...newTps, status: e.target.value })
+                  }
                 >
                   <option value="Aktif">Aktif</option>
                   <option value="Tidak Aktif">Tidak Aktif</option>
                 </select>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
-                <button type="button" onClick={() => { setShowAddTpsModal(false); setEditingTpsId(null); }} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Batal</button>
-                <button type="submit" className="btn-add-primary" disabled={isLoading}>{isLoading ? 'Menyimpan...' : (editingTpsId ? 'Update' : 'Simpan')}</button>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "12px",
+                  marginTop: "20px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddTpsModal(false);
+                    setEditingTpsId(null);
+                  }}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    border: "1px solid #cbd5e1",
+                    background: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn-add-primary"
+                  disabled={isLoading}
+                >
+                  {isLoading
+                    ? "Menyimpan..."
+                    : editingTpsId
+                      ? "Update"
+                      : "Simpan"}
+                </button>
               </div>
             </form>
           </div>

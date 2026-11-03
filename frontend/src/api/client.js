@@ -1,8 +1,47 @@
 import axios from "axios";
 import { clearLastActivity } from "./inactivity";
 
+const isLocalHost = (host = "") => host === "localhost" || host === "127.0.0.1";
+const isTryCloudflareHost = (host = "") => host.endsWith(".trycloudflare.com");
+
+const resolveApiBaseUrl = () => {
+  const envUrl = (import.meta.env.VITE_API_URL || "").trim();
+
+  if (typeof window === "undefined") {
+    return envUrl || "http://localhost:8000";
+  }
+
+  const currentHost = window.location.hostname;
+  const currentOrigin = window.location.origin;
+
+  if (!envUrl) return currentOrigin;
+
+  try {
+    const parsed = new URL(envUrl);
+    const envHost = parsed.hostname;
+    const envIsLocal = isLocalHost(envHost);
+    const pageIsLocal = isLocalHost(currentHost);
+
+    // Hindari URL localhost ketika app diakses dari device lain via tunnel/domain publik
+    if (envIsLocal && !pageIsLocal) {
+      return currentOrigin;
+    }
+
+    // Quick tunnel Cloudflare sering berubah. Jika hostname halaman sekarang
+    // berbeda dengan env tunnel lama, pakai origin halaman aktif agar tidak
+    // terkena ERR_NAME_NOT_RESOLVED.
+    if (isTryCloudflareHost(currentHost) && envHost !== currentHost) {
+      return currentOrigin;
+    }
+
+    return parsed.origin;
+  } catch {
+    return currentOrigin;
+  }
+};
+
 // Base API URL
-const API_BASE_URL = "http://localhost:8000";
+export const API_BASE_URL = resolveApiBaseUrl();
 
 /**
  * Configured Axios instance for SI-PETASAN
@@ -137,21 +176,34 @@ export const authService = {
   },
 
   setSession: (token, user, refreshToken = null, rememberMe = true) => {
+    // Selalu simpan session per-tab agar multi-tab bisa login beda role
     if (token) {
-      localStorage.setItem("access_token", token);
       sessionStorage.setItem("access_token", token);
+      if (rememberMe) localStorage.setItem("access_token", token);
+      else localStorage.removeItem("access_token");
     }
 
     if (refreshToken) {
-      localStorage.setItem("refresh_token", refreshToken);
       sessionStorage.setItem("refresh_token", refreshToken);
+      if (rememberMe) localStorage.setItem("refresh_token", refreshToken);
+      else localStorage.removeItem("refresh_token");
     }
 
     if (user) {
-      localStorage.setItem("auth_user", JSON.stringify(user));
-      sessionStorage.setItem("auth_user", JSON.stringify(user));
-      localStorage.setItem("user_role", user.role || "warga");
-      localStorage.setItem("user_email", user.email || "");
+      const userJson = JSON.stringify(user);
+      sessionStorage.setItem("auth_user", userJson);
+      sessionStorage.setItem("user_role", user.role || "warga");
+      sessionStorage.setItem("user_email", user.email || "");
+
+      if (rememberMe) {
+        localStorage.setItem("auth_user", userJson);
+        localStorage.setItem("user_role", user.role || "warga");
+        localStorage.setItem("user_email", user.email || "");
+      } else {
+        localStorage.removeItem("auth_user");
+        localStorage.removeItem("user_role");
+        localStorage.removeItem("user_email");
+      }
     }
 
     window.dispatchEvent(new Event("auth:change"));
