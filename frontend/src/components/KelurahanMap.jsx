@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { IconBuilding, IconMapPin, IconSearch, IconX, IconCompass } from './common/AppIcons';
 
 // Tile URL layers (Identical to HeroMap on Landing Page)
 const TILE_URLS = {
@@ -229,12 +230,12 @@ export default function KelurahanMap({
           </div>
 
           <div class="osm-popup-details" style="font-size: 0.8rem; color: #475569; display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px;">
-            <p style="margin: 0;"><strong>📍 Lokasi:</strong> ${tps.lokasi}</p>
-            <p style="margin: 0;"><strong>🏛️ Kecamatan:</strong> ${tps.kecamatan} (${tps.wilayahKota || 'Surabaya'})</p>
-            <p style="margin: 0;"><strong>🏘️ Kelurahan:</strong> ${tps.kelurahanList && tps.kelurahanList.length > 0 ? tps.kelurahanList.join(', ') : selectedKelurahan}</p>
-            <p style="margin: 0;"><strong>🚛 Jenis:</strong> ${tps.jenisTps || 'Jenis belum tersedia'} &bull; ${tps.jumlahContainer || 'Kontainer belum tersedia'}</p>
-            <p style="margin: 0;"><strong>📦 Daya Tampung Maksimum:</strong> ${tps.dayaTampungM3 != null ? `${tps.dayaTampungM3} m&sup3;` : 'Belum ada data'}</p>
-            <p style="margin: 0;"><strong>⏰ Jam Operasional:</strong> ${tps.jamOperasional || 'Belum ada data'}</p>
+            <p style="margin: 0;"><strong>Lokasi:</strong> ${tps.lokasi}</p>
+            <p style="margin: 0;"><strong>Kecamatan:</strong> ${tps.kecamatan} (${tps.wilayahKota || 'Surabaya'})</p>
+            <p style="margin: 0;"><strong>Kelurahan:</strong> ${tps.kelurahanList && tps.kelurahanList.length > 0 ? tps.kelurahanList.join(', ') : selectedKelurahan}</p>
+            <p style="margin: 0;"><strong>Jenis:</strong> ${tps.jenisTps || 'Jenis belum tersedia'} &bull; ${tps.jumlahContainer || 'Kontainer belum tersedia'}</p>
+            <p style="margin: 0;"><strong>Daya Tampung Maksimum:</strong> ${tps.dayaTampungM3 != null ? `${tps.dayaTampungM3} m&sup3;` : 'Belum ada data'}</p>
+            <p style="margin: 0;"><strong>Jam Operasional:</strong> ${tps.jamOperasional || 'Belum ada data'}</p>
           </div>
 
           <p style="margin: 0 0 10px; font-size: 0.72rem; color: #64748b;">
@@ -256,7 +257,7 @@ export default function KelurahanMap({
               style="background: #0284c7; color: #ffffff; text-decoration: none; border-radius: 6px; padding: 7px 10px; font-size: 0.78rem; font-weight: 700; display: flex; align-items: center; justify-content: center;"
               title="Buka rute navigasi di Google Maps"
             >
-              🧭 Rute
+              Rute
             </a>
           </div>
         </div>
@@ -354,7 +355,7 @@ export default function KelurahanMap({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.35rem' }}>🏘️</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', color: '#16a34a' }}><IconBuilding size={22} /></span>
             <div>
               <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 Wilayah Kelurahan
@@ -383,7 +384,7 @@ export default function KelurahanMap({
               gap: '5px'
             }}
           >
-            <span>📍</span>
+            <IconMapPin size={14} />
             <span>{tpsList.length} Titik TPS Melayani</span>
           </div>
         </div>
@@ -406,7 +407,7 @@ export default function KelurahanMap({
               }}
               title="Kembali ke Kelurahan tempat tinggal Anda"
             >
-              🏠 Kelurahan Saya ({userRegisteredKelurahan})
+              Kelurahan Saya ({userRegisteredKelurahan})
             </button>
           )}
 
@@ -432,7 +433,7 @@ export default function KelurahanMap({
                 boxShadow: '0 1px 3px rgba(2,132,199,0.1)'
               }}
             >
-              <span>🔍 Ganti Kelurahan</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><IconSearch size={14} /> Ganti Kelurahan</span>
               <span style={{ fontSize: '0.7rem' }}>{isDropdownOpen ? '▲' : '▼'}</span>
             </button>
 
@@ -456,7 +457,7 @@ export default function KelurahanMap({
                 }}
               >
                 <div style={{ position: 'relative', marginBottom: '8px' }}>
-                  <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.85rem' }}>🔍</span>
+                  <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', display: 'flex', alignItems: 'center' }}><IconSearch size={14} /></span>
                   <input
                     type="text"
                     placeholder="Cari kelurahan di Surabaya..."
@@ -489,8 +490,8 @@ export default function KelurahanMap({
                         cursor: 'pointer',
                         fontSize: '0.85rem'
                       }}
-                    >
-                      ✖
+                     style={{ display: 'flex', alignItems: 'center' }}>
+                      <IconX size={14} />
                     </button>
                   )}
                 </div>
@@ -597,7 +598,7 @@ export default function KelurahanMap({
                 onClick={() => setMapType('osm')}
                 title="Tampilkan peta OpenStreetMap standar"
               >
-                🗺️ Standar
+                Standar
               </button>
               <button
                 type="button"
@@ -605,7 +606,7 @@ export default function KelurahanMap({
                 onClick={() => setMapType('satellite')}
                 title="Tampilkan peta citra satelit"
               >
-                🛰️ Satelit
+                Satelit
               </button>
             </div>
 
@@ -627,7 +628,7 @@ export default function KelurahanMap({
                 onClick={handleResetView}
                 title="Kembalikan posisi peta ke titik TPS kelurahan ini"
               >
-                🎯 Reset
+                Reset
               </button>
             </div>
           </div>

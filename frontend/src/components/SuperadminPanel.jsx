@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { fetchAllTps, extractRegionsFromTps } from "../api/tpsStats";
 import { API_BASE_URL } from "../api/client";
 import TpsMapSuperadmin from "./TpsMapSuperadmin";
+import { IconUsers, IconTrendingUp, IconAlert, IconMegaphone } from "./common/AppIcons";
 
 const API_BASE = API_BASE_URL;
 
@@ -24,6 +25,7 @@ export default function SuperadminPanel({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem("sipetasan_sidebar_collapsed") === "true";
   });
@@ -964,6 +966,324 @@ export default function SuperadminPanel({
 
   return (
     <div className="admin-container">
+      {/* Mobile Sticky Top Header Bar with Hamburger Button */}
+      <header className="admin-mobile-top-bar">
+        <div className="admin-mobile-left">
+          <button
+            type="button"
+            className="admin-mobile-hamburger-btn"
+            onClick={() => setMobileDrawerOpen(true)}
+            aria-label="Buka navigasi menu superadmin"
+            title="Menu Navigasi Superadmin"
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+            >
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+
+          <div
+            className="admin-mobile-brand"
+            onClick={() => {
+              setActiveMenu("dashboard");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          >
+            <div className="admin-mobile-logo-icon" style={{ background: "#059669" }}>SA</div>
+            <div className="admin-mobile-brand-title">
+              <span>SI-Petasan</span>
+              <span className="brand-badge-country" style={{ background: "#d1fae5", color: "#065f46" }}>SUPERADMIN</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="admin-mobile-right">
+          <div className="admin-mobile-status-badge">
+            <span
+              style={{
+                width: "7px",
+                height: "7px",
+                borderRadius: "50%",
+                background: "#059669",
+                display: "inline-block",
+              }}
+            />
+            <span>DLH Pusat</span>
+          </div>
+          <div
+            className="admin-mobile-avatar"
+            style={{ background: "#059669" }}
+            title={currentUser?.nama_lengkap || currentUser?.nama || "Superadmin"}
+          >
+            {(currentUser?.nama_lengkap || currentUser?.nama || "S")
+              .charAt(0)
+              .toUpperCase()}
+          </div>
+        </div>
+      </header>
+
+      {/* Backdrop for Left Slide-over Drawer */}
+      <div
+        className={`admin-drawer-backdrop ${mobileDrawerOpen ? "open" : ""}`}
+        onClick={() => setMobileDrawerOpen(false)}
+        aria-hidden={!mobileDrawerOpen}
+      />
+
+      {/* Slide-over Left Drawer Menu for Superadmin */}
+      <aside
+        className={`admin-mobile-drawer ${mobileDrawerOpen ? "open" : ""}`}
+        aria-label="Sidebar Menu Mobile Superadmin"
+      >
+        <div className="drawer-header">
+          <button
+            type="button"
+            className="drawer-close-btn"
+            onClick={() => setMobileDrawerOpen(false)}
+            aria-label="Tutup menu"
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+
+          <div
+            className="drawer-brand-logo"
+            onClick={() => {
+              setActiveMenu("dashboard");
+              setMobileDrawerOpen(false);
+            }}
+            style={{
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <div
+              style={{
+                background: "#059669",
+                color: "#fff",
+                width: "30px",
+                height: "30px",
+                borderRadius: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: "bold",
+                fontSize: "0.85rem",
+              }}
+            >
+              SA
+            </div>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span
+                style={{
+                  fontWeight: 800,
+                  fontSize: "0.95rem",
+                  color: "#0f172a",
+                  lineHeight: 1.2,
+                }}
+              >
+                SI-PETASAN
+              </span>
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  color: "#64748b",
+                  fontWeight: 600,
+                }}
+              >
+                Superadmin Panel
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="drawer-content-scroll">
+          <div className="drawer-section-header">Menu Utama</div>
+          <nav className="drawer-section">
+            <button
+              type="button"
+              className={`drawer-item ${activeMenu === "dashboard" ? "active" : ""}`}
+              onClick={() => {
+                setActiveMenu("dashboard");
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+              </span>
+              <span className="drawer-label">Dashboard</span>
+            </button>
+
+            <button
+              type="button"
+              className={`drawer-item ${activeMenu === "users" ? "active" : ""}`}
+              onClick={() => {
+                setActiveMenu("users");
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+              </span>
+              <span className="drawer-label">Data Pengguna & Warga</span>
+            </button>
+
+            <button
+              type="button"
+              className={`drawer-item ${activeMenu === "petugas" ? "active" : ""}`}
+              onClick={() => {
+                setActiveMenu("petugas");
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="1" y="3" width="15" height="13"></rect>
+                  <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                  <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                  <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                </svg>
+              </span>
+              <span className="drawer-label">Kelola Petugas / Admin</span>
+            </button>
+
+            <button
+              type="button"
+              className={`drawer-item ${activeMenu === "tps" ? "active" : ""}`}
+              onClick={() => {
+                setActiveMenu("tps");
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </span>
+              <span className="drawer-label">Kelola TPS</span>
+            </button>
+
+            <button
+              type="button"
+              className={`drawer-item ${activeMenu === "jadwal" ? "active" : ""}`}
+              onClick={() => {
+                setActiveMenu("jadwal");
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+              </span>
+              <span className="drawer-label">Jadwal Pengambilan</span>
+            </button>
+
+            <button
+              type="button"
+              className={`drawer-item ${activeMenu === "settings" ? "active" : ""}`}
+              onClick={() => {
+                setActiveMenu("settings");
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+              </span>
+              <span className="drawer-label">Pengaturan</span>
+            </button>
+          </nav>
+        </div>
+
+        <div className="admin-drawer-footer">
+          <div className="admin-drawer-user-card">
+            <div className="admin-profile-avatar" style={{ background: "#059669" }}>
+              {(currentUser?.nama_lengkap || currentUser?.nama || "S").charAt(0).toUpperCase()}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: "0.88rem",
+                  color: "#0f172a",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {currentUser?.nama_lengkap || currentUser?.nama || "Superadmin DLH"}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.74rem",
+                  color: "#64748b",
+                  textTransform: "capitalize",
+                }}
+              >
+                {currentUser?.role || "Superadmin"}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="admin-drawer-logout-btn"
+            onClick={onLogout}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            <span>Keluar dari Superadmin</span>
+          </button>
+        </div>
+      </aside>
+
       {/* SIDEBAR */}
       <aside
         className={`admin-sidebar ${isSidebarCollapsed ? "collapsed" : ""}`}
@@ -1273,27 +1593,27 @@ export default function SuperadminPanel({
             const REGIONS = [
               {
                 name: "Surabaya Pusat",
-                icon: "🏛️",
+                icon: IconBuilding,
                 desc: "Tegalsari, Genteng, Bubutan, Simokerto",
               },
               {
                 name: "Surabaya Timur",
-                icon: "🎓",
+                icon: IconGraduationCap,
                 desc: "Gubeng, Sukolilo, Rungkut, Mulyorejo",
               },
               {
                 name: "Surabaya Barat",
-                icon: "🏢",
+                icon: IconBuilding,
                 desc: "Tandes, Sambikerep, Benowo, Sukomanunggal",
               },
               {
                 name: "Surabaya Utara",
-                icon: "⚓",
+                icon: IconAnchor,
                 desc: "Krembangan, Semampir, Pabean Cantian, Kenjeran",
               },
               {
                 name: "Surabaya Selatan",
-                icon: "🌳",
+                icon: IconTree,
                 desc: "Wonokromo, Wonocolo, Sawahan, Gayungan",
               },
             ];
@@ -1492,7 +1812,7 @@ export default function SuperadminPanel({
                   {/* KPI 1 */}
                   <div className="admin-stat-card">
                     <div className="stat-card-header">
-                      <div className="stat-icon-wrap icon-blue">👥</div>
+                      <div className="stat-icon-wrap icon-blue"><IconUsers size={20} /></div>
                       <span className="stat-badge-live">USERS</span>
                     </div>
                     <div className="stat-card-number">{users.length}</div>
@@ -1514,7 +1834,7 @@ export default function SuperadminPanel({
                   {/* KPI 2 */}
                   <div className="admin-stat-card">
                     <div className="stat-card-header">
-                      <div className="stat-icon-wrap icon-gold">📈</div>
+                      <div className="stat-icon-wrap icon-gold"><IconTrendingUp size={20} /></div>
                       <span className="stat-badge-live">KOTA</span>
                     </div>
                     <div className="stat-card-number">
@@ -1584,9 +1904,9 @@ export default function SuperadminPanel({
                     <div className="stat-card-header">
                       <div
                         className="stat-icon-wrap icon-sand"
-                        style={{ background: "#fdf4ff", color: "#c026d3" }}
+                        style={{ background: "#fdf4ff", color: "#c026d3", display: "flex", alignItems: "center", justifyContent: "center" }}
                       >
-                        📢
+                        <IconMegaphone size={20} />
                       </div>
                       <span
                         style={{
@@ -1648,7 +1968,7 @@ export default function SuperadminPanel({
                           color: "#0f172a",
                         }}
                       >
-                        🗺️ Sebaran Beban Kapasitas TPS per Wilayah Surabaya
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><IconMap size={18} /> Sebaran Beban Kapasitas TPS per Wilayah Surabaya</span>
                       </h3>
                       <p
                         style={{
@@ -1712,7 +2032,15 @@ export default function SuperadminPanel({
                                 color: "#0f172a",
                               }}
                             >
-                              {reg.icon} {reg.name}
+                              {(() => {
+                                const RegIcon = reg.icon;
+                                return (
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                                    {typeof RegIcon === "function" ? <RegIcon size={16} /> : null}
+                                    <span>{reg.name}</span>
+                                  </span>
+                                );
+                              })()}
                             </span>
                             <span
                               style={{
@@ -1839,8 +2167,7 @@ export default function SuperadminPanel({
                             color: "#0f172a",
                           }}
                         >
-                          🚨 Radar Prioritas Pengangkutan (TPS Overload &ge;
-                          80%)
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><IconAlert size={18} /> Radar Prioritas Pengangkutan (TPS Overload &ge; 80%)</span>
                         </h3>
                         <p
                           style={{
@@ -1952,7 +2279,7 @@ export default function SuperadminPanel({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              <span>{isDispatched ? "✓" : "🚨"}</span>
+                              <span>{isDispatched ? <IconCheck size={14} /> : <IconAlert size={14} />}</span>
                               <span>
                                 {isDispatched
                                   ? "Truk Ditugaskan"
@@ -1992,7 +2319,7 @@ export default function SuperadminPanel({
                             color: "#0f172a",
                           }}
                         >
-                          📢 Aduan &amp; Laporan Warga Lapangan
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><IconMegaphone size={18} /> Aduan &amp; Laporan Warga Lapangan</span>
                         </h3>
                         <p
                           style={{
@@ -2138,7 +2465,7 @@ export default function SuperadminPanel({
                       }}
                     >
                       <h3 className="admin-card-title" style={{ margin: 0 }}>
-                        👥 Pengguna Terbaru Sistem
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><IconUsers size={18} /> Pengguna Terbaru Sistem</span>
                       </h3>
                       <span
                         style={{
@@ -2182,7 +2509,7 @@ export default function SuperadminPanel({
                       }}
                     >
                       <h3 className="admin-card-title" style={{ margin: 0 }}>
-                        📅 Jadwal Pengambilan Minggu Ini
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><IconCalendar size={18} /> Jadwal Pengambilan Minggu Ini</span>
                       </h3>
                       <span
                         style={{

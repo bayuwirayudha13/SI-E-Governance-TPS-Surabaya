@@ -4,6 +4,7 @@ import AdminPanel from './AdminPanelNew';
 import SuperadminPanel from './SuperadminPanel';
 import PetugasPanel from './PetugasPanel';
 import PetugasTpsPanel from './PetugasTpsPanel';
+import { IconTruck, IconBuilding, IconUser, IconShield, IconCrown, IconRecycle } from './common/AppIcons';
 
 export default function MultiRoleSwitcher() {
   const [activeTab, setActiveTab] = useState('petugas-tps');
@@ -23,7 +24,7 @@ export default function MultiRoleSwitcher() {
       <div className="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center space-x-3">
           <span className="font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent text-lg">
-            ♻️ Multi-Role Viewer
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><IconRecycle size={20} color="#34d399" /> Multi-Role Viewer</span>
           </span>
           <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400 border border-slate-700">
             Buka Semua Panel dalam 1 Browser
@@ -39,7 +40,7 @@ export default function MultiRoleSwitcher() {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            🏢 Petugas TPS
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><IconBuilding size={16} /> Petugas TPS</span>
           </button>
           <button
             onClick={() => setActiveTab('petugas')}
@@ -49,7 +50,7 @@ export default function MultiRoleSwitcher() {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            🚚 Petugas Pengangkut
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><IconTruck size={16} /> Petugas Driver / Pengangkut</span>
           </button>
           <button
             onClick={() => setActiveTab('warga')}
@@ -59,7 +60,7 @@ export default function MultiRoleSwitcher() {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            👤 Warga Panel
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><IconUser size={16} /> Warga Panel</span>
           </button>
           <button
             onClick={() => setActiveTab('admin')}
@@ -69,7 +70,7 @@ export default function MultiRoleSwitcher() {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            🛡️ Admin Panel
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><IconShield size={16} /> Admin Panel</span>
           </button>
           <button
             onClick={() => setActiveTab('superadmin')}
@@ -79,7 +80,7 @@ export default function MultiRoleSwitcher() {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            👑 Superadmin Panel
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><IconCrown size={16} /> Superadmin Panel</span>
           </button>
         </div>
 

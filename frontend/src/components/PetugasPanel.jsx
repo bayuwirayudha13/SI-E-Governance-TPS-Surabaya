@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./PetugasPanel.css";
+import DriverRouteMap from "./DriverRouteMap";
 import { api, authService, API_BASE_URL } from "../api/client";
 import { Html5Qrcode } from "html5-qrcode";
 
@@ -730,6 +731,8 @@ export default function PetugasPanel({
           title: "Scan QR Warga",
           sub: `Rute A · B 1234 XY · Kelurahan ${wilayahKelurahan || "Sukamaju"}`,
         };
+      case "rute":
+        return { title: "Peta Rute Driver", sub: `Peta Navigasi Jalur Pengambilan Hari Ini · Kelurahan ${wilayahKelurahan || "Tembok Dukuh"}` };
       case "riwayat":
         return { title: "Riwayat Pengambilan", sub: wilayahSub };
       default:
@@ -1276,6 +1279,24 @@ export default function PetugasPanel({
                 </div>
                 {!isSidebarCollapsed && <span>Riwayat Pengambilan</span>}
               </button>
+
+              {/* 4. Peta Rute Driver */}
+              <button
+                type="button"
+                className={`petugas-nav-item ${activeMenu === "rute" ? "active" : ""}`}
+                onClick={() => {
+                  setActiveMenu("rute");
+                  window.location.hash = "rute";
+                }}
+                title="Peta Rute Driver"
+              >
+                <div className="petugas-nav-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="3 11 22 2 13 21 11 13 3 11" />
+                  </svg>
+                </div>
+                {!isSidebarCollapsed && <span>Peta Rute Driver</span>}
+              </button>
             </nav>
           </div>
         </div>
@@ -1400,262 +1421,23 @@ export default function PetugasPanel({
               </div>
             </div>
 
-            {/* Two Column Layout: Pengambilan Berikutnya + Ringkasan Rute */}
-            <div className="petugas-columns-layout">
-              {/* Left Column: Pengambilan Berikutnya */}
-              <div className="petugas-card">
-                <div className="petugas-card-header">
-                  <div>
-                    <h2 className="petugas-card-title">
-                      Pengambilan Berikutnya
-                    </h2>
-                    <p className="petugas-card-desc">
-                      Urutan berdasarkan rute paling dekat.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="petugas-btn-scan-action"
-                    onClick={() => {
-                      setActiveMenu("scan");
-                      window.location.hash = "scan";
-                    }}
-                  >
-                    <svg
-                      width="15"
-                      height="15"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M3 7V5a2 2 0 0 1 2-2h2" />
-                      <path d="M17 3h2a2 2 0 0 1 2 2v2" />
-                      <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
-                      <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
-                      <rect x="7" y="7" width="3" height="3" />
-                      <rect x="14" y="7" width="3" height="3" />
-                      <rect x="7" y="14" width="3" height="3" />
-                      <rect x="14" y="14" width="3" height="3" />
-                    </svg>
-                    <span>Scan QR</span>
-                  </button>
-                </div>
-                <div className="petugas-card-body">
-                  <div className="petugas-queue-list">
-                    {queueList.map((item) => (
-                      <div
-                        key={item.id}
-                        className={`petugas-queue-item ${item.isActive ? "active" : ""}`}
-                      >
-                        <div className="petugas-queue-left">
-                          <div className="petugas-stop-badge">
-                            {item.number}
-                          </div>
-                          <div className="petugas-stop-info">
-                            <span className="petugas-stop-name">
-                              {item.name}
-                            </span>
-                            <span className="petugas-stop-address">
-                              {item.address}
-                            </span>
-                          </div>
-                        </div>
-                        <span className={`petugas-status-tag ${item.status}`}>
-                          {item.statusText}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Ringkasan Rute with Interactive Stylized Map */}
-              <div className="petugas-card">
-                <div className="petugas-card-header">
-                  <div>
-                    <h2 className="petugas-card-title">Ringkasan Rute</h2>
-                  </div>
-                </div>
-                <div className="petugas-card-body">
-                  <div className="petugas-route-container">
-                    {/* Stylized Route Map Canvas */}
-                    <div className="petugas-map-canvas">
-                      <svg
-                        className="petugas-map-svg"
-                        viewBox="0 0 450 240"
-                        preserveAspectRatio="none"
-                      >
-                        <defs>
-                          <pattern
-                            id="street-grid"
-                            width="60"
-                            height="60"
-                            patternUnits="userSpaceOnUse"
-                          >
-                            <path
-                              d="M 60 0 L 0 0 0 60"
-                              fill="none"
-                              stroke="#e2ece2"
-                              strokeWidth="1"
-                            />
-                          </pattern>
-                        </defs>
-                        {/* Map Background */}
-                        <rect width="450" height="240" fill="#eaf2ea" />
-                        <rect
-                          width="450"
-                          height="240"
-                          fill="url(#street-grid)"
-                        />
-
-                        {/* Lake / Park graphic */}
-                        <path
-                          d="M 390,160 Q 420,170 430,200 Q 400,225 360,205 Q 350,175 390,160 Z"
-                          fill="#bfdbfe"
-                          opacity="0.75"
-                        />
-                        <ellipse
-                          cx="380"
-                          cy="80"
-                          rx="30"
-                          ry="12"
-                          fill="#c7ebd2"
-                          opacity="0.6"
-                        />
-
-                        {/* Major Road Lines */}
-                        <line
-                          x1="0"
-                          y1="130"
-                          x2="450"
-                          y2="100"
-                          stroke="#d5e4d7"
-                          strokeWidth="10"
-                        />
-                        <line
-                          x1="160"
-                          y1="0"
-                          x2="220"
-                          y2="240"
-                          stroke="#d5e4d7"
-                          strokeWidth="9"
-                        />
-                        <line
-                          x1="330"
-                          y1="0"
-                          x2="380"
-                          y2="240"
-                          stroke="#d5e4d7"
-                          strokeWidth="8"
-                        />
-
-                        {/* Traversal Route - Green Dashed Line */}
-                        <path
-                          d="M 50,140 Q 140,110 190,90 T 260,115 T 320,135 T 410,120"
-                          fill="none"
-                          stroke="#15803d"
-                          strokeWidth="2.5"
-                          strokeDasharray="6,4"
-                        />
-
-                        {/* Nodes along route */}
-                        {/* Node 1: Green Aman */}
-                        <circle
-                          cx="140"
-                          cy="95"
-                          r="7"
-                          fill="#16a34a"
-                          stroke="#ffffff"
-                          strokeWidth="2.5"
-                        />
-
-                        {/* Node 2: Green Aman */}
-                        <circle
-                          cx="215"
-                          cy="120"
-                          r="7"
-                          fill="#16a34a"
-                          stroke="#ffffff"
-                          strokeWidth="2.5"
-                        />
-
-                        {/* Node 3: Overload Red */}
-                        <circle
-                          cx="285"
-                          cy="148"
-                          r="14"
-                          fill="rgba(220, 38, 38, 0.18)"
-                        />
-                        <circle
-                          cx="285"
-                          cy="148"
-                          r="8"
-                          fill="#dc2626"
-                          stroke="#ffffff"
-                          strokeWidth="2.5"
-                        />
-
-                        {/* Node 4: Yellow Hampir Penuh */}
-                        <circle
-                          cx="340"
-                          cy="100"
-                          r="7"
-                          fill="#eab308"
-                          stroke="#ffffff"
-                          strokeWidth="2.5"
-                        />
-
-                        {/* Node 5: Yellow Hampir Penuh */}
-                        <circle
-                          cx="395"
-                          cy="150"
-                          r="7"
-                          fill="#eab308"
-                          stroke="#ffffff"
-                          strokeWidth="2.5"
-                        />
-                      </svg>
-
-                      {/* Map Live Indicator */}
-                      <div className="petugas-map-live-badge">
-                        <span className="petugas-map-live-dot" />
-                        <span>LIVE · 5 mnt lalu</span>
-                      </div>
-
-                      {/* Legend Overlay Card */}
-                      <div className="petugas-legend-card">
-                        <span className="petugas-legend-title">
-                          LEGENDA TPS
-                        </span>
-                        <div className="petugas-legend-item">
-                          <span className="petugas-legend-dot green" />
-                          <span>Aman &lt; 75%</span>
-                        </div>
-                        <div className="petugas-legend-item">
-                          <span className="petugas-legend-dot yellow" />
-                          <span>Hampir Penuh ≥ 75%</span>
-                        </div>
-                        <div className="petugas-legend-item">
-                          <span className="petugas-legend-dot red" />
-                          <span>Overload &gt; 90%</span>
-                        </div>
-                        <div className="petugas-legend-item">
-                          <span className="petugas-legend-line" />
-                          <span>Rute Pengalihan Otomatis</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Route Footer text */}
-                    <div className="petugas-route-footer">
-                      Estimasi selesai 08.30 WIB · 11 lokasi tersisa
-                    </div>
-                  </div>
-                </div>
-              </div>
+            {/* Peta Rute & Urutan Titik Penjemputan Driver (Map di Kiri, Urutan Penjemputan di Kanan) */}
+            <div style={{ marginTop: "18px" }}>
+              <DriverRouteMap
+                height="520px"
+                officerName={displayOfficerName}
+                wilayahKelurahan={wilayahKelurahan || "Tembok Dukuh"}
+                wilayahKecamatan={wilayahKecamatan || "Bubutan"}
+                queueList={queueList}
+                onNavigateScan={(stop) => {
+                  setActiveMenu("scan");
+                  window.location.hash = "scan";
+                }}
+                onExpand={() => {
+                  setActiveMenu("rute");
+                  window.location.hash = "rute";
+                }}
+              />
             </div>
           </div>
         )}
@@ -1666,6 +1448,26 @@ export default function PetugasPanel({
         {/* =========================================================
             TAB 2: SCAN QR WARGA (FLOW SESUAI SCREENSHOT)
             ========================================================= */}
+        
+        {/* =========================================================
+            TAB: PETA RUTE DRIVER (MAP RUTE HARI INI)
+            ========================================================= */}
+        {activeMenu === "rute" && (
+          <div>
+            <DriverRouteMap
+              height="540px"
+              officerName={displayOfficerName}
+              wilayahKelurahan={wilayahKelurahan || "Tembok Dukuh"}
+              wilayahKecamatan={wilayahKecamatan || "Bubutan"}
+              queueList={queueList}
+              onNavigateScan={(stop) => {
+                setActiveMenu("scan");
+                window.location.hash = "scan";
+              }}
+            />
+          </div>
+        )}
+
         {activeMenu === "scan" && (
           <div>
             {/* Step 2: Page 'QR Berhasil Dipindai' (Screenshot 1) */}

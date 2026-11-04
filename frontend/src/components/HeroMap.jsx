@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { IconMapPin } from './common/AppIcons';
 import { fetchPublicTps } from '../api/tps';
 
 // Stable module-level constants
@@ -206,10 +207,10 @@ export default function HeroMap({ onOpenTpsModal }) {
             <span class="map-tooltip-badge ${badgeClass}">${isInactive ? 'Nonaktif' : 'Aktif'}</span>
           </div>
           <div class="osm-popup-details">
-            <p><strong>📍 Lokasi:</strong> Kec. ${tps.kecamatan || '-'}, Kel. ${tps.kelurahan || '-'}</p>
-            <p><strong>⏰ Jam Operasional:</strong> ${tps.jamOperasional || 'Belum ada data'}</p>
+            <p><strong>Lokasi:</strong> Kec. ${tps.kecamatan || '-'}, Kel. ${tps.kelurahan || '-'}</p>
+            <p><strong>Jam Operasional:</strong> ${tps.jamOperasional || 'Belum ada data'}</p>
             <p><strong>📦 Daya Tampung Maksimum:</strong> ${tps.dayaTampungM3 != null ? `${tps.dayaTampungM3} m&sup3;` : 'Belum ada data'}</p>
-            <p><strong>⏱️ Terakhir Diperbarui:</strong> ${tps.terakhirUpdate || 'Belum ada data'}</p>
+            <p><strong>Terakhir Diperbarui:</strong> ${tps.terakhirUpdate || 'Belum ada data'}</p>
           </div>
           <p style="font-size: 0.75rem; color: #64748b; margin: 0 0 10px;">Persentase keterisian belum tersedia.</p>
           <button 
@@ -322,7 +323,7 @@ export default function HeroMap({ onOpenTpsModal }) {
               onClick={() => setMapType('osm')}
               title="Tampilkan peta OpenStreetMap standar"
             >
-              🗺️ OSM Standar
+              OSM Standar
             </button>
             <button
               type="button"
@@ -330,7 +331,7 @@ export default function HeroMap({ onOpenTpsModal }) {
               onClick={() => setMapType('satellite')}
               title="Tampilkan peta citra satelit OpenStreetMap"
             >
-              🛰️ OSM Satelit
+              OSM Satelit
             </button>
           </div>
 
@@ -355,7 +356,7 @@ export default function HeroMap({ onOpenTpsModal }) {
               onClick={handleResetView}
               title="Kembalikan posisi peta ke pusat Kota Surabaya"
             >
-              🎯 Reset
+              Reset
             </button>
           </div>
         </div>
@@ -415,7 +416,7 @@ export default function HeroMap({ onOpenTpsModal }) {
         ) : (
           <div className="hero-map-default-bar">
             <span style={{ color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>📍</span>
+              <IconMapPin size={15} />
               <span>{isLoading ? 'Memuat data TPS dari server...' : apiError || `Menampilkan ${tpsList.length} TPS aktif dari server. Klik marker untuk melihat detail.`}</span>
             </span>
             <button

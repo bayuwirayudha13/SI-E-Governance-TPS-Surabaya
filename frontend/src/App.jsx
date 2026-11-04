@@ -21,6 +21,7 @@ import PetugasPanel from "./components/PetugasPanel";
 import PetugasTpsPanel from "./components/PetugasTpsPanel";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MainLayout from "./components/MainLayout";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 import { authService } from "./api/client";
 import useInactivityLogout from "./api/useInactivityLogout";
 import { INACTIVITY_LOGOUT_MESSAGE, broadcastLogout } from "./api/inactivity";
@@ -371,13 +372,15 @@ export default function App() {
   // If user is inside Warga Portal (Protected by RBAC: warga)
   if (currentPage === "warga") {
     return (
-      <ProtectedRoute allowedRoles={["warga"]}>
-        <WargaPanel
-          onLogout={handleLogout}
-          wargaId={currentUser?.id}
-          currentUser={currentUser}
-        />
-      </ProtectedRoute>
+      <ErrorBoundary>
+        <ProtectedRoute allowedRoles={["warga"]}>
+          <WargaPanel
+            onLogout={handleLogout}
+            wargaId={currentUser?.id}
+            currentUser={currentUser}
+          />
+        </ProtectedRoute>
+      </ErrorBoundary>
     );
   }
 

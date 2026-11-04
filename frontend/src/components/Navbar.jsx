@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { IconMapPin, IconLeaf, IconZap, IconNewspaper, IconRecycle, IconGift } from './common/AppIcons';
 
 const NAV_ITEMS = [
   { id: 'beranda', label: 'Beranda' },
@@ -181,7 +182,7 @@ export default function Navbar({
                   {currentUser.role === 'admin' || currentUser.role === 'superadmin'
                     ? 'Admin Panel'
                     : currentUser.role === 'driver' || currentUser.role === 'petugas'
-                    ? 'Petugas Pengangkut'
+                    ? 'Petugas Driver / Pengangkut'
                     : currentUser.role === 'petugas_kelurahan'
                     ? 'Petugas Kelurahan'
                     : 'Portal Warga'}
@@ -223,42 +224,42 @@ export default function Navbar({
               className="mobile-filter-chip"
               onClick={() => onOpenTpsModal && onOpenTpsModal()}
             >
-              📍 Peta TPS
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><IconMapPin size={13} /> Peta TPS</span>
             </button>
             <button
               type="button"
               className={`mobile-filter-chip ${activeSection === 'tentang' ? 'active' : ''}`}
               onClick={(e) => handleNavClick(e, 'tentang')}
             >
-              🌿 Tentang
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><IconLeaf size={13} /> Tentang</span>
             </button>
             <button
               type="button"
               className={`mobile-filter-chip ${activeSection === 'fitur' ? 'active' : ''}`}
               onClick={(e) => handleNavClick(e, 'fitur')}
             >
-              ⚡ Fitur
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><IconZap size={13} /> Fitur</span>
             </button>
             <button
               type="button"
               className={`mobile-filter-chip ${activeSection === 'berita' ? 'active' : ''}`}
               onClick={(e) => handleNavClick(e, 'berita')}
             >
-              📰 Berita
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><IconNewspaper size={13} /> Berita</span>
             </button>
             <button
               type="button"
               className={`mobile-filter-chip ${activeSection === 'jenis-sampah' ? 'active' : ''}`}
               onClick={(e) => handleNavClick(e, 'jenis-sampah')}
             >
-              ♻️ Jenis Sampah
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><IconRecycle size={13} /> Jenis Sampah</span>
             </button>
             <button
               type="button"
               className="mobile-filter-chip"
               onClick={() => onOpenRewardModal && onOpenRewardModal()}
             >
-              🎁 Reward
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><IconGift size={13} /> Reward</span>
             </button>
           </div>
         </div>
@@ -468,6 +469,26 @@ export default function Navbar({
             <button
               type="button"
               className="drawer-item"
+              onClick={() => handleRolePortalClick('#petugas-tps')}
+            >
+              <span className="drawer-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 21h18"/>
+                  <path d="M9 8h1"/>
+                  <path d="M9 12h1"/>
+                  <path d="M9 16h1"/>
+                  <path d="M14 8h1"/>
+                  <path d="M14 12h1"/>
+                  <path d="M14 16h1"/>
+                  <path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/>
+                </svg>
+              </span>
+              <span className="drawer-label">Petugas TPS Kelurahan</span>
+            </button>
+
+            <button
+              type="button"
+              className="drawer-item"
               onClick={() => handleRolePortalClick('#petugas')}
             >
               <span className="drawer-icon">
@@ -478,7 +499,7 @@ export default function Navbar({
                   <circle cx="18.5" cy="18.5" r="2.5"/>
                 </svg>
               </span>
-              <span className="drawer-label">Petugas Pengangkut</span>
+              <span className="drawer-label">Petugas Driver / Armada</span>
             </button>
 
             <button

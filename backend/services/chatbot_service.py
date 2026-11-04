@@ -31,7 +31,7 @@ def handle_bot_or_routing(db: Session, warga_id: int, message_text: str) -> str:
                 matched_jadwal = db.query(JadwalPengambilan).limit(5).all()
                 
             if matched_jadwal:
-                response_lines = ["🤖 **Bot Jadwal Pengambilan Sampah**:\n"]
+                response_lines = ["**Bot Jadwal Pengambilan Sampah**:\n"]
                 if warga_kelurahan:
                     response_lines.append(f"📍 Jadwal untuk wilayah Anda ({warga_kelurahan}):\n")
                 else:
@@ -45,7 +45,7 @@ def handle_bot_or_routing(db: Session, warga_id: int, message_text: str) -> str:
                 response_lines.append("\n_Jika ada kendala khusus di luar jadwal ini, silakan ketik pesan Anda dan akan diteruskan ke Admin/Petugas kelurahan._")
                 return "\n".join(response_lines)
             else:
-                return "🤖 Maaf, belum ada data jadwal pengambilan sampah yang terdaftar untuk saat ini. Silakan hubungi Admin."
+                return "Maaf, belum ada data jadwal pengambilan sampah yang terdaftar untuk saat ini. Silakan hubungi Admin."
 
         # 2. Cek pertanyaan Wilayah / Petugas Lokasi
         if any(keyword in text_lower for keyword in ["wilayah", "kapan petugas"]) and \
@@ -58,7 +58,7 @@ def handle_bot_or_routing(db: Session, warga_id: int, message_text: str) -> str:
                 matched_jadwal = db.query(JadwalPengambilan).limit(5).all()
                 
             if matched_jadwal:
-                response_lines = ["🤖 **Jadwal Petugas di Wilayah Anda**:\n"]
+                response_lines = ["**Jadwal Petugas di Wilayah Anda**:\n"]
                 response_lines.append(f"📍 Wilayah: {warga_kelurahan if warga_kelurahan else warga_kecamatan}\n")
                     
                 for j in matched_jadwal:
@@ -71,27 +71,27 @@ def handle_bot_or_routing(db: Session, warga_id: int, message_text: str) -> str:
                 response_lines.append("\n_Hubungi Petugas atau Admin jika ada kebutuhan khusus._")
                 return "\n".join(response_lines)
             else:
-                return "🤖 Belum ada data petugas untuk wilayah Anda. Silakan hubungi Admin."
+                return "Belum ada data petugas untuk wilayah Anda. Silakan hubungi Admin."
 
         # 3. Cek keluhan (belum diangkut, menumpuk, rusak, bocor, bau)
         if any(keyword in text_lower for keyword in ["belum diangkut", "menumpuk", "rusak", "bocor", "bau", "penuh"]):
             assign_petugas_by_wilayah(db, warga_id, warga_kelurahan, warga_kecamatan, conversation_type="keluhan")
             
-            return "🤖 **Laporan keluhan Anda telah dicatat**. Tim kami akan segera menindaklanjuti. Terima kasih."
+            return "**Laporan keluhan Anda telah dicatat**. Tim kami akan segera menindaklanjuti. Terima kasih."
 
         # 4. Cek permintaan chat langsung / petugas
         if any(keyword in text_lower for keyword in ["bicara", "langsung", "berbicara", "admin", "petugas", "tolong", "darurat"]):
             assigned = assign_petugas_by_wilayah(db, warga_id, warga_kelurahan, warga_kecamatan, conversation_type="bicara_langsung")
             
             if assigned:
-                return f"🤖 Permintaan Anda telah dicatat dan **diteruskan ke {assigned['role_label']} {assigned['name']} ({assigned['wilayah']})**. Petugas akan segera merespons percakapan Anda. Terima kasih."
+                return f"Permintaan Anda telah dicatat dan **diteruskan ke {assigned['role_label']} {assigned['name']} ({assigned['wilayah']})**. Petugas akan segera merespons percakapan Anda. Terima kasih."
             else:
-                return f"🤖 Permintaan Anda telah dicatat dan **diteruskan ke Admin**. Admin akan segera merespons. Terima kasih."
+                return f"Permintaan Anda telah dicatat dan **diteruskan ke Admin**. Admin akan segera merespons. Terima kasih."
 
         return None
     except Exception as e:
         logger.error(f"Error in chatbot service: {e}")
-        return "🤖 Halo! Ada yang bisa saya bantu terkait jadwal pengambilan sampah atau pelaporan wilayah?"
+        return "Halo! Ada yang bisa saya bantu terkait jadwal pengambilan sampah atau pelaporan wilayah?"
 
 
 def assign_petugas_by_wilayah(db: Session, warga_id: int, warga_kelurahan: str, warga_kecamatan: str, conversation_type: str = "general") -> dict:

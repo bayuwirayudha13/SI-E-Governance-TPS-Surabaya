@@ -372,6 +372,11 @@
 
 .warga-alert-icon {
   font-size: 1.3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .warga-alert-title {
@@ -430,6 +435,11 @@
 
 .warga-stat-icon {
   font-size: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  color: #334155;
 }
 
 .warga-stat-badge {
@@ -667,7 +677,55 @@
   letter-spacing: 0.04em;
 }
 
-/* Setor & Reward Plastic Cards */
+/* Setor & Reward Header & Multi-Item Plastic Selection */
+.warga-setor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.warga-setor-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.warga-selected-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.warga-reset-btn {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.14s ease;
+}
+
+.warga-reset-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+/* Setor & Reward Plastic Cards Grid */
 .warga-plastic-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -680,22 +738,31 @@
   border-radius: 12px;
   padding: 14px 16px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   background: #ffffff;
   cursor: pointer;
   transition: all 0.18s ease;
+  user-select: none;
 }
 
 .warga-plastic-card:hover {
   border-color: #cbd5e1;
   transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
 }
 
 .warga-plastic-card.selected {
   border-color: #16a34a;
   background: #f0fdf4;
-  box-shadow: 0 0 0 1px #16a34a;
+  box-shadow: 0 0 0 1px #16a34a, 0 3px 12px rgba(22, 163, 74, 0.08);
+}
+
+.warga-plastic-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 }
 
 .warga-plastic-left {
@@ -712,6 +779,7 @@
   border-radius: 6px;
   letter-spacing: 0.02em;
   display: inline-block;
+  flex-shrink: 0;
 }
 
 .warga-plastic-name {
@@ -729,78 +797,417 @@
 
 .warga-plastic-rate {
   font-size: 0.78rem;
-  color: #94a3b8;
-  font-weight: 600;
+  color: #15803d;
+  font-weight: 700;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-block;
 }
 
-.warga-radio-circle {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
+.warga-plastic-card.selected .warga-plastic-rate {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* Checkbox Box for Multi-Select */
+.warga-checkbox-box {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
   border: 2px solid #cbd5e1;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: #ffffff;
+  transition: all 0.15s ease;
 }
 
-.warga-radio-circle.checked {
+.warga-checkbox-box.checked {
+  background: #16a34a;
   border-color: #16a34a;
 }
 
-.warga-radio-inner {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #16a34a;
+/* Inline Card Controls for Selected Plastic */
+.warga-plastic-card-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #bbf7d0;
 }
 
-/* Setor Weight Form */
-.warga-deposit-form {
-  margin-top: 18px;
-  padding: 16px 20px;
+.warga-card-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.warga-card-input-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.warga-card-stepper {
+  display: inline-flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 2px 4px;
+}
+
+.warga-card-step-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  padding: 0;
+  transition: background 0.12s;
+}
+
+.warga-card-step-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.warga-card-step-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.warga-card-stepper-input {
+  width: 52px;
+  border: none;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+  outline: none;
+  background: transparent;
+  padding: 2px;
+}
+
+.warga-card-unit {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-right: 4px;
+}
+
+.warga-card-points-badge {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #bbf7d0;
+  white-space: nowrap;
+}
+
+/* Multi-Item Deposit Summary Card & Breakdown */
+.warga-deposit-summary-card {
+  margin-top: 22px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+}
+
+.warga-summary-card-header {
+  padding: 14px 18px;
   background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  border-radius: 12px;
-}
-
-.warga-form-inner {
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
-  align-items: flex-end;
-  gap: 20px;
+  justify-content: space-between;
+  align-items: center;
   flex-wrap: wrap;
+  gap: 10px;
 }
 
-.warga-weight-input {
-  width: 140px;
-  padding: 9px 12px;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
-  font-size: 0.95rem;
-  font-family: inherit;
-}
-
-.warga-calc-summary {
+.warga-summary-card-title {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.warga-summary-method-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.warga-selected-items-table {
+  padding: 6px 14px;
+}
+
+.warga-selected-table-head {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.6fr 1.2fr 48px;
+  align-items: center;
+  padding: 10px 12px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.warga-selected-table-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.6fr 1.2fr 48px;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid #f8fafc;
+  transition: background 0.12s;
+}
+
+.warga-selected-table-row:hover {
+  background: #f8fafc;
+}
+
+.warga-selected-table-row:last-child {
+  border-bottom: none;
+}
+
+.warga-table-plastic-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.warga-table-plastic-info strong {
+  display: block;
+  font-size: 0.88rem;
+  color: #0f172a;
+}
+
+.warga-table-plastic-info small {
+  display: block;
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.warga-resin-badge-sm {
+  color: #ffffff;
+  font-size: 0.64rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.warga-table-rate {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.warga-table-weight-cell {
+  display: flex;
   justify-content: center;
 }
 
-.warga-submit-deposit-btn {
+.warga-table-stepper {
+  display: inline-flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 2px 4px;
+}
+
+.warga-table-step-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  padding: 0;
+}
+
+.warga-table-step-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.warga-table-step-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.warga-table-weight-input {
+  width: 56px;
+  border: none;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+  outline: none;
+  background: transparent;
+  padding: 2px;
+}
+
+.warga-table-unit {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-right: 4px;
+}
+
+.warga-table-points {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #16a34a;
+}
+
+.warga-table-remove-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.14s ease;
+}
+
+.warga-table-remove-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.warga-summary-footer {
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.warga-summary-totals {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #ffffff;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.warga-total-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.warga-total-stat .stat-label {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.warga-total-stat .stat-val {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.warga-total-stat.highlighted .stat-val.green {
+  color: #16a34a;
+  font-size: 1.15rem;
+}
+
+.warga-total-divider {
+  width: 1px;
+  height: 28px;
+  background: #e2e8f0;
+}
+
+.warga-submit-multi-deposit-btn {
   background: #166534;
   color: #ffffff;
   border: none;
-  border-radius: 8px;
-  padding: 10px 18px;
-  font-size: 0.88rem;
-  font-weight: 600;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 0.92rem;
+  font-weight: 700;
   cursor: pointer;
-  margin-left: auto;
-  transition: background 0.18s;
+  font-family: inherit;
+  box-shadow: 0 4px 12px rgba(22, 101, 52, 0.25);
+  transition: all 0.16s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.warga-submit-deposit-btn:hover {
+.warga-submit-multi-deposit-btn:hover:not(:disabled) {
   background: #14532d;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(22, 101, 52, 0.32);
+}
+
+.warga-submit-multi-deposit-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.warga-empty-selection-card {
+  margin-top: 18px;
+  padding: 18px 20px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.warga-empty-selection-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: #e2e8f0;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 /* Panduan 3 Top Cards */

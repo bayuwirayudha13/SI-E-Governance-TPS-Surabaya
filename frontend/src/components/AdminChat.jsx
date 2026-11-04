@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { api, authService, API_BASE_URL } from "../api/client";
 import "./AdminChat.css";
+import { IconMegaphone, IconLightbulb, IconSend, IconClock } from './common/AppIcons';
 
 export default function AdminChat() {
   const [conversations, setConversations] = useState([]);
@@ -30,23 +31,23 @@ export default function AdminChat() {
   const shortcuts = [
     {
       id: "greeting",
-      label: "💬 Salam Pembuka",
+      label: "Salam Pembuka",
       text: null, // Will be generated dynamically
       oneTimeOnly: true,
     },
     {
       id: "confirm",
-      label: "✓ Apakah jawaban dari kami sudah cukup?",
+      label: "Apakah jawaban dari kami sudah cukup?",
       text: "Apakah jawaban dari kami sudah cukup?",
     },
     {
       id: "ask_more",
-      label: "❓ Apakah ada pertanyaan lagi?",
+      label: "Apakah ada pertanyaan lagi?",
       text: "Apakah ada pertanyaan lagi?",
     },
     {
       id: "thanks",
-      label: "🙏 Terima kasih sudah menggunakan layanan kami",
+      label: "Terima kasih sudah menggunakan layanan kami",
       text: "Terima kasih sudah menggunakan layanan kami.",
     },
   ];
@@ -428,7 +429,7 @@ export default function AdminChat() {
             }}
           >
             <strong style={{ fontSize: "0.95rem" }}>
-              🔔 {toastPopup.title}
+              {toastPopup.title}
             </strong>
             <button
               onClick={() => setToastPopup(null)}
@@ -488,7 +489,7 @@ export default function AdminChat() {
               fontWeight: 600,
             }}
           >
-            {soundEnabled ? "🔊 Suara On" : "🔇 Suara Off"}
+            {soundEnabled ? "Suara On" : "Suara Off"}
           </button>
         </div>
 
@@ -540,7 +541,7 @@ export default function AdminChat() {
       <div className="admin-chat-main">
         {!selectedConv ? (
           <div className="admin-chat-no-selection">
-            <div className="no-selection-icon">💬</div>
+            <div className="no-selection-icon"><IconMegaphone size={48} color="#94a3b8" /></div>
             <p>Pilih percakapan untuk memulai</p>
           </div>
         ) : (
@@ -613,7 +614,7 @@ export default function AdminChat() {
 
             {greetingTemplate && greetingTemplate.should_send && (
               <div className="admin-chat-template-suggestion">
-                <div className="template-header">💡 Saran Pembuka</div>
+                <div className="template-header"><span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><IconLightbulb size={14} /> Saran Pembuka</span></div>
                 <textarea
                   className="template-edit-textarea"
                   value={editableTemplate}
@@ -651,7 +652,7 @@ export default function AdminChat() {
             <form onSubmit={sendMessage} className="admin-chat-input-form">
               {showShortcutPopup && greetingTemplate && (
                 <div className="shortcut-popup">
-                  <div className="shortcut-header">💡 Shortcut Pesan</div>
+                  <div className="shortcut-header"><span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><IconLightbulb size={14} /> Shortcut Pesan</span></div>
                   {shortcuts.map((shortcut) => {
                     // Skip greeting if already used
                     if (shortcut.id === "greeting" && usedGreetingShortcut)
@@ -685,7 +686,7 @@ export default function AdminChat() {
                   !messageText.trim() || wsStatus !== "connected" || sending
                 }
               >
-                {sending ? "⏳" : "➤"}
+                {sending ? <IconClock size={16} /> : <IconSend size={16} />}
               </button>
             </form>
           </>

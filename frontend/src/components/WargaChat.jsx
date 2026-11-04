@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { api, authService, API_BASE_URL } from "../api/client";
 import "./WargaChat.css";
+import { IconClock, IconMapPin, IconAlert, IconTrash, IconUser, IconMegaphone, IconCalendar, IconBot, IconSend } from './common/AppIcons';
 
 export default function WargaChat() {
   const [conversation, setConversation] = useState(null);
@@ -242,7 +243,7 @@ export default function WargaChat() {
       <div className="warga-chat-messages">
         {messages.length === 0 ? (
           <div className="warga-chat-empty">
-            <div className="empty-icon">💬</div>
+            <div className="empty-icon"><IconMegaphone size={36} color="#94a3b8" /></div>
             <p>Belum ada pesan. Mulai percakapan dengan admin!</p>
           </div>
         ) : (
@@ -254,13 +255,17 @@ export default function WargaChat() {
               minute: "2-digit",
             });
 
+            const cleanMessage = typeof msg.message === "string" ? msg.message.replace(/🤖\s*/g, "") : msg.message;
             return (
               <div
                 key={msg.id}
                 className={`warga-message-bubble ${isOwnMessage ? "own" : "other"}`}
               >
-                <div className="message-sender">{senderName}</div>
-                <div className="message-text">{msg.message}</div>
+                <div className="message-sender" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  {!isOwnMessage && <IconBot size={13} />}
+                  <span>{senderName}</span>
+                </div>
+                <div className="message-text">{cleanMessage}</div>
                 <div className="message-time">{time}</div>
               </div>
             );
@@ -277,8 +282,9 @@ export default function WargaChat() {
               sendMessageText("Jadwal pengambilan sampah hari ini?")
             }
             className="template-btn"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
           >
-            📅 Jadwal Hari Ini
+            <IconCalendar size={14} /> Jadwal Hari Ini
           </button>
           <button
             type="button"
@@ -286,15 +292,17 @@ export default function WargaChat() {
               sendMessageText("Kapan petugas lewat di wilayah saya?")
             }
             className="template-btn"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
           >
-            🗺️ Wilayah Saya
+            <IconMapPin size={14} /> Wilayah Saya
           </button>
           <button
             type="button"
             onClick={() => sendMessageText("Sampah belum diangkut 2 hari")}
             className="template-btn"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
           >
-            ⚠️ Belum Diangkut
+            <IconAlert size={14} /> Belum Diangkut
           </button>
           <button
             type="button"
@@ -302,8 +310,9 @@ export default function WargaChat() {
               sendMessageText("Ada sampah menumpuk di titik pengumpulan")
             }
             className="template-btn"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
           >
-            🗑️ Menumpuk
+            <IconTrash size={14} /> Menumpuk
           </button>
           <button
             type="button"
@@ -311,8 +320,9 @@ export default function WargaChat() {
               sendMessageText("Ingin bicara langsung dengan petugas")
             }
             className="template-btn"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
           >
-            👤 Bicara Petugas
+            <IconUser size={14} /> Bicara Petugas
           </button>
         </div>
         <div className="warga-chat-input-wrapper">
@@ -331,7 +341,7 @@ export default function WargaChat() {
               !messageText.trim() || wsStatus !== "connected" || sending
             }
           >
-            {sending ? "⏳" : "➤"}
+            {sending ? <IconClock size={16} /> : <IconSend size={16} />}
           </button>
         </div>
       </form>

@@ -1519,3 +1519,17 @@
     background: #fee2e2;
   }
 }
+
+/* Responsive Driver Route Columns Grid (Map on Left, Urutan Penjemputan on Right) */
+.driver-route-columns-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+@media (max-width: 960px) {
+  .driver-route-columns-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

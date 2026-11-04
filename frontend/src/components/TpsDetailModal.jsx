@@ -1,4 +1,5 @@
 import React from 'react';
+import { IconBox, IconTruck, IconClock, IconMapPin } from './common/AppIcons';
 
 /**
  * TpsDetailModal Component:
@@ -139,7 +140,7 @@ export default function TpsDetailModal({ tps, isOpen, onClose, onOpenReport }) {
           }}>
             <div style={{ padding: '14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, marginBottom: '4px' }}>
-                📦 DAYA TAMPUNG TOTAL
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><IconBox size={14} /> DAYA TAMPUNG TOTAL</span>
               </div>
               <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
                 {tps.kapasitasM3 || tps.daya_tampung_m3 || tps.dayaTampungM3 || '—'} m³
@@ -148,7 +149,7 @@ export default function TpsDetailModal({ tps, isOpen, onClose, onOpenReport }) {
 
             <div style={{ padding: '14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, marginBottom: '4px' }}>
-                🚛 JUMLAH KONTAINER
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><IconTruck size={14} /> JUMLAH KONTAINER</span>
               </div>
               <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
                 {tps.jumlahContainer || tps.jumlah_container || '1 Kontainer Besar'}
@@ -157,7 +158,7 @@ export default function TpsDetailModal({ tps, isOpen, onClose, onOpenReport }) {
 
             <div style={{ padding: '14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, marginBottom: '4px' }}>
-                ⏰ JAM OPERASIONAL
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><IconClock size={14} /> JAM OPERASIONAL</span>
               </div>
               <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a' }}>
                 {tps.jamOperasional || '06:00 - 18:00 WIB'}
@@ -166,7 +167,7 @@ export default function TpsDetailModal({ tps, isOpen, onClose, onOpenReport }) {
 
             <div style={{ padding: '14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, marginBottom: '4px' }}>
-                🌐 KOORDINAT GPS
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><IconMapPin size={14} /> KOORDINAT GPS</span>
               </div>
               <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
                 {tps.lat ? `${parseFloat(tps.lat).toFixed(4)}, ${parseFloat(tps.lng).toFixed(4)}` : 'Tersedia di Peta'}
@@ -177,7 +178,7 @@ export default function TpsDetailModal({ tps, isOpen, onClose, onOpenReport }) {
           {/* Location & Details Card */}
           <div style={{ padding: '16px', background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
             <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1e293b', margin: '0 0 10px' }}>
-              📍 Alamat &amp; Area Layanan
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><IconMapPin size={15} /> Alamat &amp; Area Layanan</span>
             </h4>
             <p style={{ fontSize: '0.86rem', color: '#475569', margin: '0 0 8px', lineHeight: 1.5 }}>
               {tps.lokasi || tps.alamat || `Area TPS ${tps.nama}, Kelurahan ${tps.kelurahan || tps.wilayahKota || '—'}, Kecamatan ${tps.kecamatan || '—'}, Kota Surabaya.`}

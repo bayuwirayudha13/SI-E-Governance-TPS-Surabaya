@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { API_BASE_URL } from "../api/client";
 import AdminChat from "./AdminChat";
+import { 
+  IconTruck, 
+  IconTrendingUp, 
+  IconAlert, 
+  IconMegaphone, 
+  IconBuilding, 
+  IconGraduationCap, 
+  IconAnchor, 
+  IconTree, 
+  IconMap, 
+  IconUsers, 
+  IconCalendar,
+  IconCheck
+} from "./common/AppIcons";
 
 const API_BASE = API_BASE_URL;
 
@@ -26,6 +40,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
     pending_reports: 0,
   });
 
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem("sipetasan_sidebar_collapsed") === "true";
   });
@@ -344,6 +359,349 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
 
   return (
     <div className="admin-container">
+      {/* Mobile Sticky Top Header Bar with Hamburger Button */}
+      <header className="admin-mobile-top-bar">
+        <div className="admin-mobile-left">
+          <button
+            type="button"
+            className="admin-mobile-hamburger-btn"
+            onClick={() => setMobileDrawerOpen(true)}
+            aria-label="Buka navigasi menu admin"
+            title="Menu Navigasi Admin"
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+            >
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+
+          <div
+            className="admin-mobile-brand"
+            onClick={() => {
+              setActiveMenu("dashboard");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          >
+            <div className="admin-mobile-logo-icon">A</div>
+            <div className="admin-mobile-brand-title">
+              <span>SI-Petasan</span>
+              <span className="brand-badge-country">ADMIN</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="admin-mobile-right">
+          <div className="admin-mobile-status-badge">
+            <span
+              style={{
+                width: "7px",
+                height: "7px",
+                borderRadius: "50%",
+                background: "#16a34a",
+                display: "inline-block",
+              }}
+            />
+            <span>Command Center</span>
+          </div>
+          <div
+            className="admin-mobile-avatar"
+            title={currentUser?.nama_lengkap || currentUser?.nama || "Admin"}
+          >
+            {(currentUser?.nama_lengkap || currentUser?.nama || "A")
+              .charAt(0)
+              .toUpperCase()}
+          </div>
+        </div>
+      </header>
+
+      {/* Backdrop for Left Slide-over Drawer */}
+      <div
+        className={`admin-drawer-backdrop ${mobileDrawerOpen ? "open" : ""}`}
+        onClick={() => setMobileDrawerOpen(false)}
+        aria-hidden={!mobileDrawerOpen}
+      />
+
+      {/* Slide-over Left Drawer Menu for Admin */}
+      <aside
+        className={`admin-mobile-drawer ${mobileDrawerOpen ? "open" : ""}`}
+        aria-label="Sidebar Menu Mobile Admin"
+      >
+        {/* Drawer Top Header: Close button & Logo */}
+        <div className="drawer-header">
+          <button
+            type="button"
+            className="drawer-close-btn"
+            onClick={() => setMobileDrawerOpen(false)}
+            aria-label="Tutup menu"
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+
+          <div
+            className="drawer-brand-logo"
+            onClick={() => {
+              setActiveMenu("dashboard");
+              setMobileDrawerOpen(false);
+            }}
+            style={{
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <div
+              style={{
+                background: "#16a34a",
+                color: "#fff",
+                width: "30px",
+                height: "30px",
+                borderRadius: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: "bold",
+                fontSize: "0.85rem",
+              }}
+            >
+              A
+            </div>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span
+                style={{
+                  fontWeight: 800,
+                  fontSize: "0.95rem",
+                  color: "#0f172a",
+                  lineHeight: 1.2,
+                }}
+              >
+                SI-PETASAN
+              </span>
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  color: "#64748b",
+                  fontWeight: 600,
+                }}
+              >
+                Admin Panel
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Drawer Content */}
+        <div className="drawer-content-scroll">
+          <div className="drawer-section-header">Menu Admin</div>
+          <nav className="drawer-section">
+            <button
+              type="button"
+              className={`drawer-item ${activeMenu === "dashboard" ? "active" : ""}`}
+              onClick={() => {
+                setActiveMenu("dashboard");
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+              </span>
+              <span className="drawer-label">Dashboard</span>
+            </button>
+
+            <button
+              type="button"
+              className={`drawer-item ${activeMenu === "warga" ? "active" : ""}`}
+              onClick={() => {
+                setActiveMenu("warga");
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                </svg>
+              </span>
+              <span className="drawer-label">Kelola Warga</span>
+            </button>
+
+            <button
+              type="button"
+              className={`drawer-item ${activeMenu === "jadwal" ? "active" : ""}`}
+              onClick={() => {
+                setActiveMenu("jadwal");
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <rect
+                    x="3"
+                    y="4"
+                    width="18"
+                    height="18"
+                    rx="2"
+                    ry="2"
+                  ></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+              </span>
+              <span className="drawer-label">Jadwal Pengambilan</span>
+            </button>
+
+            <button
+              type="button"
+              className={`drawer-item ${activeMenu === "chat" ? "active" : ""}`}
+              onClick={() => {
+                setActiveMenu("chat");
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </span>
+              <span className="drawer-label">Chat ke Warga</span>
+            </button>
+
+            <button
+              type="button"
+              className={`drawer-item ${activeMenu === "pengambilan" ? "active" : ""}`}
+              onClick={() => {
+                setActiveMenu("pengambilan");
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                  <circle cx="9" cy="9" r="2"></circle>
+                  <path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                </svg>
+              </span>
+              <span className="drawer-label">Riwayat Pengambilan</span>
+            </button>
+          </nav>
+        </div>
+
+        {/* Drawer Footer with Profile & Logout */}
+        <div className="admin-drawer-footer">
+          <div className="admin-drawer-user-card">
+            <div className="admin-profile-avatar">
+              {(currentUser?.nama_lengkap || currentUser?.nama || "A")
+                .charAt(0)
+                .toUpperCase()}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: "0.88rem",
+                  color: "#0f172a",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {currentUser?.nama_lengkap || currentUser?.nama || "Admin"}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.74rem",
+                  color: "#64748b",
+                  textTransform: "capitalize",
+                }}
+              >
+                {currentUser?.role || "Admin DLH"}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="admin-drawer-logout-btn"
+            onClick={onLogout}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            <span>Keluar dari Admin</span>
+          </button>
+        </div>
+      </aside>
+
       {/* SIDEBAR */}
       <aside
         className={`admin-sidebar ${isSidebarCollapsed ? "collapsed" : ""}`}
@@ -628,27 +986,27 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
             const REGIONS = [
               {
                 name: "Surabaya Pusat",
-                icon: "🏛️",
+                icon: IconBuilding,
                 desc: "Tegalsari, Genteng, Bubutan, Simokerto",
               },
               {
                 name: "Surabaya Timur",
-                icon: "🎓",
+                icon: IconGraduationCap,
                 desc: "Gubeng, Sukolilo, Rungkut, Mulyorejo",
               },
               {
                 name: "Surabaya Barat",
-                icon: "🏢",
+                icon: IconBuilding,
                 desc: "Tandes, Sambikerep, Benowo, Sukomanunggal",
               },
               {
                 name: "Surabaya Utara",
-                icon: "⚓",
+                icon: IconAnchor,
                 desc: "Krembangan, Semampir, Pabean Cantian, Kenjeran",
               },
               {
                 name: "Surabaya Selatan",
-                icon: "🌳",
+                icon: IconTree,
                 desc: "Wonokromo, Wonocolo, Sawahan, Gayungan",
               },
             ];
@@ -809,7 +1167,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
                   {/* KPI 1 */}
                   <div className="admin-stat-card">
                     <div className="stat-card-header">
-                      <div className="stat-icon-wrap icon-blue">🚛</div>
+                      <div className="stat-icon-wrap icon-blue"><IconTruck size={20} /></div>
                       <span className="stat-badge-live">ESTIMASI</span>
                     </div>
                     <div className="stat-card-number">1.846 m³</div>
@@ -831,7 +1189,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
                   {/* KPI 2 */}
                   <div className="admin-stat-card">
                     <div className="stat-card-header">
-                      <div className="stat-icon-wrap icon-gold">📈</div>
+                      <div className="stat-icon-wrap icon-gold"><IconTrendingUp size={20} /></div>
                       <span className="stat-badge-live">KOTA</span>
                     </div>
                     <div className="stat-card-number">
@@ -865,9 +1223,9 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
                     <div className="stat-card-header">
                       <div
                         className="stat-icon-wrap icon-orange"
-                        style={{ background: "#fee2e2", color: "#dc2626" }}
+                        style={{ background: "#fee2e2", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center" }}
                       >
-                        ⚠️
+                        <IconAlert size={20} />
                       </div>
                       <span
                         style={{
@@ -908,9 +1266,9 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
                     <div className="stat-card-header">
                       <div
                         className="stat-icon-wrap icon-sand"
-                        style={{ background: "#fdf4ff", color: "#c026d3" }}
+                        style={{ background: "#fdf4ff", color: "#c026d3", display: "flex", alignItems: "center", justifyContent: "center" }}
                       >
-                        📢
+                        <IconMegaphone size={20} />
                       </div>
                       <span
                         style={{
@@ -972,7 +1330,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
                           color: "#0f172a",
                         }}
                       >
-                        🗺️ Sebaran Beban Kapasitas TPS per Wilayah Surabaya
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><IconMap size={18} /> Sebaran Beban Kapasitas TPS per Wilayah Surabaya</span>
                       </h3>
                       <p
                         style={{
@@ -1036,7 +1394,15 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
                                 color: "#0f172a",
                               }}
                             >
-                              {reg.icon} {reg.name}
+                              {(() => {
+                                const RegIcon = reg.icon;
+                                return (
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                                    {typeof RegIcon === "function" ? <RegIcon size={16} /> : null}
+                                    <span>{reg.name}</span>
+                                  </span>
+                                );
+                              })()}
                             </span>
                             <span
                               style={{
@@ -1156,8 +1522,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
                             color: "#0f172a",
                           }}
                         >
-                          🚨 Radar Prioritas Pengangkutan (TPS Overload &ge;
-                          80%)
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><IconAlert size={18} /> Radar Prioritas Pengangkutan (TPS Overload &ge; 80%)</span>
                         </h3>
                         <p
                           style={{
@@ -1269,7 +1634,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              <span>{isDispatched ? "✓" : "🚨"}</span>
+                              <span>{isDispatched ? <IconCheck size={14} /> : <IconAlert size={14} />}</span>
                               <span>
                                 {isDispatched
                                   ? "Truk Ditugaskan"
@@ -1309,7 +1674,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
                             color: "#0f172a",
                           }}
                         >
-                          📢 Aduan &amp; Laporan Warga Lapangan
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><IconMegaphone size={18} /> Aduan &amp; Laporan Warga Lapangan</span>
                         </h3>
                         <p
                           style={{
@@ -1455,7 +1820,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
                       }}
                     >
                       <h3 className="admin-card-title" style={{ margin: 0 }}>
-                        👥 Warga Terdaftar Terbaru
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><IconUsers size={18} /> Warga Terdaftar Terbaru</span>
                       </h3>
                       <span
                         style={{
@@ -1495,7 +1860,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
                       }}
                     >
                       <h3 className="admin-card-title" style={{ margin: 0 }}>
-                        📅 Jadwal Pengambilan Minggu Ini
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><IconCalendar size={18} /> Jadwal Pengambilan Minggu Ini</span>
                       </h3>
                       <span
                         style={{

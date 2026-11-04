@@ -61,9 +61,7 @@ def get_active_public_tps(db: Session) -> List[TPS]:
 def get_active_public_tps_with_coords(db: Session) -> List[dict]:
     """Get all active TPS with coordinates for public display (for maps)."""
     tps_list = db.query(TPS).filter(
-        TPS.status == 'Aktif',
-        TPS.latitude.isnot(None),
-        TPS.longitude.isnot(None)
+        TPS.status == 'Aktif'
     ).all()
     return [
         {
