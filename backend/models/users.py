@@ -1,17 +1,20 @@
-from sqlalchemy import Column, Integer, String, Enum, DateTime, Boolean
-from sqlalchemy.dialects.mysql import INTEGER
 from core.database import Base
 from core.timezone import get_wib_now
+from sqlalchemy import Boolean, Column, DateTime, Enum, Integer, String
+from sqlalchemy.dialects.mysql import INTEGER
+
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(INTEGER(unsigned=True), primary_key=True, index=True, autoincrement=True)
+    id = Column(
+        INTEGER(unsigned=True), primary_key=True, index=True, autoincrement=True
+    )
     username = Column(String(50), unique=True, index=True, nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     nama_lengkap = Column(String(100), nullable=False)
-    role = Column(Enum('admin', 'petugas', 'petugas_kelurahan', 'driver', 'superadmin'), nullable=False)
+    role = Column(Enum('admin', 'petugas', 'petugas_kelurahan', 'driver', 'superadmin', 'petugas_tps'), nullable=False)
     is_active = Column(Boolean, default=True)
     # Wilayah tugas petugas & foto profil
     wilayah_kecamatan = Column(String(100), nullable=True)
@@ -20,5 +23,6 @@ class User(Base):
     foto_url = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=get_wib_now)
     updated_at = Column(DateTime, default=get_wib_now, onupdate=get_wib_now)
+
 
 # Hapus model Admin & PetugasPengangkut karena sudah jadi satu di User

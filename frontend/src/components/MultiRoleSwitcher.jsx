@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
-import WargaPanel from './WargaPanel';
-import AdminPanel from './AdminPanelNew';
-import SuperadminPanel from './SuperadminPanel';
-import PetugasPanel from './PetugasPanel';
-import PetugasTpsPanel from './PetugasTpsPanel';
-import { IconTruck, IconBuilding, IconUser, IconShield, IconCrown, IconRecycle } from './common/AppIcons';
+import React, { useState } from "react";
+import WargaPanel from "./WargaPanel";
+import AdminPanel from "./AdminPanelNew";
+import SuperadminPanel from "./SuperadminPanel";
+import PetugasPanel from "./PetugasPanel";
+import PetugasTpsPanel from "./PetugasTpsPanel";
+import {
+  IconTruck,
+  IconBuilding,
+  IconUser,
+  IconShield,
+  IconCrown,
+  IconRecycle,
+} from "./common/AppIcons";
 
 export default function MultiRoleSwitcher() {
-  const [activeTab, setActiveTab] = useState('petugas-tps');
+  const [activeTab, setActiveTab] = useState("petugas-tps");
 
   // Mock users for each role to preview immediately
   const users = {
@@ -24,70 +31,118 @@ export default function MultiRoleSwitcher() {
       <div className="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center space-x-3">
           <span className="font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent text-lg">
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><IconRecycle size={20} color="#34d399" /> Multi-Role Viewer</span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <IconRecycle size={20} color="#34d399" /> Multi-Role Viewer
+            </span>
           </span>
           <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400 border border-slate-700">
             Buka Semua Panel dalam 1 Browser
           </span>
         </div>
-        
+
         <div className="flex space-x-2 bg-slate-950 p-1 rounded-lg border border-slate-800">
           <button
-            onClick={() => setActiveTab('petugas-tps')}
+            onClick={() => setActiveTab("petugas-tps")}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-              activeTab === 'petugas-tps' 
-                ? 'bg-emerald-600 text-white shadow' 
-                : 'text-slate-400 hover:text-white'
+              activeTab === "petugas-tps"
+                ? "bg-emerald-600 text-white shadow"
+                : "text-slate-400 hover:text-white"
             }`}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><IconBuilding size={16} /> Petugas TPS</span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <IconBuilding size={16} /> Petugas TPS
+            </span>
           </button>
           <button
-            onClick={() => setActiveTab('petugas')}
+            onClick={() => setActiveTab("petugas")}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-              activeTab === 'petugas' 
-                ? 'bg-amber-600 text-white shadow' 
-                : 'text-slate-400 hover:text-white'
+              activeTab === "petugas"
+                ? "bg-amber-600 text-white shadow"
+                : "text-slate-400 hover:text-white"
             }`}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><IconTruck size={16} /> Petugas Driver / Pengangkut</span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <IconTruck size={16} /> Petugas Driver / Pengangkut
+            </span>
           </button>
           <button
-            onClick={() => setActiveTab('warga')}
+            onClick={() => setActiveTab("warga")}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-              activeTab === 'warga' 
-                ? 'bg-emerald-600 text-white shadow' 
-                : 'text-slate-400 hover:text-white'
+              activeTab === "warga"
+                ? "bg-emerald-600 text-white shadow"
+                : "text-slate-400 hover:text-white"
             }`}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><IconUser size={16} /> Warga Panel</span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <IconUser size={16} /> Warga Panel
+            </span>
           </button>
           <button
-            onClick={() => setActiveTab('admin')}
+            onClick={() => setActiveTab("admin")}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-              activeTab === 'admin' 
-                ? 'bg-blue-600 text-white shadow' 
-                : 'text-slate-400 hover:text-white'
+              activeTab === "admin"
+                ? "bg-blue-600 text-white shadow"
+                : "text-slate-400 hover:text-white"
             }`}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><IconShield size={16} /> Admin Panel</span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <IconShield size={16} /> Admin Panel
+            </span>
           </button>
           <button
-            onClick={() => setActiveTab('superadmin')}
+            onClick={() => setActiveTab("superadmin")}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-              activeTab === 'superadmin' 
-                ? 'bg-purple-600 text-white shadow' 
-                : 'text-slate-400 hover:text-white'
+              activeTab === "superadmin"
+                ? "bg-purple-600 text-white shadow"
+                : "text-slate-400 hover:text-white"
             }`}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><IconCrown size={16} /> Superadmin Panel</span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <IconCrown size={16} /> Superadmin Panel
+            </span>
           </button>
         </div>
 
         <div>
           <a
             href="#beranda"
-            onClick={() => window.location.hash = 'beranda'}
+            onClick={() => (window.location.hash = "beranda")}
             className="text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-lg transition"
           >
             Keluar ke Beranda
@@ -97,34 +152,34 @@ export default function MultiRoleSwitcher() {
 
       {/* Main Content Area per Tab */}
       <div className="flex-1 overflow-auto bg-slate-900">
-        {activeTab === 'petugas-tps' && (
-          <PetugasTpsPanel 
-            currentUser={users.petugasTps} 
-            onLogout={() => alert('Demo Mode Petugas TPS')} 
+        {activeTab === "petugas-tps" && (
+          <PetugasTpsPanel
+            currentUser={users.petugasTps}
+            onLogout={() => alert("Demo Mode Petugas TPS")}
           />
         )}
-        {activeTab === 'petugas' && (
-          <PetugasPanel 
-            currentUser={users.petugasPengangkut} 
-            onLogout={() => alert('Demo Mode Petugas Pengangkut')} 
+        {activeTab === "petugas" && (
+          <PetugasPanel
+            currentUser={users.petugasPengangkut}
+            onLogout={() => alert("Demo Mode Petugas Pengangkut")}
           />
         )}
-        {activeTab === 'warga' && (
-          <WargaPanel 
-            currentUser={users.warga} 
-            onLogout={() => alert('Demo Mode Warga')} 
+        {activeTab === "warga" && (
+          <WargaPanel
+            currentUser={users.warga}
+            onLogout={() => alert("Demo Mode Warga")}
           />
         )}
-        {activeTab === 'admin' && (
-          <AdminPanel 
-            currentUser={users.admin} 
-            onLogout={() => alert('Demo Mode Admin')} 
+        {activeTab === "admin" && (
+          <AdminPanel
+            currentUser={users.admin}
+            onLogout={() => alert("Demo Mode Admin")}
           />
         )}
-        {activeTab === 'superadmin' && (
-          <SuperadminPanel 
-            currentUser={users.superadmin} 
-            onLogout={() => alert('Demo Mode Superadmin')} 
+        {activeTab === "superadmin" && (
+          <SuperadminPanel
+            currentUser={users.superadmin}
+            onLogout={() => alert("Demo Mode Superadmin")}
           />
         )}
       </div>

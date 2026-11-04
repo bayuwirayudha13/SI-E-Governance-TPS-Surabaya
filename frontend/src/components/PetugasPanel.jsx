@@ -732,7 +732,10 @@ export default function PetugasPanel({
           sub: `Rute A · B 1234 XY · Kelurahan ${wilayahKelurahan || "Sukamaju"}`,
         };
       case "rute":
-        return { title: "Peta Rute Driver", sub: `Peta Navigasi Jalur Pengambilan Hari Ini · Kelurahan ${wilayahKelurahan || "Tembok Dukuh"}` };
+        return {
+          title: "Peta Rute Driver",
+          sub: `Peta Navigasi Jalur Pengambilan Hari Ini · Kelurahan ${wilayahKelurahan || "Tembok Dukuh"}`,
+        };
       case "riwayat":
         return { title: "Riwayat Pengambilan", sub: wilayahSub };
       default:
@@ -1291,7 +1294,16 @@ export default function PetugasPanel({
                 title="Peta Rute Driver"
               >
                 <div className="petugas-nav-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <polygon points="3 11 22 2 13 21 11 13 3 11" />
                   </svg>
                 </div>
@@ -1448,7 +1460,7 @@ export default function PetugasPanel({
         {/* =========================================================
             TAB 2: SCAN QR WARGA (FLOW SESUAI SCREENSHOT)
             ========================================================= */}
-        
+
         {/* =========================================================
             TAB: PETA RUTE DRIVER (MAP RUTE HARI INI)
             ========================================================= */}

@@ -1,52 +1,56 @@
-from fastapi import FastAPI, HTTPException, Depends, Header
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, Column, String, DateTime, Integer, func, text
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
-from pydantic import BaseModel, ConfigDict
-from typing import Optional
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
-from jose import JWTError, jwt
 import os
 import secrets
+from datetime import datetime, timedelta
+from typing import Optional
+
 from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import Column, DateTime, Integer, String, create_engine, func, text
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 load_dotenv()
 
 # Import core database FIRST
-from core.database import engine, SessionLocal, Base, get_db
+from auth.otp import generate_otp, save_otp
+from auth.routes import router as auth_router
+from core.database import Base, SessionLocal, engine, get_db
+from models.chat import ChatConversation, ChatMessage
+from models.jadwal import JadwalPengambilan
+from models.laporan import LaporanWarga
+from models.pengambilan import PengambilanSampah
+from models.petugas_tps_assignment import PetugasTPSAssignment
+from models.scan_history import ScanHistory
+from models.setoran import SetoranSampah
+from models.token import RefreshToken, TokenRevocation
+from models.tps import TPS
+from models.tps_kelurahan import TPSKelurahan
+from models.tps_monitoring_report import TPSMonitoringReport
+from models.users import User
 
 # Import ALL models BEFORE routes (ensure FK references resolve)
 from models.warga import Warga
-from models.tps import TPS
-from models.tps_kelurahan import TPSKelurahan
 from models.wilayah import Kecamatan, Kelurahan
-from models.users import User
-from models.chat import ChatMessage, ChatConversation
-from models.laporan import LaporanWarga
-from models.setoran import SetoranSampah
-from models.jadwal import JadwalPengambilan
-from models.pengambilan import PengambilanSampah
-from models.scan_history import ScanHistory
-from models.token import RefreshToken, TokenRevocation
-
-# Now import routes
-from routes.qr_routes import router as qr_router
-from routes.pengambilan_routes import router as pengambilan_router
-from auth.routes import router as auth_router
-from auth.otp import generate_otp, save_otp
-from services.email_service import send_otp_email
-from routes.tps_routes import router as tps_router
-from routes.dashboard_routes import router as dashboard_router
-from routes.wilayah_routes import router as wilayah_router
-from routes.laporan_routes import router as laporan_router
-from routes.setoran_routes import router as setoran_router
-from routes.jadwal_routes import router as jadwal_router
 from routes.admin_routes import router as admin_router
 from routes.chat_routes import router as chat_router
 from routes.chat_ws import router as chat_ws_router
+from routes.dashboard_routes import router as dashboard_router
+from routes.jadwal_routes import router as jadwal_router
+from routes.laporan_routes import router as laporan_router
+from routes.pengambilan_routes import router as pengambilan_router
 from routes.petugas_integrated_routes import router as petugas_integrated_router
+from routes.petugas_tps_routes import router as petugas_tps_router
+
+# Now import routes
+from routes.qr_routes import router as qr_router
+from routes.setoran_routes import router as setoran_router
+from routes.tps_routes import router as tps_router
+from routes.wilayah_routes import router as wilayah_router
+from services.email_service import send_otp_email
 
 # Config
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
@@ -59,14 +63,17 @@ app = FastAPI(title="SampahPintar API")
 # CORS
 cors_origins_env = os.getenv(
     "CORS_ALLOW_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173",
+    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173",
 )
-allow_origins = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
+allow_origins = [
+    origin.strip() for origin in cors_origins_env.split(",") if origin.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
-    allow_origin_regex=r"^https://.*\.trycloudflare\.com$",
+    # support local dev origin (localhost/127.0.0.1 di port apa pun) + cloudflare quick tunnel
+    allow_origin_regex=r"^https://.*\.trycloudflare\.com$|^http://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -88,11 +95,13 @@ except Exception as e:
 # Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 # Schemas
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
     user: dict
+
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -101,6 +110,7 @@ class UserResponse(BaseModel):
     nama: str
     total_poin: int
     created_at: datetime | None = None
+
 
 # Utilities
 def get_current_user(token: str = None, db: Session = Depends(get_db)):
@@ -112,40 +122,58 @@ def get_current_user(token: str = None, db: Session = Depends(get_db)):
             user = db.query(User).filter(User.role.in_(["admin", "superadmin"])).first()
             if user:
                 return {
-                    "id": user.id, "email": user.email, "nama_lengkap": user.nama_lengkap,
-                    "nama": user.nama_lengkap, "role": user.role, "username": user.username,
+                    "id": user.id,
+                    "email": user.email,
+                    "nama_lengkap": user.nama_lengkap,
+                    "nama": user.nama_lengkap,
+                    "role": user.role,
+                    "username": user.username,
                     "wilayah_kecamatan": getattr(user, "wilayah_kecamatan", None),
                     "wilayah_kelurahan": getattr(user, "wilayah_kelurahan", None),
-                    "wilayah_kota": getattr(user, "wilayah_kota", "Surabaya")
+                    "wilayah_kota": getattr(user, "wilayah_kota", "Surabaya"),
                 }
         elif "petugas" in token:
             user = db.query(User).filter(User.role == "petugas").first()
             if user:
                 return {
-                    "id": user.id, "email": user.email, "nama_lengkap": user.nama_lengkap,
-                    "nama": user.nama_lengkap, "role": user.role, "username": user.username,
+                    "id": user.id,
+                    "email": user.email,
+                    "nama_lengkap": user.nama_lengkap,
+                    "nama": user.nama_lengkap,
+                    "role": user.role,
+                    "username": user.username,
                     "wilayah_kecamatan": getattr(user, "wilayah_kecamatan", None),
                     "wilayah_kelurahan": getattr(user, "wilayah_kelurahan", None),
-                    "wilayah_kota": getattr(user, "wilayah_kota", "Surabaya")
+                    "wilayah_kota": getattr(user, "wilayah_kota", "Surabaya"),
                 }
         elif "driver" in token:
             user = db.query(User).filter(User.role == "driver").first()
             if user:
                 return {
-                    "id": user.id, "email": user.email, "nama_lengkap": user.nama_lengkap,
-                    "nama": user.nama_lengkap, "role": user.role, "username": user.username,
+                    "id": user.id,
+                    "email": user.email,
+                    "nama_lengkap": user.nama_lengkap,
+                    "nama": user.nama_lengkap,
+                    "role": user.role,
+                    "username": user.username,
                     "wilayah_kecamatan": getattr(user, "wilayah_kecamatan", None),
                     "wilayah_kelurahan": getattr(user, "wilayah_kelurahan", None),
-                    "wilayah_kota": getattr(user, "wilayah_kota", "Surabaya")
+                    "wilayah_kota": getattr(user, "wilayah_kota", "Surabaya"),
                 }
         elif "warga" in token:
             warga = db.query(Warga).first()
             if warga:
                 return {
-                    "id": warga.id, "email": warga.email, "nama_lengkap": warga.nama,
-                    "nama": warga.nama, "full_name": warga.nama, "role": "warga",
-                    "kecamatan": warga.kecamatan, "kelurahan": warga.kelurahan,
-                    "alamat_rumah": warga.alamat_rumah, "total_poin": warga.total_poin
+                    "id": warga.id,
+                    "email": warga.email,
+                    "nama_lengkap": warga.nama,
+                    "nama": warga.nama,
+                    "full_name": warga.nama,
+                    "role": "warga",
+                    "kecamatan": warga.kecamatan,
+                    "kelurahan": warga.kelurahan,
+                    "alamat_rumah": warga.alamat_rumah,
+                    "total_poin": warga.total_poin,
                 }
 
     try:
@@ -171,7 +199,7 @@ def get_current_user(token: str = None, db: Session = Depends(get_db)):
                 "kecamatan": warga.kecamatan,
                 "kelurahan": warga.kelurahan,
                 "alamat_rumah": warga.alamat_rumah,
-                "total_poin": warga.total_poin
+                "total_poin": warga.total_poin,
             }
 
     # Cek tabel users (admin/petugas/superadmin)
@@ -204,14 +232,16 @@ def get_current_user(token: str = None, db: Session = Depends(get_db)):
             "kecamatan": warga.kecamatan,
             "kelurahan": warga.kelurahan,
             "alamat_rumah": warga.alamat_rumah,
-            "total_poin": warga.total_poin
+            "total_poin": warga.total_poin,
         }
     raise HTTPException(status_code=401, detail="User not found")
+
 
 # Routes
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
 
 @app.get("/")
 def root():
@@ -220,20 +250,20 @@ def root():
 
 from fastapi import Header
 
+
 @app.get("/api/auth/me")
-def get_me(
-    authorization: str = Header(None),
-    db: Session = Depends(get_db)
-):
+def get_me(authorization: str = Header(None), db: Session = Depends(get_db)):
     if not authorization:
         raise HTTPException(status_code=401, detail="Not authenticated")
     token = authorization.replace("Bearer ", "")
     user = get_current_user(token, db)
     return user
 
+
 @app.post("/api/auth/logout")
 def logout():
     return {"message": "Logged out successfully"}
+
 
 app.include_router(auth_router, prefix="/api")
 app.include_router(qr_router, prefix="/api")
@@ -248,12 +278,16 @@ app.include_router(admin_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(chat_ws_router)
 app.include_router(petugas_integrated_router, prefix="/api")
+app.include_router(petugas_tps_router, prefix="/api")
 
 # Mount frontend dist folder AFTER all API routes
 frontend_dist_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 if os.path.exists(frontend_dist_path):
-    app.mount("/", StaticFiles(directory=frontend_dist_path, html=True), name="frontend")
+    app.mount(
+        "/", StaticFiles(directory=frontend_dist_path, html=True), name="frontend"
+    )
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

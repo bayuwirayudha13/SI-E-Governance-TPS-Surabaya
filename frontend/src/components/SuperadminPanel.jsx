@@ -2,7 +2,19 @@ import React, { useState, useEffect } from "react";
 import { fetchAllTps, extractRegionsFromTps } from "../api/tpsStats";
 import { API_BASE_URL } from "../api/client";
 import TpsMapSuperadmin from "./TpsMapSuperadmin";
-import { IconUsers, IconTrendingUp, IconAlert, IconMegaphone } from "./common/AppIcons";
+import {
+  IconUsers,
+  IconTrendingUp,
+  IconAlert,
+  IconMegaphone,
+  IconBuilding,
+  IconGraduationCap,
+  IconAnchor,
+  IconTree,
+  IconMap,
+  IconCheck,
+  IconCalendar,
+} from "./common/AppIcons";
 
 const API_BASE = API_BASE_URL;
 
@@ -80,6 +92,7 @@ export default function SuperadminPanel({
     wilayah_kecamatan: "",
     wilayah_kelurahan: "",
     foto_url: "",
+    tps_ids: [],
   });
   const [editUser, setEditUser] = useState(null); // {id, ...} saat klik Edit (hijau) / View (merah)
   const [viewUser, setViewUser] = useState(null);
@@ -264,7 +277,8 @@ export default function SuperadminPanel({
               u.role === "superadmin" ||
               u.role === "driver" ||
               u.role === "petugas_kelurahan" ||
-              u.role === "petugas_pengangkut",
+              u.role === "petugas_pengangkut" ||
+              u.role === "petugas_tps",
           ),
         );
       } else {
@@ -774,7 +788,19 @@ export default function SuperadminPanel({
     }
   };
 
-  const openEditUser = (u) => {
+  const openEditUser = async (u) => {
+    let tps_ids = [];
+    if (u.role === "petugas_tps") {
+      try {
+        const r = await fetch(`${API_BASE}/api/petugas-tps/assignments/${u.id}`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        if (r.ok) {
+          const data = await r.json();
+          tps_ids = data.map(a => a.tps_id);
+        }
+      } catch {}
+    }
     setEditUser({
       id: u.id,
       nama_lengkap: u.nama_lengkap,
@@ -783,6 +809,7 @@ export default function SuperadminPanel({
       wilayah_kecamatan: u.wilayah_kecamatan || "",
       wilayah_kelurahan: u.wilayah_kelurahan || "",
       foto_url: u.foto_url || "",
+      tps_ids,
     });
     setEditFotoFile(null);
     setEditFotoPreview(u.foto_url ? `${API_BASE}${u.foto_url}` : "");
@@ -998,10 +1025,20 @@ export default function SuperadminPanel({
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           >
-            <div className="admin-mobile-logo-icon" style={{ background: "#059669" }}>SA</div>
+            <div
+              className="admin-mobile-logo-icon"
+              style={{ background: "#059669" }}
+            >
+              SA
+            </div>
             <div className="admin-mobile-brand-title">
               <span>SI-Petasan</span>
-              <span className="brand-badge-country" style={{ background: "#d1fae5", color: "#065f46" }}>SUPERADMIN</span>
+              <span
+                className="brand-badge-country"
+                style={{ background: "#d1fae5", color: "#065f46" }}
+              >
+                SUPERADMIN
+              </span>
             </div>
           </div>
         </div>
@@ -1022,7 +1059,9 @@ export default function SuperadminPanel({
           <div
             className="admin-mobile-avatar"
             style={{ background: "#059669" }}
-            title={currentUser?.nama_lengkap || currentUser?.nama || "Superadmin"}
+            title={
+              currentUser?.nama_lengkap || currentUser?.nama || "Superadmin"
+            }
           >
             {(currentUser?.nama_lengkap || currentUser?.nama || "S")
               .charAt(0)
@@ -1129,7 +1168,14 @@ export default function SuperadminPanel({
               }}
             >
               <span className="drawer-icon">
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <rect x="3" y="3" width="7" height="7"></rect>
                   <rect x="14" y="3" width="7" height="7"></rect>
                   <rect x="14" y="14" width="7" height="7"></rect>
@@ -1148,7 +1194,14 @@ export default function SuperadminPanel({
               }}
             >
               <span className="drawer-icon">
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                   <circle cx="9" cy="7" r="4"></circle>
                   <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -1167,7 +1220,14 @@ export default function SuperadminPanel({
               }}
             >
               <span className="drawer-icon">
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <rect x="1" y="3" width="15" height="13"></rect>
                   <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
                   <circle cx="5.5" cy="18.5" r="2.5"></circle>
@@ -1186,7 +1246,14 @@ export default function SuperadminPanel({
               }}
             >
               <span className="drawer-icon">
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                 </svg>
@@ -1203,7 +1270,14 @@ export default function SuperadminPanel({
               }}
             >
               <span className="drawer-icon">
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                   <line x1="16" y1="2" x2="16" y2="6"></line>
                   <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -1222,7 +1296,14 @@ export default function SuperadminPanel({
               }}
             >
               <span className="drawer-icon">
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <circle cx="12" cy="12" r="3"></circle>
                   <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                 </svg>
@@ -1234,8 +1315,13 @@ export default function SuperadminPanel({
 
         <div className="admin-drawer-footer">
           <div className="admin-drawer-user-card">
-            <div className="admin-profile-avatar" style={{ background: "#059669" }}>
-              {(currentUser?.nama_lengkap || currentUser?.nama || "S").charAt(0).toUpperCase()}
+            <div
+              className="admin-profile-avatar"
+              style={{ background: "#059669" }}
+            >
+              {(currentUser?.nama_lengkap || currentUser?.nama || "S")
+                .charAt(0)
+                .toUpperCase()}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
@@ -1248,7 +1334,9 @@ export default function SuperadminPanel({
                   textOverflow: "ellipsis",
                 }}
               >
-                {currentUser?.nama_lengkap || currentUser?.nama || "Superadmin DLH"}
+                {currentUser?.nama_lengkap ||
+                  currentUser?.nama ||
+                  "Superadmin DLH"}
               </div>
               <div
                 style={{
@@ -1812,7 +1900,9 @@ export default function SuperadminPanel({
                   {/* KPI 1 */}
                   <div className="admin-stat-card">
                     <div className="stat-card-header">
-                      <div className="stat-icon-wrap icon-blue"><IconUsers size={20} /></div>
+                      <div className="stat-icon-wrap icon-blue">
+                        <IconUsers size={20} />
+                      </div>
                       <span className="stat-badge-live">USERS</span>
                     </div>
                     <div className="stat-card-number">{users.length}</div>
@@ -1834,7 +1924,9 @@ export default function SuperadminPanel({
                   {/* KPI 2 */}
                   <div className="admin-stat-card">
                     <div className="stat-card-header">
-                      <div className="stat-icon-wrap icon-gold"><IconTrendingUp size={20} /></div>
+                      <div className="stat-icon-wrap icon-gold">
+                        <IconTrendingUp size={20} />
+                      </div>
                       <span className="stat-badge-live">KOTA</span>
                     </div>
                     <div className="stat-card-number">
@@ -1904,7 +1996,13 @@ export default function SuperadminPanel({
                     <div className="stat-card-header">
                       <div
                         className="stat-icon-wrap icon-sand"
-                        style={{ background: "#fdf4ff", color: "#c026d3", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        style={{
+                          background: "#fdf4ff",
+                          color: "#c026d3",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
                       >
                         <IconMegaphone size={20} />
                       </div>
@@ -1968,7 +2066,16 @@ export default function SuperadminPanel({
                           color: "#0f172a",
                         }}
                       >
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><IconMap size={18} /> Sebaran Beban Kapasitas TPS per Wilayah Surabaya</span>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          <IconMap size={18} /> Sebaran Beban Kapasitas TPS per
+                          Wilayah Surabaya
+                        </span>
                       </h3>
                       <p
                         style={{
@@ -2035,8 +2142,16 @@ export default function SuperadminPanel({
                               {(() => {
                                 const RegIcon = reg.icon;
                                 return (
-                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                                    {typeof RegIcon === "function" ? <RegIcon size={16} /> : null}
+                                  <span
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "6px",
+                                    }}
+                                  >
+                                    {typeof RegIcon === "function" ? (
+                                      <RegIcon size={16} />
+                                    ) : null}
                                     <span>{reg.name}</span>
                                   </span>
                                 );
@@ -2167,7 +2282,16 @@ export default function SuperadminPanel({
                             color: "#0f172a",
                           }}
                         >
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><IconAlert size={18} /> Radar Prioritas Pengangkutan (TPS Overload &ge; 80%)</span>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "8px",
+                            }}
+                          >
+                            <IconAlert size={18} /> Radar Prioritas Pengangkutan
+                            (TPS Overload &ge; 80%)
+                          </span>
                         </h3>
                         <p
                           style={{
@@ -2279,7 +2403,13 @@ export default function SuperadminPanel({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              <span>{isDispatched ? <IconCheck size={14} /> : <IconAlert size={14} />}</span>
+                              <span>
+                                {isDispatched ? (
+                                  <IconCheck size={14} />
+                                ) : (
+                                  <IconAlert size={14} />
+                                )}
+                              </span>
                               <span>
                                 {isDispatched
                                   ? "Truk Ditugaskan"
@@ -2319,7 +2449,16 @@ export default function SuperadminPanel({
                             color: "#0f172a",
                           }}
                         >
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><IconMegaphone size={18} /> Aduan &amp; Laporan Warga Lapangan</span>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "8px",
+                            }}
+                          >
+                            <IconMegaphone size={18} /> Aduan &amp; Laporan
+                            Warga Lapangan
+                          </span>
                         </h3>
                         <p
                           style={{
@@ -2465,7 +2604,15 @@ export default function SuperadminPanel({
                       }}
                     >
                       <h3 className="admin-card-title" style={{ margin: 0 }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><IconUsers size={18} /> Pengguna Terbaru Sistem</span>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          <IconUsers size={18} /> Pengguna Terbaru Sistem
+                        </span>
                       </h3>
                       <span
                         style={{
@@ -2509,7 +2656,16 @@ export default function SuperadminPanel({
                       }}
                     >
                       <h3 className="admin-card-title" style={{ margin: 0 }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}><IconCalendar size={18} /> Jadwal Pengambilan Minggu Ini</span>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          <IconCalendar size={18} /> Jadwal Pengambilan Minggu
+                          Ini
+                        </span>
                       </h3>
                       <span
                         style={{
@@ -3610,12 +3766,14 @@ export default function SuperadminPanel({
                   <option value="driver">Driver</option>
                   <option value="petugas_kelurahan">Petugas Kelurahan</option>
                   <option value="petugas_pengangkut">Petugas Pengangkut</option>
+                  <option value="petugas_tps">Petugas TPS</option>
                 </select>
               </div>
               {(newUser.role === "petugas" ||
                 newUser.role === "driver" ||
                 newUser.role === "petugas_kelurahan" ||
-                newUser.role === "petugas_pengangkut") && (
+                newUser.role === "petugas_pengangkut" ||
+                newUser.role === "petugas_tps") && (
                 <>
                   <div className="form-group">
                     <label className="form-label">Kecamatan Tugas</label>
@@ -3659,6 +3817,29 @@ export default function SuperadminPanel({
                     </select>
                   </div>
                 </>
+              )}
+              {(newUser.role === "petugas_tps") && (
+                <div className="form-group">
+                  <label className="form-label">TPS Tanggung Jawab</label>
+                  <select
+                    className="settings-input"
+                    multiple
+                    value={newUser.tps_ids || []}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions).map(o => Number(o.value));
+                      setNewUser({ ...newUser, tps_ids: selected });
+                    }}
+                  >
+                    {tpsList.map((tps) => (
+                      <option key={tps.id} value={tps.id}>
+                        {tps.nama} ({tps.kecamatan})
+                      </option>
+                    ))}
+                  </select>
+                  <small style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                    Tahan Ctrl/Cmd untuk memilih multiple TPS
+                  </small>
+                </div>
               )}
               <div
                 style={{
@@ -3798,12 +3979,14 @@ export default function SuperadminPanel({
                   <option value="driver">Driver</option>
                   <option value="petugas_kelurahan">Petugas Kelurahan</option>
                   <option value="petugas_pengangkut">Petugas Pengangkut</option>
+                  <option value="petugas_tps">Petugas TPS</option>
                 </select>
               </div>
               {(editUser.role === "petugas" ||
                 editUser.role === "driver" ||
                 editUser.role === "petugas_kelurahan" ||
-                editUser.role === "petugas_pengangkut") && (
+                editUser.role === "petugas_pengangkut" ||
+                editUser.role === "petugas_tps") && (
                 <>
                   <div className="form-group">
                     <label className="form-label">Kecamatan Tugas</label>
@@ -3847,6 +4030,29 @@ export default function SuperadminPanel({
                     </select>
                   </div>
                 </>
+              )}
+              {(newUser.role === "petugas_tps") && (
+                <div className="form-group">
+                  <label className="form-label">TPS Tanggung Jawab</label>
+                  <select
+                    className="settings-input"
+                    multiple
+                    value={newUser.tps_ids || []}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions).map(o => Number(o.value));
+                      setNewUser({ ...newUser, tps_ids: selected });
+                    }}
+                  >
+                    {tpsList.map((tps) => (
+                      <option key={tps.id} value={tps.id}>
+                        {tps.nama} ({tps.kecamatan})
+                      </option>
+                    ))}
+                  </select>
+                  <small style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                    Tahan Ctrl/Cmd untuk memilih multiple TPS
+                  </small>
+                </div>
               )}
               <div
                 style={{

@@ -144,7 +144,7 @@ export default function App() {
         setCurrentPage("admin");
         window.location.hash =
           user.role === "superadmin" ? "superadmin" : "admin";
-      } else if (user.role === "petugas_kelurahan") {
+      } else if (user.role === "petugas_kelurahan" || user.role === "petugas_tps") {
         setCurrentPage("petugas-tps");
         window.location.hash = "petugas-tps";
       } else if (
@@ -269,7 +269,7 @@ export default function App() {
     } else if (user.role === "admin") {
       setCurrentPage("admin");
       window.location.hash = "admin";
-    } else if (user.role === "petugas_kelurahan") {
+    } else if (user.role === "petugas_kelurahan" || user.role === "petugas_tps") {
       setCurrentPage("petugas-tps");
       window.location.hash = "petugas-tps";
     } else if (user.role === "petugas" || user.role === "petugas_pengangkut") {
@@ -353,7 +353,7 @@ export default function App() {
   if (currentPage === "petugas-tps") {
     return (
       <ProtectedRoute
-        allowedRoles={["petugas_kelurahan", "admin", "superadmin"]}
+        allowedRoles={["petugas_kelurahan", "petugas_tps", "admin", "superadmin"]}
       >
         <PetugasTpsPanel onLogout={handleLogout} currentUser={currentUser} />
       </ProtectedRoute>

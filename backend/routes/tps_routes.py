@@ -1,16 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_
 from typing import List, Optional
+
 from core.database import get_db
 from core.security import get_current_user, require_admin, require_superadmin
+from fastapi import APIRouter, Depends, HTTPException, Query
 from models.tps import TPS
-from models.wilayah import Kelurahan
 from models.users import User
-from schemas.tps_schema import TPSCreate, TPSUpdate, TPSResponse
-from services.tps_service import get_active_public_tps, get_active_public_tps_with_coords
+from models.wilayah import Kelurahan
+from schemas.tps_schema import TPSCreate, TPSResponse, TPSUpdate
+from services.tps_service import (
+    get_active_public_tps,
+    get_active_public_tps_with_coords,
+)
+from sqlalchemy import and_, or_
+from sqlalchemy.orm import Session, joinedload
 
 router = APIRouter(prefix="/tps", tags=["TPS Management"])
+
 
 @router.get("/public", response_model=List[TPSResponse])
 def get_public_tps(db: Session = Depends(get_db)):
@@ -21,6 +26,7 @@ def get_public_tps(db: Session = Depends(get_db)):
     """
     tps_list = get_active_public_tps_with_coords(db)
     return tps_list
+
 
 @router.get("/")
 def list_tps(
@@ -34,7 +40,7 @@ def list_tps(
     min_kapasitas: Optional[float] = None,
     max_kapasitas: Optional[float] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get TPS dengan filter:
@@ -46,7 +52,7 @@ def list_tps(
     - min_kapasitas, max_kapasitas: filter berdasarkan daya_tampung_m3
     """
     query = db.query(TPS)
-    
+
     if search:
         search_pattern = f"%{search}%"
         query = query.filter(
@@ -54,10 +60,10 @@ def list_tps(
                 TPS.nama.like(search_pattern),
                 TPS.nama_lama.like(search_pattern),
                 TPS.lokasi.like(search_pattern),
-                TPS.kecamatan.like(search_pattern)
+                TPS.kecamatan.like(search_pattern),
             )
         )
-    
+
     if kecamatan:
         query = query.filter(TPS.kecamatan == kecamatan)
     if wilayah_kota:
@@ -68,15 +74,18 @@ def list_tps(
         query = query.filter(TPS.daya_tampung_m3 >= min_kapasitas)
     if max_kapasitas is not None:
         query = query.filter(TPS.daya_tampung_m3 <= max_kapasitas)
-    
+
     # Kelurahan filter: join tps_kelurahan table
     if kelurahan:
         from models.tps_kelurahan import TPSKelurahan
-        query = query.join(TPSKelurahan, TPS.id == TPSKelurahan.tps_id) \
-                    .join(Kelurahan, TPSKelurahan.kelurahan_id == Kelurahan.id) \
-                    .filter(Kelurahan.nama == kelurahan) \
-                    .distinct()
-    
+
+        query = (
+            query.join(TPSKelurahan, TPS.id == TPSKelurahan.tps_id)
+            .join(Kelurahan, TPSKelurahan.kelurahan_id == Kelurahan.id)
+            .filter(Kelurahan.nama == kelurahan)
+            .distinct()
+        )
+
     results = query.offset(skip).limit(limit).all()
     # Return as dict to avoid Pydantic issues
     return [
@@ -91,20 +100,23 @@ def list_tps(
             "longitude": str(tps.longitude) if tps.longitude else None,
             "jenis_tps": tps.jenis_tps,
             "jumlah_container": tps.jumlah_container,
-            "daya_tampung_m3": str(tps.daya_tampung_m3) if tps.daya_tampung_m3 else None,
+            "daya_tampung_m3": str(tps.daya_tampung_m3)
+            if tps.daya_tampung_m3
+            else None,
             "status": tps.status,
             "sumber_data": tps.sumber_data,
             "tanggal_update": tps.tanggal_update,
-            "catatan": tps.catatan
+            "catatan": tps.catatan,
         }
         for tps in results
     ]
+
 
 @router.get("/{tps_id}", response_model=TPSResponse)
 def get_tps(
     tps_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Get detail TPS berdasarkan ID"""
     tps = db.query(TPS).filter(TPS.id == tps_id).first()
@@ -112,11 +124,12 @@ def get_tps(
         raise HTTPException(status_code=404, detail="TPS tidak ditemukan")
     return tps
 
+
 @router.post("/", response_model=TPSResponse, status_code=201)
 def create_tps(
     tps_data: TPSCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_superadmin)
+    current_user: User = Depends(require_superadmin),
 ):
     """Tambah TPS baru (Superadmin only)"""
     try:
@@ -129,46 +142,49 @@ def create_tps(
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Gagal menambah TPS: {str(e)}")
 
+
 @router.put("/{tps_id}", response_model=TPSResponse)
 def update_tps(
     tps_id: int,
     tps_data: TPSUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin),
 ):
     """Update data TPS (Admin/Superadmin only)"""
     db_tps = db.query(TPS).filter(TPS.id == tps_id).first()
     if not db_tps:
         raise HTTPException(status_code=404, detail="TPS tidak ditemukan")
-    
+
     update_data = tps_data.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_tps, field, value)
-    
+
     db.commit()
     db.refresh(db_tps)
     return db_tps
+
 
 @router.delete("/{tps_id}")
 def delete_tps(
     tps_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_superadmin)
+    current_user: User = Depends(require_superadmin),
 ):
     """Hapus TPS (Superadmin only)"""
     db_tps = db.query(TPS).filter(TPS.id == tps_id).first()
     if not db_tps:
         raise HTTPException(status_code=404, detail="TPS tidak ditemukan")
-    
+
     db.delete(db_tps)
     db.commit()
     return {"message": "TPS berhasil dihapus", "id": tps_id}
+
 
 @router.get("/kecamatan/{kecamatan}")
 def get_tps_by_kecamatan(
     kecamatan: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get all TPS by kecamatan for warga tracking map.
@@ -177,34 +193,48 @@ def get_tps_by_kecamatan(
     """
     # Normalize kecamatan (strip whitespace, case-insensitive comparison)
     kecamatan_normalized = kecamatan.strip()
-    
+
     # Validate user's kecamatan access: warga can only query their own kecamatan
-    if current_user.role == 'warga':
+    if current_user.role == "warga":
         # Get warga's kecamatan from kelurahan
         if not current_user.wilayah_kelurahan:
-            raise HTTPException(status_code=403, detail="Profil warga belum memiliki kelurahan terdaftar")
-        
-        warga_kelurahan = db.query(Kelurahan).filter(
-            Kelurahan.nama == current_user.wilayah_kelurahan
-        ).first()
-        
+            raise HTTPException(
+                status_code=403,
+                detail="Profil warga belum memiliki kelurahan terdaftar",
+            )
+
+        warga_kelurahan = (
+            db.query(Kelurahan)
+            .filter(Kelurahan.nama == current_user.wilayah_kelurahan)
+            .first()
+        )
+
         if not warga_kelurahan or not warga_kelurahan.kecamatan:
-            raise HTTPException(status_code=403, detail="Kelurahan warga tidak terdaftar")
-        
+            raise HTTPException(
+                status_code=403, detail="Kelurahan warga tidak terdaftar"
+            )
+
         warga_kecamatan = warga_kelurahan.kecamatan.strip()
-        
+
         # Warga can only access their own kecamatan
         if kecamatan_normalized.lower() != warga_kecamatan.lower():
-            raise HTTPException(status_code=403, detail="Akses ditolak: kecamatan tidak sesuai dengan profil warga")
-    
+            raise HTTPException(
+                status_code=403,
+                detail="Akses ditolak: kecamatan tidak sesuai dengan profil warga",
+            )
+
     # Query TPS by kecamatan with valid coordinates
-    tps_list = db.query(TPS).filter(
-        TPS.kecamatan.ilike(kecamatan_normalized),
-        TPS.latitude.isnot(None),
-        TPS.longitude.isnot(None),
-        TPS.status == 'Aktif'
-    ).all()
-    
+    tps_list = (
+        db.query(TPS)
+        .filter(
+            TPS.kecamatan.ilike(kecamatan_normalized),
+            TPS.latitude.isnot(None),
+            TPS.longitude.isnot(None),
+            TPS.status == "Aktif",
+        )
+        .all()
+    )
+
     # Return as dict to avoid Pydantic Decimal issues
     return [
         {
@@ -216,8 +246,10 @@ def get_tps_by_kecamatan(
             "latitude": str(tps.latitude),
             "longitude": str(tps.longitude),
             "status": tps.status,
-            "daya_tampung_m3": str(tps.daya_tampung_m3) if tps.daya_tampung_m3 else None,
-            "jenis_tps": tps.jenis_tps
+            "daya_tampung_m3": str(tps.daya_tampung_m3)
+            if tps.daya_tampung_m3
+            else None,
+            "jenis_tps": tps.jenis_tps,
         }
         for tps in tps_list
     ]
@@ -227,10 +259,12 @@ def get_tps_by_kecamatan(
 def get_tps_by_wilayah(
     wilayah_kota: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Filter TPS by wilayah kota"""
     tps_list = db.query(TPS).filter(TPS.wilayah_kota == wilayah_kota).all()
     if not tps_list:
-        raise HTTPException(status_code=404, detail=f"Tidak ada TPS di wilayah {wilayah_kota}")
+        raise HTTPException(
+            status_code=404, detail=f"Tidak ada TPS di wilayah {wilayah_kota}"
+        )
     return tps_list

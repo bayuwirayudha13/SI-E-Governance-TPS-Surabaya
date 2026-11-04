@@ -34,6 +34,12 @@ const resolveApiBaseUrl = () => {
       return currentOrigin;
     }
 
+    // Saat buka lokal (localhost/127.0.0.1) tapi env masih menunjuk tunnel lama,
+    // arahkan ke backend lokal agar dev tidak gagal resolve DNS.
+    if (isTryCloudflareHost(envHost) && pageIsLocal) {
+      return "http://localhost:8000";
+    }
+
     return parsed.origin;
   } catch {
     return currentOrigin;
