@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { API_BASE_URL } from "../api/client";
 import AdminChat from "./AdminChat";
+import AdminTpsMap from "./AdminTpsMap";
+import TpsDetailModal from "./TpsDetailModal";
 import { 
   IconTruck, 
   IconTrendingUp, 
@@ -40,6 +42,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
     pending_reports: 0,
   });
 
+  const [selectedTpsDetail, setSelectedTpsDetail] = useState(null);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem("sipetasan_sidebar_collapsed") === "true";
@@ -542,6 +545,33 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
 
             <button
               type="button"
+              className={`drawer-item ${activeMenu === "peta-tps" ? "active" : ""}`}
+              onClick={() => {
+                setActiveMenu("peta-tps");
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+                  <line x1="8" y1="2" x2="8" y2="18"></line>
+                  <line x1="16" y1="6" x2="16" y2="22"></line>
+                </svg>
+              </span>
+              <span className="drawer-label">Peta TPS</span>
+            </button>
+
+            <button
+              type="button"
               className={`drawer-item ${activeMenu === "warga" ? "active" : ""}`}
               onClick={() => {
                 setActiveMenu("warga");
@@ -784,6 +814,29 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
 
             <button
               type="button"
+              className={`admin-nav-item ${activeMenu === "peta-tps" ? "active" : ""}`}
+              onClick={() => setActiveMenu("peta-tps")}
+              title="Peta TPS"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+                <line x1="8" y1="2" x2="8" y2="18"></line>
+                <line x1="16" y1="6" x2="16" y2="22"></line>
+              </svg>
+              {!isSidebarCollapsed && <span>Peta TPS</span>}
+            </button>
+
+            <button
+              type="button"
               className={`admin-nav-item ${activeMenu === "warga" ? "active" : ""}`}
               onClick={() => setActiveMenu("warga")}
               title="Kelola Warga"
@@ -925,9 +978,11 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
           <div>
             <h1 className="admin-page-title">
               {activeMenu === "dashboard" && "Dashboard Admin"}
+              {activeMenu === "peta-tps" && "Peta Lokasi TPS"}
               {activeMenu === "warga" && "Kelola Data Warga"}
               {activeMenu === "jadwal" && "Jadwal Pengambilan"}
               {activeMenu === "chat" && "Chat ke Warga"}
+              {activeMenu === "pengambilan" && "Riwayat Pengambilan"}
             </h1>
             <div className="admin-page-date">{getCurrentDate()}</div>
           </div>
@@ -1896,6 +1951,112 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
             );
           })()}
 
+        {/* PETA TPS */}
+        {activeMenu === "peta-tps" && (
+          <div className="admin-content-view">
+            {/* Header Information Banner */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #064e3b 0%, #047857 55%, #059669 100%)",
+                color: "#ffffff",
+                borderRadius: "16px",
+                padding: "20px 24px",
+                marginBottom: "20px",
+                boxShadow: "0 4px 16px rgba(4, 120, 87, 0.15)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "12px",
+              }}
+            >
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                  <span
+                    style={{
+                      background: "rgba(255, 255, 255, 0.2)",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      padding: "3px 10px",
+                      borderRadius: "20px",
+                      letterSpacing: "0.03em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    GIS Peta Interaktif
+                  </span>
+                  <span
+                    style={{
+                      background: "#10b981",
+                      color: "#ffffff",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      padding: "3px 10px",
+                      borderRadius: "20px",
+                    }}
+                  >
+                    Live Monitoring
+                  </span>
+                </div>
+                <h2 style={{ fontSize: "1.3rem", fontWeight: 700, margin: "0 0 4px 0", letterSpacing: "-0.01em" }}>
+                  Peta Sebaran Lokasi TPS Kota Surabaya
+                </h2>
+                <p style={{ margin: 0, fontSize: "0.85rem", opacity: 0.9, maxWidth: "700px" }}>
+                  Pantau titik lokasi Tempat Penampungan Sementara (TPS) di 5 wilayah Kota Surabaya berbasis OpenStreetMap (OSM) dan Citra Satelit secara interaktif.
+                </p>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    background: "rgba(255, 255, 255, 0.12)",
+                    borderRadius: "10px",
+                    padding: "8px 14px",
+                    textAlign: "center",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                  }}
+                >
+                  <div style={{ fontSize: "0.72rem", opacity: 0.85, textTransform: "uppercase", letterSpacing: "0.05em" }}>Total TPS</div>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 800 }}>{activeTps.length || 231} TPS</div>
+                </div>
+                <div
+                  style={{
+                    background: "rgba(255, 255, 255, 0.12)",
+                    borderRadius: "10px",
+                    padding: "8px 14px",
+                    textAlign: "center",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                  }}
+                >
+                  <div style={{ fontSize: "0.72rem", opacity: 0.85, textTransform: "uppercase", letterSpacing: "0.05em" }}>Wilayah Kota</div>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 800 }}>5 Wilayah</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive Leaflet HeroMap */}
+            <div
+              className="admin-card"
+              style={{
+                padding: "0",
+                overflow: "hidden",
+                borderRadius: "16px",
+                border: "1px solid #e2e8f0",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+              }}
+            >
+              <AdminTpsMap
+                onOpenTpsModal={(tps) => {
+                  if (tps && typeof tps === "object" && tps.id) {
+                    setSelectedTpsDetail(tps);
+                  }
+                }}
+                height="560px"
+              />
+            </div>
+          </div>
+        )}
+
         {/* KELOLA WARGA */}
         {activeMenu === "warga" && (
           <div className="admin-content-view">
@@ -2067,6 +2228,13 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
           </div>
         )}
       </main>
+
+      {/* MODAL: Detail TPS */}
+      <TpsDetailModal
+        tps={selectedTpsDetail}
+        isOpen={Boolean(selectedTpsDetail)}
+        onClose={() => setSelectedTpsDetail(null)}
+      />
 
       {/* MODAL: Tambah Jadwal */}
       {showAddJadwalModal && (

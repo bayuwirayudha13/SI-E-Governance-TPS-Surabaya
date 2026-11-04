@@ -565,30 +565,7 @@ export default function KelurahanMap({
             pointerEvents: 'none'
           }}
         >
-          {/* Row 1: Header & Legend */}
-          <div 
-            className="map-status-bar"
-            style={{
-              alignSelf: 'flex-start',
-              width: 'fit-content',
-              maxWidth: '100%',
-              pointerEvents: 'auto'
-            }}
-          >
-            <div className="map-status-title">
-              <span style={{ fontWeight: 700, color: '#ffffff', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
-                Peta TPS Kel. {selectedKelurahan}
-              </span>
-            </div>
-
-            {/* Legend Indicators */}
-            <div className="map-status-indicators">
-              <span title="Daya tampung maksimum berasal dari data TPS"><span className="status-dot" style={{ background: '#64748b' }}></span>Daya tampung maksimum ditampilkan di detail TPS</span>
-              <span>Persentase keterisian belum tersedia</span>
-            </div>
-          </div>
-
-          {/* Row 2: Filter & Layer Controls Overlay */}
+          {/* Filter & Layer Controls Overlay */}
           <div className="osm-map-controls-overlay" style={{ pointerEvents: 'auto' }}>
             {/* Layer Mode Switcher: OSM Standard vs Satellite */}
             <div className="osm-mode-switcher">
@@ -641,57 +618,6 @@ export default function KelurahanMap({
           style={{ width: '100%', height: '480px', position: 'relative', zIndex: 1 }}
         />
 
-        {/* Bottom Bar Indicator */}
-        <div 
-          className="hero-map-bottom-bar-wrap"
-          style={{
-            position: 'absolute',
-            bottom: '10px',
-            left: '12px',
-            right: '12px',
-            zIndex: 10,
-            background: 'rgba(15, 23, 42, 0.88)',
-            backdropFilter: 'blur(8px)',
-            borderRadius: '10px',
-            padding: '8px 14px',
-            color: '#ffffff',
-            fontSize: '0.78rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '8px'
-          }}
-        >
-          {currentSelectedTps ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: currentSelectedTps.dotColor || '#10b981' }}></span>
-              <span>
-                TPS Terpilih: <strong>{currentSelectedTps.nama}</strong> &bull; Daya tampung maksimum: {currentSelectedTps.dayaTampungM3 != null ? `${currentSelectedTps.dayaTampungM3} m³` : 'Belum ada data'} &bull; {currentSelectedTps.lokasi}
-              </span>
-            </div>
-          ) : (
-            <span>Klik salah satu titik pin di peta untuk melihat detail TPS &amp; membuka rute penjemputan.</span>
-          )}
-
-          <a 
-            href={currentSelectedTps && Number.isFinite(currentSelectedTps.lat) && Number.isFinite(currentSelectedTps.lng)
-              ? `https://www.google.com/maps/search/?api=1&query=${currentSelectedTps.lat},${currentSelectedTps.lng}`
-              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`TPS Kelurahan ${selectedKelurahan} Surabaya`)}`}
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              color: '#38bdf8',
-              fontWeight: 700,
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            <span>Buka di Google Maps &rarr;</span>
-          </a>
-        </div>
       </div>
     </div>
   );
