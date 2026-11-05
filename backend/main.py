@@ -174,6 +174,7 @@ def get_current_user(token: str = None, db: Session = Depends(get_db)):
                     "kelurahan": warga.kelurahan,
                     "alamat_rumah": warga.alamat_rumah,
                     "total_poin": warga.total_poin,
+                    "qr_token": warga.qr_token,
                 }
 
     try:
@@ -200,6 +201,7 @@ def get_current_user(token: str = None, db: Session = Depends(get_db)):
                 "kelurahan": warga.kelurahan,
                 "alamat_rumah": warga.alamat_rumah,
                 "total_poin": warga.total_poin,
+                "qr_token": warga.qr_token,
             }
 
     # Cek tabel users (admin/petugas/superadmin)

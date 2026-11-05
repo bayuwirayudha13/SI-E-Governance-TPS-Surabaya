@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 from datetime import date, datetime
 from typing import Optional
@@ -29,6 +30,35 @@ UPLOAD_DIR = "uploads/pengambilan"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
+def _extract_qr_code_from_text(text: str) -> str:
+    """
+    Extract actual QR code from text that may be in format:
+    - SIPETASAN:WARGA-<token> -> returns WARGA-<token>
+    - SIPETASAN:QR-0575DACBB78C6DD1 -> returns QR-0575DACBB78C6DD1
+    - QR-0575DACBB78C6DD1 -> returns QR-0575DACBB78C6DD1
+    - SP-2025-XXXX -> returns SP-2025-XXXX
+    """
+    text = text.strip()
+    
+    # Format: SIPETASAN:WARGA-... or SIPETASAN:QR-...
+    if text.startswith("SIPETASAN:"):
+        return text.split(":", 1)[1].strip()
+    
+    # Format: WARGA-... (direct)
+    if text.startswith("WARGA-"):
+        return text
+
+    # Format: QR-XXXXXXXX (direct)
+    if text.startswith("QR-"):
+        return text
+    
+    # Format: SP-2025-XXXX (direct)
+    if text.startswith("SP-2025-"):
+        return text
+    
+    # Default: return as-is
+    return text
+
 @router.post("/scan-qr-validate")
 def scan_qr_validate(
     qr_code: str = Form(...),
@@ -38,19 +68,41 @@ def scan_qr_validate(
     """
     Step 1: Validate QR code and check petugas authority.
     Returns setoran data if valid.
+    Supports:
+    - Setoran-specific QR (QR-XXXXXXXX, SIPETASAN:QR-XXXXXXXX)
+    - Warga permanent QR token (SIPETASAN:WARGA-<qr_token>)
     """
-    # Find setoran by QR
-    setoran = get_setoran_by_qr(db, qr_code)
-    if not setoran:
-        raise HTTPException(status_code=404, detail="QR tidak ditemukan di sistem")
+    # Parse QR code text to extract actual QR code
+    actual_qr = _extract_qr_code_from_text(qr_code)
+    
+    # Check if it's a warga permanent QR token format: SIPETASAN:WARGA-<token>
+    warga = None
+    setoran = None
+    
+    if actual_qr.startswith("WARGA-"):
+        # Extract warga QR token
+        warga_token = actual_qr.replace("WARGA-", "")
+        warga = db.query(Warga).filter(Warga.qr_token == warga_token).first()
+        if not warga:
+            raise HTTPException(status_code=404, detail="Kode QR warga tidak ditemukan")
+        
+        # Find active setoran for this warga
+        setoran = db.query(SetoranSampah).filter(
+            SetoranSampah.warga_id == warga.id,
+            SetoranSampah.status.in_(["Menunggu Penjemputan", "Sedang Diproses"])
+        ).order_by(SetoranSampah.waktu_setor.desc()).first()
+    else:
+        # Find setoran by QR (original logic)
+        setoran = get_setoran_by_qr(db, actual_qr)
+        if not setoran:
+            raise HTTPException(status_code=404, detail="QR tidak ditemukan di sistem")
+        
+        warga = db.query(Warga).filter(Warga.id == setoran.warga_id).first()
+        if not warga:
+            raise HTTPException(status_code=404, detail="Data warga tidak ditemukan")
 
-    if setoran.status not in ["Menunggu Penjemputan", "Sedang Diproses"]:
+    if setoran and setoran.status not in ["Menunggu Penjemputan", "Sedang Diproses"]:
         raise HTTPException(status_code=400, detail=f"Setoran sudah {setoran.status}")
-
-    # Get warga data
-    warga = db.query(Warga).filter(Warga.id == setoran.warga_id).first()
-    if not warga:
-        raise HTTPException(status_code=404, detail="Data warga tidak ditemukan")
 
     # Check petugas authority
     petugas_kelurahan = current_user.wilayah_kelurahan
@@ -67,14 +119,15 @@ def scan_qr_validate(
             detail=f"Setoran di luar wilayah tugas Anda (Kecamatan {petugas_kecamatan})",
         )
 
-    # Mark as being processed
-    setoran.status = "Sedang Diproses"
-    setoran.petugas_id = current_user.id
-    db.commit()
+    # If there's an active setoran, mark as being processed
+    if setoran:
+        setoran.status = "Sedang Diproses"
+        setoran.petugas_id = current_user.id
+        db.commit()
 
     return {
-        "setoran_id": setoran.id,
-        "qr_code": setoran.qr_code,
+        "setoran_id": setoran.id if setoran else None,
+        "qr_code": setoran.qr_code if setoran else None,
         "warga": {
             "id": warga.id,
             "nama": warga.nama,
@@ -82,11 +135,12 @@ def scan_qr_validate(
             "kelurahan": warga.kelurahan,
             "kecamatan": warga.kecamatan,
         },
-        "jenis_sampah_dilaporkan": setoran.jenis_sampah,
+        "jenis_sampah_dilaporkan": setoran.jenis_sampah if setoran else None,
         "perkiraan_berat_kg": float(setoran.perkiraan_berat_kg)
-        if setoran.perkiraan_berat_kg
+        if setoran and setoran.perkiraan_berat_kg
         else 0,
-        "status": setoran.status,
+        "status": setoran.status if setoran else "Belum Ada Setoran",
+        "has_active_setoran": setoran is not None,
     }
 
 

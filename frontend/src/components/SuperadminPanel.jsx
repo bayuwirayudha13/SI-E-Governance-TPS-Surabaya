@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { fetchAllTps, extractRegionsFromTps } from "../api/tpsStats";
 import { API_BASE_URL } from "../api/client";
 import TpsMapSuperadmin from "./TpsMapSuperadmin";
+import SearchableSelect from "./common/SearchableSelect";
+import "./common/SearchableSelect.css";
 import {
   IconUsers,
   IconTrendingUp,
@@ -96,8 +98,9 @@ export default function SuperadminPanel({
   });
   const [editUser, setEditUser] = useState(null); // {id, ...} saat klik Edit (hijau) / View (merah)
   const [viewUser, setViewUser] = useState(null);
-  const [kecamatanOptions, setKecamatanOptions] = useState(KEC_DEFAULT);
+  const [kecamatanOptions, setKecamatanOptions] = useState([]);
   const [kelurahanOptions, setKelurahanOptions] = useState([]);
+  const [tpsOptions, setTpsOptions] = useState([]);
   const [newUserFotoFile, setNewUserFotoFile] = useState(null);
   const [newUserFotoPreview, setNewUserFotoPreview] = useState("");
   const [editFotoFile, setEditFotoFile] = useState(null);
@@ -177,7 +180,7 @@ export default function SuperadminPanel({
         if (r.ok) {
           const d = await r.json();
           if (Array.isArray(d) && d.length)
-            setKecamatanOptions(d.map((x) => x.nama || x));
+            setKecamatanOptions(d.map((x) => ({ id: x.id || x.nama, nama: x.nama || x })));
         }
       } catch {}
     })();
@@ -214,13 +217,52 @@ export default function SuperadminPanel({
         );
         if (r.ok) {
           const d = await r.json();
-          setKelurahanOptions((d || []).map((x) => x.nama || x));
+          setKelurahanOptions((d || []).map((x) => ({ id: x.id || x.nama, nama: x.nama || x })));
         }
       } catch {
         setKelurahanOptions([]);
       }
     })();
   }, [newUser.wilayah_kecamatan, editUser?.wilayah_kecamatan]);
+
+  // load TPS options saat kecamatan/kelurahan berubah untuk role petugas_tps
+  useEffect(() => {
+    const kec = editUser
+      ? editUser.wilayah_kecamatan
+      : newUser.wilayah_kecamatan;
+    const kel = editUser
+      ? editUser.wilayah_kelurahan
+      : newUser.wilayah_kelurahan;
+    const role = editUser ? editUser.role : newUser.role;
+
+    if (role !== "petugas_tps" || !kec) {
+      setTpsOptions([]);
+      return;
+    }
+
+    (async () => {
+      try {
+        let url = `${API_BASE}/api/tps/?kecamatan=${encodeURIComponent(kec)}`;
+        if (kel) {
+          url += `&kelurahan=${encodeURIComponent(kel)}`;
+        }
+        const r = await fetch(url, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        if (r.ok) {
+          const d = await r.json();
+          setTpsOptions((d || []).map((x) => ({
+            id: x.id,
+            nama: x.nama,
+            kecamatan: x.kecamatan,
+            kelurahan: x.kelurahan,
+          })));
+        }
+      } catch {
+        setTpsOptions([]);
+      }
+    })();
+  }, [newUser.wilayah_kecamatan, newUser.wilayah_kelurahan, editUser?.wilayah_kecamatan, editUser?.wilayah_kelurahan, editUser?.role, newUser.role]);
 
   // Get current date
   const getCurrentDate = () => {
@@ -767,6 +809,28 @@ export default function SuperadminPanel({
           console.warn(fe);
         }
       }
+      // Assign TPS if role is petugas_tps
+      if (uid && newUser.role === "petugas_tps" && newUser.tps_ids && newUser.tps_ids.length > 0) {
+        try {
+          const assignResponse = await fetch(`${API_BASE}/api/petugas-tps/assignments`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              user_id: uid,
+              tps_ids: newUser.tps_ids,
+            }),
+          });
+          if (!assignResponse.ok) {
+            const errTxt = await assignResponse.text();
+            console.warn("Failed to assign TPS:", errTxt);
+          }
+        } catch (assignErr) {
+          console.warn("Failed to assign TPS:", assignErr);
+        }
+      }
       setSuccess("User berhasil ditambahkan");
       setNewUser({
         nama_lengkap: "",
@@ -776,6 +840,7 @@ export default function SuperadminPanel({
         wilayah_kecamatan: "",
         wilayah_kelurahan: "",
         foto_url: "",
+        tps_ids: [],
       });
       setNewUserFotoFile(null);
       setNewUserFotoPreview("");
@@ -847,6 +912,52 @@ export default function SuperadminPanel({
           m = JSON.parse(txt).detail || txt;
         } catch {}
         throw new Error(m);
+      }
+      // Update TPS assignments if role is petugas_tps
+      if (editUser.role === "petugas_tps") {
+        try {
+          // Get current assignments
+          const currentAssignmentsResponse = await fetch(`${API_BASE}/api/petugas-tps/assignments/${editUser.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          let currentTpsIds = [];
+          if (currentAssignmentsResponse.ok) {
+            const data = await currentAssignmentsResponse.json();
+            currentTpsIds = data.map(a => a.tps_id);
+          }
+          
+          const newTpsIds = editUser.tps_ids || [];
+          
+          // Find TPS to remove
+          const toRemove = currentTpsIds.filter(id => !newTpsIds.includes(id));
+          // Find TPS to add
+          const toAdd = newTpsIds.filter(id => !currentTpsIds.includes(id));
+          
+          // Remove old assignments
+          for (const tpsId of toRemove) {
+            await fetch(`${API_BASE}/api/petugas-tps/assignments/${editUser.id}/${tpsId}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          }
+          
+          // Add new assignments
+          if (toAdd.length > 0) {
+            await fetch(`${API_BASE}/api/petugas-tps/assignments`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                user_id: editUser.id,
+                tps_ids: toAdd,
+              }),
+            });
+          }
+        } catch (assignErr) {
+          console.warn("Failed to update TPS assignments:", assignErr);
+        }
       }
       setSuccess("Petugas berhasil diperbarui");
       setEditUser(null);
@@ -3748,26 +3859,31 @@ export default function SuperadminPanel({
               </div>
               <div className="form-group">
                 <label className="form-label">Role</label>
-                <select
-                  className="settings-input"
+                <SearchableSelect
                   value={newUser.role}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     setNewUser({
                       ...newUser,
-                      role: e.target.value,
+                      role: value,
                       wilayah_kecamatan: "",
                       wilayah_kelurahan: "",
                     })
                   }
-                >
-                  <option value="admin">Admin</option>
-                  <option value="superadmin">Superadmin</option>
-                  <option value="petugas">Petugas</option>
-                  <option value="driver">Driver</option>
-                  <option value="petugas_kelurahan">Petugas Kelurahan</option>
-                  <option value="petugas_pengangkut">Petugas Pengangkut</option>
-                  <option value="petugas_tps">Petugas TPS</option>
-                </select>
+                  options={[
+                    { id: "admin", nama: "Admin" },
+                    { id: "superadmin", nama: "Superadmin" },
+                    { id: "petugas", nama: "Petugas" },
+                    { id: "driver", nama: "Driver" },
+                    { id: "petugas_kelurahan", nama: "Petugas Kelurahan" },
+                    { id: "petugas_pengangkut", nama: "Petugas Pengangkut" },
+                    { id: "petugas_tps", nama: "Petugas TPS" },
+                  ]}
+                  getOptionLabel={(opt) => opt.nama}
+                  getOptionValue={(opt) => opt.id}
+                  placeholder="— Pilih Role —"
+                  searchPlaceholder="Cari role..."
+                  required
+                />
               </div>
               {(newUser.role === "petugas" ||
                 newUser.role === "driver" ||
@@ -3777,67 +3893,62 @@ export default function SuperadminPanel({
                 <>
                   <div className="form-group">
                     <label className="form-label">Kecamatan Tugas</label>
-                    <select
-                      className="settings-input"
+                    <SearchableSelect
                       value={newUser.wilayah_kecamatan}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         setNewUser({
                           ...newUser,
-                          wilayah_kecamatan: e.target.value,
+                          wilayah_kecamatan: value,
                           wilayah_kelurahan: "",
                         })
                       }
-                    >
-                      <option value="">— Pilih Kecamatan —</option>
-                      {kecamatanOptions.map((k) => (
-                        <option key={k} value={k}>
-                          {k}
-                        </option>
-                      ))}
-                    </select>
+                      options={kecamatanOptions}
+                      getOptionLabel={(opt) => opt.nama}
+                      getOptionValue={(opt) => opt.nama}
+                      placeholder="— Pilih Kecamatan —"
+                      searchPlaceholder="Cari kecamatan..."
+                      disabled={!newUser.role}
+                    />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Kelurahan Tugas</label>
-                    <select
-                      className="settings-input"
+                    <SearchableSelect
                       value={newUser.wilayah_kelurahan}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         setNewUser({
                           ...newUser,
-                          wilayah_kelurahan: e.target.value,
+                          wilayah_kelurahan: value,
                         })
                       }
-                    >
-                      <option value="">— Pilih Kelurahan —</option>
-                      {kelurahanOptions.map((k) => (
-                        <option key={k} value={k}>
-                          {k}
-                        </option>
-                      ))}
-                    </select>
+                      options={kelurahanOptions}
+                      getOptionLabel={(opt) => opt.nama}
+                      getOptionValue={(opt) => opt.nama}
+                      placeholder="— Pilih Kelurahan —"
+                      searchPlaceholder="Cari kelurahan..."
+                      disabled={!newUser.wilayah_kecamatan}
+                    />
                   </div>
                 </>
               )}
               {(newUser.role === "petugas_tps") && (
                 <div className="form-group">
                   <label className="form-label">TPS Tanggung Jawab</label>
-                  <select
-                    className="settings-input"
-                    multiple
+                  <SearchableSelect
                     value={newUser.tps_ids || []}
-                    onChange={(e) => {
-                      const selected = Array.from(e.target.selectedOptions).map(o => Number(o.value));
-                      setNewUser({ ...newUser, tps_ids: selected });
-                    }}
-                  >
-                    {tpsList.map((tps) => (
-                      <option key={tps.id} value={tps.id}>
-                        {tps.nama} ({tps.kecamatan})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) =>
+                      setNewUser({ ...newUser, tps_ids: value || [] })
+                    }
+                    options={tpsOptions.length > 0 ? tpsOptions : tpsList}
+                    getOptionLabel={(opt) => `${opt.nama} (${opt.kecamatan}${opt.kelurahan ? `, ${opt.kelurahan}` : ''})`}
+                    getOptionValue={(opt) => opt.id}
+                    getOptionDescription={(opt) => opt.kecamatan}
+                    placeholder="— Pilih TPS —"
+                    searchPlaceholder="Cari TPS..."
+                    multiple
+                    disabled={!newUser.wilayah_kecamatan}
+                  />
                   <small style={{ color: '#64748b', fontSize: '0.8rem' }}>
-                    Tahan Ctrl/Cmd untuk memilih multiple TPS
+                    {newUser.wilayah_kecamatan ? "Pilih satu atau beberapa TPS" : "Pilih Kecamatan terlebih dahulu untuk menampilkan daftar TPS"}
                   </small>
                 </div>
               )}
@@ -3961,26 +4072,30 @@ export default function SuperadminPanel({
               </div>
               <div className="form-group">
                 <label className="form-label">Role</label>
-                <select
-                  className="settings-input"
+                <SearchableSelect
                   value={editUser.role}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     setEditUser({
                       ...editUser,
-                      role: e.target.value,
+                      role: value,
                       wilayah_kecamatan: "",
                       wilayah_kelurahan: "",
                     })
                   }
-                >
-                  <option value="admin">Admin</option>
-                  <option value="superadmin">Superadmin</option>
-                  <option value="petugas">Petugas</option>
-                  <option value="driver">Driver</option>
-                  <option value="petugas_kelurahan">Petugas Kelurahan</option>
-                  <option value="petugas_pengangkut">Petugas Pengangkut</option>
-                  <option value="petugas_tps">Petugas TPS</option>
-                </select>
+                  options={[
+                    { id: "admin", nama: "Admin" },
+                    { id: "superadmin", nama: "Superadmin" },
+                    { id: "petugas", nama: "Petugas" },
+                    { id: "driver", nama: "Driver" },
+                    { id: "petugas_kelurahan", nama: "Petugas Kelurahan" },
+                    { id: "petugas_pengangkut", nama: "Petugas Pengangkut" },
+                    { id: "petugas_tps", nama: "Petugas TPS" },
+                  ]}
+                  getOptionLabel={(opt) => opt.nama}
+                  getOptionValue={(opt) => opt.id}
+                  placeholder="— Pilih Role —"
+                  searchPlaceholder="Cari role..."
+                />
               </div>
               {(editUser.role === "petugas" ||
                 editUser.role === "driver" ||
@@ -3990,67 +4105,61 @@ export default function SuperadminPanel({
                 <>
                   <div className="form-group">
                     <label className="form-label">Kecamatan Tugas</label>
-                    <select
-                      className="settings-input"
+                    <SearchableSelect
                       value={editUser.wilayah_kecamatan}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         setEditUser({
                           ...editUser,
-                          wilayah_kecamatan: e.target.value,
+                          wilayah_kecamatan: value,
                           wilayah_kelurahan: "",
                         })
                       }
-                    >
-                      <option value="">— Pilih Kecamatan —</option>
-                      {kecamatanOptions.map((k) => (
-                        <option key={k} value={k}>
-                          {k}
-                        </option>
-                      ))}
-                    </select>
+                      options={kecamatanOptions}
+                      getOptionLabel={(opt) => opt.nama}
+                      getOptionValue={(opt) => opt.nama}
+                      placeholder="— Pilih Kecamatan —"
+                      searchPlaceholder="Cari kecamatan..."
+                    />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Kelurahan Tugas</label>
-                    <select
-                      className="settings-input"
+                    <SearchableSelect
                       value={editUser.wilayah_kelurahan}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         setEditUser({
                           ...editUser,
-                          wilayah_kelurahan: e.target.value,
+                          wilayah_kelurahan: value,
                         })
                       }
-                    >
-                      <option value="">— Pilih Kelurahan —</option>
-                      {kelurahanOptions.map((k) => (
-                        <option key={k} value={k}>
-                          {k}
-                        </option>
-                      ))}
-                    </select>
+                      options={kelurahanOptions}
+                      getOptionLabel={(opt) => opt.nama}
+                      getOptionValue={(opt) => opt.nama}
+                      placeholder="— Pilih Kelurahan —"
+                      searchPlaceholder="Cari kelurahan..."
+                      disabled={!editUser.wilayah_kecamatan}
+                    />
                   </div>
                 </>
               )}
-              {(newUser.role === "petugas_tps") && (
+              {(editUser.role === "petugas_tps") && (
                 <div className="form-group">
                   <label className="form-label">TPS Tanggung Jawab</label>
-                  <select
-                    className="settings-input"
+                  <SearchableSelect
+                    value={editUser.tps_ids || []}
+                    onChange={(value) =>
+                      setEditUser({ ...editUser, tps_ids: value || [] })
+                    }
+                    options={tpsOptions.length > 0 ? tpsOptions : tpsList}
+                    getOptionLabel={(opt) => `${opt.nama} (${opt.kecamatan}${opt.kelurahan ? `, ${opt.kelurahan}` : ''})`}
+                    getOptionValue={(opt) => opt.id}
+                    getOptionDescription={(opt) => opt.kecamatan}
+                    placeholder="— Pilih TPS —"
+                    searchPlaceholder="Cari TPS..."
                     multiple
-                    value={newUser.tps_ids || []}
-                    onChange={(e) => {
-                      const selected = Array.from(e.target.selectedOptions).map(o => Number(o.value));
-                      setNewUser({ ...newUser, tps_ids: selected });
-                    }}
-                  >
-                    {tpsList.map((tps) => (
-                      <option key={tps.id} value={tps.id}>
-                        {tps.nama} ({tps.kecamatan})
-                      </option>
-                    ))}
-                  </select>
+                    disabled={!editUser.wilayah_kecamatan}
+                  />
                   <small style={{ color: '#64748b', fontSize: '0.8rem' }}>
-                    Tahan Ctrl/Cmd untuk memilih multiple TPS
+                    {editUser.wilayah_kecamatan ? "Pilih satu atau beberapa TPS" : "Pilih Kecamatan terlebih dahulu untuk menampilkan daftar TPS"}
                   </small>
                 </div>
               )}

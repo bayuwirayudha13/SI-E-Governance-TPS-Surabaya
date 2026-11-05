@@ -502,7 +502,13 @@ export default function PetugasPanel({
     try {
       const fd = new FormData();
       fd.append("qr_code", cleanToken);
-      const res = await api.post("/api/petugas/scan-qr-validate", fd);
+      
+      // Explicitly set headers for multipart/form-data to avoid axios JSON default conflicts
+      const res = await api.post("/api/petugas/scan-qr-validate", fd, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       if (res.data) {
         const w = res.data.warga;
         const s = res.data;
@@ -526,13 +532,24 @@ export default function PetugasPanel({
           ),
           setoran_id: s.setoran_id,
         };
+        
+        if (!s.setoran_id || s.has_active_setoran === false) {
+          setScanError("Warga ini tidak ada setor sampah aktif");
+          return;
+        }
       }
     } catch (err) {
       const statusCode = err?.response?.status;
       const detail = err?.response?.data?.detail;
 
       if (statusCode && statusCode >= 400 && statusCode < 500) {
-        setScanError(detail || "QR tidak valid / setoran tidak ditemukan");
+        const errorMsg = typeof detail === "string" 
+          ? detail 
+          : Array.isArray(detail) && detail.length > 0 && detail[0].msg
+            ? detail[0].msg
+            : JSON.stringify(detail) || "QR tidak valid / setoran tidak ditemukan";
+        
+        setScanError(errorMsg);
         return;
       }
 
@@ -652,12 +669,44 @@ export default function PetugasPanel({
         fd.append("foto_bukti", fotoFile);
       }
 
-      await api.post("/api/petugas/complete-verification", fd, {
+    await api.post("/api/petugas/complete-verification", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
+      // Refresh data after successful verification
+      try {
+        const queueRes = await api.get("/api/petugas/queue");
+        if (Array.isArray(queueRes.data)) {
+          setQueueList(queueRes.data.map((item, idx) => ({
+            id: item.setoran_id || item.id,
+            name: item.warga_nama,
+            address: item.warga_alamat,
+            kelurahan: item.kelurahan,
+            category: item.jenis_sampah,
+            estimatedKg: item.perkiraan_berat_kg,
+            kode: item.qr_code,
+            status: idx === 0 ? "ready" : "pending",
+            statusText: idx === 0 ? "Siap diambil" : "Menunggu",
+            isActive: idx === 0,
+            setoran_id: item.setoran_id || item.id
+          })));
+        }
+        const statsRes = await api.get("/api/petugas/daily-stats");
+        if (statsRes.data) {
+          setStats({
+            targetPengambilan: statsRes.data.target_pengambilan || 10,
+            sudahDiambil: statsRes.data.sudah_diambil || 0,
+            persentaseSelesai: statsRes.data.persentase_selesai || 0,
+            totalMuatanKg: statsRes.data.total_muatan_kg || 0,
+            kapasitasTruk: Math.min(100, Math.round(((statsRes.data.total_muatan_kg || 0) / 50) * 100)),
+          });
+        }
+      } catch (refreshErr) {
+        console.warn("Gagal refresh data setelah verifikasi:", refreshErr);
+      }
+
       showToast(
-        `Pengambilan dari ${scannedWarga.name || "Warga"} berhasil dicatat!`,
+        `Pengambilan dari ${scannedWarga.name || "Warga"} berhasil dicatat dan poin telah ditambahkan ke warga!`,
       );
     } catch (err) {
       setScanError(err.response?.data?.detail || "Gagal mencatat pengambilan");

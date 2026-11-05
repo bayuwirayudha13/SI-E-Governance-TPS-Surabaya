@@ -40,6 +40,31 @@ def _parse_qr_text(token: str):
     import re
     data = {}
     t = token.strip()
+    
+    # Format baru: SIPETASAN:QR-... atau SIPETASAN:WARGA-...
+    if t.startswith("SIPETASAN:"):
+        parts = t.split(":", 2)
+        if len(parts) >= 2:
+            kode = parts[1].strip()
+            if kode.startswith("WARGA-"):
+                data["warga_token"] = kode.replace("WARGA-", "").strip()
+            # Ekstrak ID warga dari kode QR (misal: QR-0575DACBB78C6DD1 -> cari angka)
+            m = re.search(r"\d+", kode)
+            if m:
+                try:
+                    data["warga_id_from_kode"] = int(m.group())
+                except:
+                    pass
+            # Jika kode mengandung SP-2025-XXXX, ekstrak itu juga
+            m = re.search(r"SP-2025-(\d+)", kode)
+            if m:
+                try:
+                    data["warga_id_from_kode"] = int(m.group(1))
+                except:
+                    pass
+        return data
+
+    # Format lama: SI-PETASAN|KODE|NAMA|KELURAHAN|ALAMAT|JENIS|BERAT
     if t.startswith("SI-PETASAN|"):
         parts = t.split("|")
         if len(parts) >= 2 and "SP-2025-" in parts[1]:
@@ -62,6 +87,18 @@ def _parse_qr_text(token: str):
             data["berat"] = parts[6].strip()
         return data
 
+    # Format QR asli backend: QR-0575DACBB78C6DD1
+    if t.startswith("QR-"):
+        # Cari angka dari QR code
+        m = re.search(r"\d+", t)
+        if m:
+            try:
+                data["warga_id_from_kode"] = int(m.group())
+            except:
+                pass
+        return data
+
+    # Fallback: cari pola SP-2025-XXXX di mana saja
     m = re.search(r"SP-2025-(\d+)", t)
     if m:
         try:
@@ -94,7 +131,10 @@ def scan_qr(payload: ScanRequest, authorization: Optional[str] = Header(None), d
     print(f"[DEBUG SCAN] Hasil parse: {parsed}")
 
     warga = None
-    if len(token) < 500:
+    if parsed.get("warga_token"):
+        warga = db.query(Warga).filter(Warga.qr_token == parsed["warga_token"]).first()
+
+    if not warga and len(token) < 500:
         warga = db.query(Warga).filter(Warga.qr_token == token).first()
 
     if not warga and "warga_id_from_kode" in parsed:
@@ -200,7 +240,10 @@ def create_pengambilan(
     parsed = _parse_qr_text(token)
 
     warga = None
-    if len(token) < 500:
+    if parsed.get("warga_token"):
+        warga = db.query(Warga).filter(Warga.qr_token == parsed["warga_token"]).first()
+
+    if not warga and len(token) < 500:
         warga = db.query(Warga).filter(Warga.qr_token == token).first()
     if not warga and "warga_id_from_kode" in parsed:
         warga = db.query(Warga).filter(Warga.id == parsed["warga_id_from_kode"]).first()

@@ -46,13 +46,13 @@ function RealQRCode({ text, size = 210, color = "#166534", onGenerated }) {
     if (!text) return;
 
     QRCode.toDataURL(text, {
-      width: Math.max(size * 2, 350),
-      margin: 1,
+      width: Math.max(size * 2, 600),
+      margin: 4,
       color: {
-        dark: color,
+        dark: "#000000",
         light: "#ffffff",
       },
-      errorCorrectionLevel: "L", // Low -> QR lebih jarang, lebih mudah di-scan cepat
+      errorCorrectionLevel: "M", 
     })
       .then((url) => {
         if (isMounted) {
@@ -555,7 +555,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
     setCurrentDateFormatted(now.toLocaleDateString("id-ID", options));
   }, []);
 
-  const [points, setPoints] = useState(1050);
+  const [points, setPoints] = useState(0);
   const [tukarHistory, setTukarHistory] = useState(() => {
     try {
       const saved = sessionStorage.getItem("sipetasan_tukar_history");
@@ -781,6 +781,9 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [toastMessage, setToastMessage] = useState("");
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [showPermanentQrPreviewModal, setShowPermanentQrPreviewModal] = useState(false);
+  const [permanentQrDataUrl, setPermanentQrDataUrl] = useState("");
+  const [copyPermanentFeedback, setCopyPermanentFeedback] = useState(false);
 
   // Alur validasi step calculation (1: Laporan, 2: Dipindai, 3: Diperiksa)
   const alurStep = useMemo(() => {
@@ -800,56 +803,32 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
     return 1;
   }, [currentSetoran]);
 
-  // Compact QR Payload - mudah di-scan petugas (pakai delimiter |, bukan multiline panjang)
-  // Format: SI-PETASAN|KODE|NAMA|KELURAHAN|ALAMAT|JENIS|BERAT => < 120 char, QR low-density
-  const qrTextContent = useMemo(() => {
-    if (currentSetoran) {
-      const kode =
-        currentSetoran.qr_code ||
-        `SP-2025-${String(currentSetoran.id).padStart(4, "0")}`;
-      const namaWarga = (
-        userData?.nama ||
-        userData?.full_name ||
-        "Budi Santoso"
-      )
-        .replace(/\|/g, " ")
-        .trim();
-      const kel = (
-        userData?.kelurahan ||
-        currentSetoran.warga?.kelurahan ||
-        "Sukamaju"
-      )
-        .replace(/\|/g, " ")
-        .trim();
-      const alamatClean = (
-        userData?.alamat_rumah ||
-        currentSetoran.warga?.alamat_rumah ||
-        "Jl. Mawar"
-      )
-        .replace(/\|/g, " ")
-        .replace(/,/g, " ")
-        .trim();
-      const jenis = (currentSetoran.jenis_sampah || "PETE")
-        .replace(/\|/g, ",")
-        .trim();
-      const berat = currentSetoran.perkiraan_berat_kg
-        ? `${currentSetoran.perkiraan_berat_kg}kg`
-        : "0kg";
-      return `SI-PETASAN|${kode}|${namaWarga}|${kel}|${alamatClean}|${jenis}|${berat}`;
+  // Helper: Check if setoran is completed/verified
+  const isSetoranCompleted = (setoran) => {
+    if (!setoran) return false;
+    const st = (setoran.status || "").toLowerCase();
+    return st.includes("selesai") || st.includes("sudah") || st.includes("validasi");
+  };
+
+  // Permanent QR Payload - Based on user's persistent QR token
+  // Format: SIPETASAN:WARGA-<qr_token> => Permanent QR for warga (printed on trash bin/fence)
+  const permanentQrText = useMemo(() => {
+    if (userData?.qr_token) {
+      return `SIPETASAN:WARGA-${userData.qr_token}`;
     }
-    const kode = userData?.id
-      ? `SP-2025-${String(userData.id).padStart(4, "0")}`
-      : "SP-2025-0042";
-    const namaWarga = (userData?.nama || userData?.full_name || "Budi Santoso")
-      .replace(/\|/g, " ")
-      .trim();
-    const kel = (userData?.kelurahan || "Sukamaju").replace(/\|/g, " ").trim();
-    const alamatClean = (userData?.alamat_rumah || "Jl. Mawar")
-      .replace(/\|/g, " ")
-      .replace(/,/g, " ")
-      .trim();
-    return `SI-PETASAN|${kode}|${namaWarga}|${kel}|${alamatClean}|PETE|3.5kg`;
-  }, [currentSetoran, userData]);
+    return null;
+  }, [userData]);
+
+  // Legacy QR for backward compatibility (setoran-specific)
+  const legacyQrText = useMemo(() => {
+    if (currentSetoran?.qr_code) {
+      return `SIPETASAN:${currentSetoran.qr_code}`;
+    }
+    return null;
+  }, [currentSetoran]);
+
+  // Legacy QR Data URL
+  const [legacyQrDataUrl, setLegacyQrDataUrl] = useState("");
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -890,8 +869,12 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
   };
 
   const handleCopyQrText = async () => {
+    if (!legacyQrText) {
+      showToast("QR code tidak tersedia untuk setoran ini");
+      return;
+    }
     try {
-      await navigator.clipboard.writeText(qrTextContent);
+      await navigator.clipboard.writeText(legacyQrText);
       setCopyFeedback(true);
       showToast("📋 Isi data QR berhasil disalin ke clipboard!");
       setTimeout(() => setCopyFeedback(false), 2000);
@@ -901,7 +884,10 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
   };
 
   const handleDownloadQr = () => {
-    if (!qrDataUrl) return;
+    if (!legacyQrText || !qrDataUrl) {
+      showToast("QR code tidak tersedia untuk setoran ini");
+      return;
+    }
     const a = document.createElement("a");
     a.href = qrDataUrl;
     const kode = currentSetoran?.qr_code || "VALIDASI";
@@ -910,6 +896,36 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
     a.click();
     document.body.removeChild(a);
     showToast("⬇️ Kode QR berhasil diunduh!");
+  };
+
+  // Permanent QR Handlers
+  const handleCopyPermanentQrText = async () => {
+    if (!permanentQrText) {
+      showToast("QR permanen belum tersedia");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(permanentQrText);
+      setCopyPermanentFeedback(true);
+      showToast("📋 Isi data QR permanen berhasil disalin!");
+      setTimeout(() => setCopyPermanentFeedback(false), 2000);
+    } catch {
+      showToast("Gagal menyalin teks");
+    }
+  };
+
+  const handleDownloadPermanentQr = () => {
+    if (!permanentQrText || !permanentQrDataUrl) {
+      showToast("QR permanen belum tersedia");
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = permanentQrDataUrl;
+    a.download = `QR-SIPETASAN-PERMANEN-${userData?.id || "WARGA"}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast("⬇️ QR Kode Permanen berhasil diunduh!");
   };
 
   const handleQuickPreset = (type) => {
@@ -1111,16 +1127,13 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
       const response = await api.get("/api/auth/me");
       if (response.data) {
         setUserData(response.data);
-        const p =
-          response.data.total_poin !== undefined
-            ? response.data.total_poin
-            : 1050;
-        setPoints(p > 0 ? p : 1050);
+        const p = response.data.total_poin ?? 0;
+        setPoints(Math.max(0, p));
       }
     } catch (err) {
       console.error("Load warga data error:", err);
       setUserData(null);
-      setPoints((prev) => (prev > 0 ? prev : 1050));
+      setPoints((prev) => prev);
       setErrorMsg("Gagal memuat data warga. Silakan coba lagi.");
       setTimeout(() => setErrorMsg(""), 4000);
     }
@@ -1198,6 +1211,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
     if (activeMenu === "qr-status") {
       const interval = setInterval(() => {
         loadCurrentSetoran();
+        loadWargaData(); // Also refresh points balance
       }, 5000); // Poll every 5 seconds
       setQrPollingInterval(interval);
       return () => {
@@ -1282,11 +1296,11 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
       const addedKg = totalDepositWeight;
       const itemCount = selectedPlasticList.length;
 
-      setPoints((prev) => prev + addedPoints);
+      setPoints((prev) => prev); // Don't add points immediately anymore
       setTotalSetoran((prev) => prev + 1);
       setTotalKg((prev) => parseFloat((prev + addedKg).toFixed(1)));
       setDepositSuccessMsg(
-        `Berhasil setor ${itemCount} jenis sampah plastik (${addedKg} kg)! Mendapatkan +${addedPoints} pts.`
+        `Setoran berhasil dikirim! Menunggu validasi petugas untuk mendapatkan poin.`
       );
       setSelectedPlastics({});
       if (response.data) {
@@ -3115,368 +3129,396 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
 
         {/* ========================================================= */}
         {/* ========================================================= */}
-        {/* TAB: QR & STATUS VALIDASI (Matching User Screenshot) */}
+        {/* TAB: QR & STATUS VALIDASI - Permanent QR + Dynamic Right Panel */}
         {/* ========================================================= */}
         {activeMenu === "qr-status" && (
           <div className="warga-content-body">
-            {!currentSetoran ? (
-              <div
-                className="warga-panel-card"
-                style={{ textAlign: "center", padding: "40px" }}
-              >
-                <h3 className="warga-card-title">Belum Ada QR Setoran Aktif</h3>
-                <p style={{ color: "#64748b", margin: "12px 0 20px 0" }}>
-                  Buat setoran sampah baru untuk mendapatkan kode QR validasi
-                  penjemputan.
+            {/* Main Grid: Left = Permanent QR, Right = Dynamic Status */}
+            <div className="warga-qr-grid">
+              {/* Left Column: Permanent QR Code (Always Visible) */}
+              <div className="warga-qr-card">
+                <div className="warga-qr-badge">
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
+                    <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
+                    <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
+                    <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
+                    <rect x="7" y="7" width="3" height="3" fill="currentColor"></rect>
+                    <rect x="14" y="7" width="3" height="3" fill="currentColor"></rect>
+                    <rect x="7" y="14" width="3" height="3" fill="currentColor"></rect>
+                    <rect x="14" y="14" width="3" height="3" fill="currentColor"></rect>
+                  </svg>
+                </div>
+                <h3 className="warga-qr-title">QR Kode Permanen Warga</h3>
+                <p className="warga-qr-subtitle">
+                  Tempel QR ini di tempat sampah/pagar rumah. Petugas scan untuk verifikasi penjemputan.
                 </p>
-                <button
-                  type="button"
-                  className="warga-submit-deposit-btn"
-                  onClick={() => setActiveMenu("setor")}
-                >
-                  Setor Sampah Sekarang &rarr;
-                </button>
-              </div>
-            ) : (
-              <div className="warga-qr-grid">
-                {/* Left Column: QR Pengambilan Sampah (Real Scannable QR Code) */}
-                <div className="warga-qr-card">
-                  <div className="warga-qr-badge">
-                    <svg
-                      width="22"
-                      height="22"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
-                      <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
-                      <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
-                      <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
-                      <rect
-                        x="7"
-                        y="7"
-                        width="3"
-                        height="3"
-                        fill="currentColor"
-                      ></rect>
-                      <rect
-                        x="14"
-                        y="7"
-                        width="3"
-                        height="3"
-                        fill="currentColor"
-                      ></rect>
-                      <rect
-                        x="7"
-                        y="14"
-                        width="3"
-                        height="3"
-                        fill="currentColor"
-                      ></rect>
-                      <rect
-                        x="14"
-                        y="14"
-                        width="3"
-                        height="3"
-                        fill="currentColor"
-                      ></rect>
-                    </svg>
-                  </div>
-                  <h3 className="warga-qr-title">QR Pengambilan Sampah</h3>
-                  <p className="warga-qr-subtitle">
-                    Tunjukkan QR ini kepada petugas sebelum sampah ditimbang.
-                  </p>
 
-                  {/* Real Scannable QR Code */}
-                  <div className="warga-qr-image-wrapper">
+                {/* Permanent QR Code */}
+                <div className="warga-qr-image-wrapper">
+                  {permanentQrText ? (
                     <RealQRCode
-                      text={qrTextContent}
+                      text={permanentQrText}
                       size={210}
                       color="#166534"
-                      onGenerated={setQrDataUrl}
+                      onGenerated={setPermanentQrDataUrl}
                     />
-                  </div>
+                  ) : (
+                    <div style={{
+                      width: 210, height: 210,
+                      display: "flex", flexDirection: "column",
+                      alignItems: "center", justifyContent: "center",
+                      background: "#fef2f2", border: "2px dashed #fecaca",
+                      borderRadius: "12px", color: "#b91c1c",
+                      padding: "20px", textAlign: "center"
+                    }}>
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginBottom:"12px"}}>
+                        <rect x="3" y="3" width="7" height="7" strokeDasharray="4"/>
+                        <rect x="14" y="3" width="7" height="7" strokeDasharray="4"/>
+                        <rect x="3" y="14" width="7" height="7" strokeDasharray="4"/>
+                        <rect x="14" y="14" width="7" height="7" strokeDasharray="4"/>
+                      </svg>
+                      <p style={{fontWeight:600,margin:"0 0 8px"}}>QR Belum Tersedia</p>
+                      <p style={{fontSize:"0.8rem",margin:0}}>Data QR token belum digenerate</p>
+                    </div>
+                  )}
+                </div>
 
-                  {/* Live Scanner indicator */}
+                {/* Live Scanner indicator */}
+                {permanentQrText && (
                   <div className="warga-qr-scannable-pill">
                     <span className="qr-scannable-dot"></span>
-                    <span>Kode QR Asli &bull; Siap di-scan Kamera HP</span>
+                    <span>QR Permanen &bull; Siap di-scan Kamera HP</span>
                   </div>
+                )}
 
-                  <div className="warga-qr-code-pill">
-                    {currentSetoran.qr_code ||
-                      `SP-2025-${String(currentSetoran.id).padStart(4, "0")}`}
-                  </div>
-
-                  <p className="warga-qr-address-sub">
-                    Warga {userData?.kelurahan || "Sukamaju"} &bull; RT 03
-                    &bull; {userData?.alamat_rumah || "Jl. Mawar"}
-                  </p>
-
-                  {/* Action Buttons for User testing */}
-                  <div className="warga-qr-btn-group">
-                    <button
-                      type="button"
-                      className="warga-qr-util-btn"
-                      onClick={handleCopyQrText}
-                      title="Salin isi data teks QR"
-                    >
-                      <svg
-                        width="13"
-                        height="13"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <rect
-                          x="9"
-                          y="9"
-                          width="13"
-                          height="13"
-                          rx="2"
-                          ry="2"
-                        ></rect>
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                      </svg>
-                      <span>{copyFeedback ? "Tersalin!" : "Salin Teks"}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className="warga-qr-util-btn"
-                      onClick={() => setShowQrPreviewModal(true)}
-                      title="Lihat teks yang terkandung dalam QR"
-                    >
-                      <svg
-                        width="13"
-                        height="13"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                      </svg>
-                      <span>Isi QR</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className="warga-qr-util-btn download"
-                      onClick={handleDownloadQr}
-                      title="Download gambar QR Code"
-                    >
-                      <svg
-                        width="13"
-                        height="13"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                      </svg>
-                      <span>Unduh</span>
-                    </button>
-                  </div>
+                <div className="warga-qr-code-pill">
+                  {permanentQrText || "QR token belum tersedia"}
                 </div>
 
-                {/* Right Column: 3 Stacked Cards */}
-                <div className="warga-qr-right-col">
-                  <div className="warga-status-terbaru-card">
-                    <div className="warga-status-header-row">
-                      <span className="warga-status-label-badge">
-                        STATUS TERBARU
-                      </span>
-                      <span className="warga-status-time">
-                        {currentSetoran.waktu_validasi
-                          ? new Date(
-                              currentSetoran.waktu_validasi,
-                            ).toLocaleTimeString("id-ID", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : currentSetoran.waktu_setor
-                            ? new Date(
-                                currentSetoran.waktu_setor,
-                              ).toLocaleTimeString("id-ID", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : "Update terkini"}
-                      </span>
-                    </div>
-                    <h3 className="warga-status-heading">
-                      {currentSetoran.status}
-                    </h3>
-                    <p className="warga-status-subtext">
-                      {currentSetoran.status === "Sudah Divalidasi"
-                        ? `Sampah telah berhasil diverifikasi dan ditimbang petugas (${currentSetoran.berat_aktual_kg} kg). +${currentSetoran.poin_diperoleh || 0} poin reward telah ditambahkan!`
-                        : currentSetoran.status === "Sedang Diproses"
-                          ? "Petugas armada sedang menimbang dan memeriksa kebersihan sampah di lokasi."
-                          : "Tunjukkan QR kepada petugas ketika sampah dijemput."}
-                    </p>
-                  </div>
-                  <div className="warga-rincian-card">
-                    <div className="warga-rincian-header">
-                      <div>
-                        <h4 className="warga-rincian-title">
-                          Rincian Pemeriksaan Petugas
-                        </h4>
-                        <span className="warga-rincian-subtitle">
-                          Data setoran terhubung otomatis dengan QR aktif
-                        </span>
-                      </div>
-                    </div>
+                <p className="warga-qr-address-sub">
+                  {userData?.kelurahan || "Sukamaju"} &bull; RT 03
+                  &bull; {userData?.alamat_rumah || "Jl. Mawar"}
+                </p>
 
-                    <div className="warga-rincian-grid">
-                      <div className="warga-rincian-row">
-                        <div className="warga-rincian-cell">
-                          <div className="warga-rincian-cell-label">
-                            Berat dilaporkan
-                          </div>
-                          <div className="warga-rincian-cell-value">
-                            {currentSetoran.perkiraan_berat_kg
-                              ? `${currentSetoran.perkiraan_berat_kg} kg`
-                              : "-"}
-                          </div>
-                        </div>
-                        <div className="warga-rincian-cell">
-                          <div className="warga-rincian-cell-label">
-                            Berat aktual
-                          </div>
-                          <div
-                            className={`warga-rincian-cell-value ${currentSetoran.berat_aktual_kg ? "highlight-val" : ""}`}
-                          >
-                            {currentSetoran.berat_aktual_kg
-                              ? `${currentSetoran.berat_aktual_kg} kg`
-                              : "Menunggu timbang"}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="warga-rincian-row">
-                        <div className="warga-rincian-cell">
-                          <div className="warga-rincian-cell-label">
-                            Kondisi sampah
-                          </div>
-                          <div
-                            className={`warga-rincian-cell-value ${currentSetoran.kondisi_sampah ? "highlight-green" : ""}`}
-                          >
-                            {currentSetoran.kondisi_sampah ||
-                              "Menunggu pemeriksaan"}
-                          </div>
-                        </div>
-                        <div className="warga-rincian-cell">
-                          <div className="warga-rincian-cell-label">
-                            Jenis sampah
-                          </div>
-                          <div className="warga-rincian-cell-value">
-                            {currentSetoran.jenis_sampah_terverifikasi ||
-                              currentSetoran.jenis_sampah}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                {/* Action Buttons for Permanent QR */}
+                <div className="warga-qr-btn-group">
+                  <button
+                    type="button"
+                    className="warga-qr-util-btn"
+                    onClick={() => permanentQrText && handleCopyPermanentQrText()}
+                    title="Salin isi data teks QR permanen"
+                    disabled={!permanentQrText}
+                    style={{opacity: permanentQrText ? 1 : 0.5, cursor: permanentQrText ? "pointer" : "not-allowed"}}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    <span>{copyPermanentFeedback ? "Tersalin!" : "Salin Teks"}</span>
+                  </button>
 
-                    {currentSetoran.foto_bukti_url && (
-                      <div style={{ marginTop: "14px" }}>
-                        <a
-                          href={`${API_BASE_URL}${currentSetoran.foto_bukti_url}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            display: "inline-block",
-                            padding: "6px 14px",
-                            background: "#e0f2fe",
-                            color: "#0284c7",
-                            borderRadius: "6px",
-                            fontSize: "0.8rem",
-                            fontWeight: 600,
-                            textDecoration: "none",
-                          }}
-                        >
-                          📷 Lihat Foto Bukti Pengambilan
-                        </a>
-                      </div>
-                    )}
+                  <button
+                    type="button"
+                    className="warga-qr-util-btn"
+                    onClick={() => permanentQrText && setShowPermanentQrPreviewModal(true)}
+                    title="Lihat teks yang terkandung dalam QR permanen"
+                    disabled={!permanentQrText}
+                    style={{opacity: permanentQrText ? 1 : 0.5, cursor: permanentQrText ? "pointer" : "not-allowed"}}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <span>Isi QR</span>
+                  </button>
 
-                    {currentSetoran.catatan_petugas && (
-                      <div
-                        className="warga-rincian-note-box"
-                        style={{ marginTop: "12px" }}
-                      >
-                        <span>💬</span>
-                        <span>
-                          <strong>Catatan Petugas:</strong>{" "}
-                          {currentSetoran.catatan_petugas}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Card 3: Alur Validasi */}
-                  <div className="warga-alur-card">
-                    <h4 className="warga-alur-title">Alur Validasi</h4>
-                    <div className="warga-alur-steps">
-                      <div className="warga-alur-step-item">
-                        <div className="warga-alur-step-circle active">1</div>
-                        <div className="warga-alur-step-content">
-                          <div className="warga-alur-step-title">
-                            Laporan dibuat warga
-                          </div>
-                          <div className="warga-alur-step-desc">
-                            {currentSetoran.perkiraan_berat_kg} kg &bull;{" "}
-                            {currentSetoran.jenis_sampah}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="warga-alur-step-item">
-                        <div
-                          className={`warga-alur-step-circle ${alurStep >= 2 ? "active" : "pending"}`}
-                        >
-                          2
-                        </div>
-                        <div className="warga-alur-step-content">
-                          <div className="warga-alur-step-title">
-                            QR dipindai petugas
-                          </div>
-                          <div className="warga-alur-step-desc">
-                            {alurStep >= 2
-                              ? "Petugas armada telah memindai QR code ini di lokasi."
-                              : "Identitas dan laporan terbuka otomatis saat di-scan."}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="warga-alur-step-item">
-                        <div
-                          className={`warga-alur-step-circle ${alurStep >= 3 ? "active" : "pending"}`}
-                        >
-                          3
-                        </div>
-                        <div className="warga-alur-step-content">
-                          <div className="warga-alur-step-title">
-                            Kebersihan &amp; berat diperiksa
-                          </div>
-                          <div className="warga-alur-step-desc">
-                            {alurStep >= 3
-                              ? `Selesai: ${currentSetoran.berat_aktual_kg} kg (${currentSetoran.kondisi_sampah})`
-                              : "Hasil dikirim langsung sebagai pemberitahuan."}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    className="warga-qr-util-btn download"
+                    onClick={() => permanentQrText && handleDownloadPermanentQr()}
+                    title="Download gambar QR Code Permanen"
+                    disabled={!permanentQrText || !permanentQrDataUrl}
+                    style={{opacity: (permanentQrText && permanentQrDataUrl) ? 1 : 0.5, cursor: (permanentQrText && permanentQrDataUrl) ? "pointer" : "not-allowed"}}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Unduh</span>
+                  </button>
                 </div>
+
+                {/* Legacy QR info (small) */}
+                {legacyQrText && (
+                  <div style={{marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #e2e8f0"}}>
+                    <p style={{fontSize: "0.75rem", color: "#94a3b8", margin: "0 0 4px"}}>Kode QR Setoran Spesifik (Legacy)</p>
+                    <div className="warga-qr-code-pill" style={{fontSize: "0.7rem"}}>
+                      {legacyQrText}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Right Column: Dynamic Content Based on Setoran State */}
+              <div className="warga-qr-right-col">
+                {!currentSetoran ? (
+                  <div className="warga-panel-card warga-empty-setoran-card" style={{ textAlign: "center", padding: "40px 24px" }}>
+                    <div style={{fontSize: "48px", marginBottom: "16px"}}>&#x1F4E6;</div>
+                    <h3 className="warga-card-title" style={{color: "#334155", marginBottom: "8px"}}>Anda Belum Setor Sampah</h3>
+                    <p style={{ color: "#64748b", margin: "0 0 24px 0", fontSize: "0.95rem", lineHeight: 1.5 }}>
+                      Belum ada jadwal penjemputan aktif. Buat setoran baru agar petugas bisa menjemput sampah di rumah Anda.
+                    </p>
+                    <button
+                      type="button"
+                      className="warga-submit-deposit-btn"
+                      onClick={() => setActiveMenu("setor")}
+                      style={{width: "100%", padding: "14px", fontSize: "1rem"}}
+                    >
+                      Setor Sampah Sekarang &rarr;
+                    </button>
+                  </div>
+                ) : isSetoranCompleted(currentSetoran) ? (
+                  <>
+                    <div className="warga-panel-card warga-completed-card" style={{ textAlign: "center", padding: "28px 24px" }}>
+                      <div style={{fontSize: "40px", marginBottom: "12px"}}>&#x2705;</div>
+                      <h3 className="warga-card-title" style={{color: "#059669", marginBottom: "8px"}}>Sampah Anda Sudah Diverifikasi Petugas</h3>
+                      <p style={{ color: "#047857", margin: "0 0 4px 0", fontWeight: 600, fontSize: "1rem" }}>
+                        {currentSetoran.berat_aktual_kg ? `${currentSetoran.berat_aktual_kg} kg` : "Berat tercatat"} &bull; {currentSetoran.kondisi_sampah || "Sesuai"}
+                      </p>
+                      <p style={{ color: "#047857", margin: "0 0 8px 0", fontSize: "0.9rem" }}>
+                        {currentSetoran.waktu_validasi ? `Diverifikasi: ${new Date(currentSetoran.waktu_validasi).toLocaleString("id-ID")}` : "Status: Selesai"}
+                      </p>
+                      <p style={{ color: "#059669", fontWeight: 700, fontSize: "1.1rem", margin: "0" }}>
+                        +{currentSetoran.poin_diperoleh || 0} Poin Reward Telah Ditambahkan!
+                      </p>
+                    </div>
+
+                    {/* Detail cards below */}
+                    <div className="warga-rincian-card">
+                      <div className="warga-rincian-header">
+                        <div>
+                          <h4 className="warga-rincian-title">Rincian Pemeriksaan Petugas</h4>
+                          <span className="warga-rincian-subtitle">Hasil verifikasi lengkap untuk setoran ini</span>
+                        </div>
+                      </div>
+                      <div className="warga-rincian-grid">
+                        <div className="warga-rincian-row">
+                          <div className="warga-rincian-cell">
+                            <div className="warga-rincian-cell-label">Berat Dilaporkan</div>
+                            <div className="warga-rincian-cell-value">
+                              {currentSetoran.perkiraan_berat_kg ? `${currentSetoran.perkiraan_berat_kg} kg` : "-"}
+                            </div>
+                          </div>
+                          <div className="warga-rincian-cell">
+                            <div className="warga-rincian-cell-label">Berat Aktual</div>
+                            <div className="warga-rincian-cell-value highlight-val">
+                              {currentSetoran.berat_aktual_kg ? `${currentSetoran.berat_aktual_kg} kg` : "Tidak tercatat"}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="warga-rincian-row">
+                          <div className="warga-rincian-cell">
+                            <div className="warga-rincian-cell-label">Kondisi Sampah</div>
+                            <div className="warga-rincian-cell-value highlight-green">
+                              {currentSetoran.kondisi_sampah || "Tidak tercatat"}
+                            </div>
+                          </div>
+                          <div className="warga-rincian-cell">
+                            <div className="warga-rincian-cell-label">Jenis Sampah</div>
+                            <div className="warga-rincian-cell-value">
+                              {currentSetoran.jenis_sampah_terverifikasi || currentSetoran.jenis_sampah}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {currentSetoran.foto_bukti_url && (
+                        <div style={{ marginTop: "14px" }}>
+                          <a
+                            href={`${API_BASE_URL}${currentSetoran.foto_bukti_url}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              display: "inline-block",
+                              padding: "6px 14px",
+                              background: "#e0f2fe",
+                              color: "#0284c7",
+                              borderRadius: "6px",
+                              fontSize: "0.8rem",
+                              fontWeight: 600,
+                              textDecoration: "none",
+                            }}
+                          >
+                            &#x1F4F7; Lihat Foto Bukti Pengambilan
+                          </a>
+                        </div>
+                      )}
+
+                      {currentSetoran.catatan_petugas && (
+                        <div className="warga-rincian-note-box" style={{ marginTop: "12px" }}>
+                          <span>💬</span>
+                          <span>
+                            <strong>Catatan Petugas:</strong> {currentSetoran.catatan_petugas}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Alur Validasi Completed */}
+                    <div className="warga-alur-card">
+                      <h4 className="warga-alur-title">Alur Validasi (Selesai)</h4>
+                      <div className="warga-alur-steps">
+                        <div className="warga-alur-step-item">
+                          <div className="warga-alur-step-circle active">1</div>
+                          <div className="warga-alur-step-content">
+                            <div className="warga-alur-step-title">Laporan dibuat warga</div>
+                            <div className="warga-alur-step-desc">
+                              {currentSetoran.perkiraan_berat_kg} kg &bull; {currentSetoran.jenis_sampah}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="warga-alur-step-item">
+                          <div className="warga-alur-step-circle active">2</div>
+                          <div className="warga-alur-step-content">
+                            <div className="warga-alur-step-title">QR dipindai petugas</div>
+                            <div className="warga-alur-step-desc">
+                              Petugas armada telah memindai QR code di lokasi.
+                            </div>
+                          </div>
+                        </div>
+                        <div className="warga-alur-step-item">
+                          <div className="warga-alur-step-circle active">3</div>
+                          <div className="warga-alur-step-content">
+                            <div className="warga-alur-step-title">Kebersihan & berat diperiksa</div>
+                            <div className="warga-alur-step-desc">
+                              Selesai: {currentSetoran.berat_aktual_kg} kg ({currentSetoran.kondisi_sampah}) &bull; +{currentSetoran.poin_diperoleh || 0} poin
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="warga-status-terbaru-card">
+                      <div className="warga-status-header-row">
+                        <span className="warga-status-label-badge">
+                          STATUS TERBARU
+                        </span>
+                        <span className="warga-status-time">
+                          {currentSetoran.waktu_pemeriksaan
+                            ? new Date(currentSetoran.waktu_pemeriksaan).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+                            : currentSetoran.waktu_setor
+                            ? new Date(currentSetoran.waktu_setor).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+                            : "Menunggu update"}
+                        </span>
+                      </div>
+                      <h3 className="warga-status-heading">
+                        {currentSetoran.status}
+                      </h3>
+                      <p className="warga-status-subtext">
+                        {currentSetoran.status === "Sedang Diproses"
+                          ? "Petugas armada sedang menimbang dan memeriksa kebersihan sampah di lokasi."
+                          : "Tunjukkan QR permanen kepada petugas ketika sampah dijemput. Status akan berubah otomatis saat di-scan."}
+                      </p>
+                    </div>
+
+                    {/* Card 2: Rincian Pemeriksaan */}
+                    <div className="warga-rincian-card">
+                      <div className="warga-rincian-header">
+                        <div>
+                          <h4 className="warga-rincian-title">Rincian Pemeriksaan Petugas</h4>
+                          <span className="warga-rincian-subtitle">Data setoran terhubung otomatis dengan QR permanen</span>
+                        </div>
+                      </div>
+                      <div className="warga-rincian-grid">
+                        <div className="warga-rincian-row">
+                          <div className="warga-rincian-cell">
+                            <div className="warga-rincian-cell-label">Berat Dilaporkan</div>
+                            <div className="warga-rincian-cell-value">
+                              {currentSetoran.perkiraan_berat_kg ? `${currentSetoran.perkiraan_berat_kg} kg` : "-"}
+                            </div>
+                          </div>
+                          <div className="warga-rincian-cell">
+                            <div className="warga-rincian-cell-label">Berat Aktual</div>
+                            <div className="warga-rincian-cell-value">
+                              {currentSetoran.berat_aktual_kg ? `${currentSetoran.berat_aktual_kg} kg` : "Menunggu timbang petugas"}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="warga-rincian-row">
+                          <div className="warga-rincian-cell">
+                            <div className="warga-rincian-cell-label">Kondisi Sampah</div>
+                            <div className="warga-rincian-cell-value">
+                              {currentSetoran.kondisi_sampah || "Menunggu pemeriksaan"}
+                            </div>
+                          </div>
+                          <div className="warga-rincian-cell">
+                            <div className="warga-rincian-cell-label">Jenis Sampah</div>
+                            <div className="warga-rincian-cell-value">
+                              {currentSetoran.jenis_sampah_terverifikasi || currentSetoran.jenis_sampah}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Alur Validasi */}
+                    <div className="warga-alur-card">
+                      <h4 className="warga-alur-title">Alur Validasi</h4>
+                      <div className="warga-alur-steps">
+                        <div className="warga-alur-step-item">
+                          <div className="warga-alur-step-circle active">1</div>
+                          <div className="warga-alur-step-content">
+                            <div className="warga-alur-step-title">Laporan dibuat warga</div>
+                            <div className="warga-alur-step-desc">
+                              {currentSetoran.perkiraan_berat_kg} kg &bull; {currentSetoran.jenis_sampah}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="warga-alur-step-item">
+                          <div className={`warga-alur-step-circle ${alurStep >= 2 ? "active" : "pending"}`}>
+                            2
+                          </div>
+                          <div className="warga-alur-step-content">
+                            <div className="warga-alur-step-title">QR dipindai petugas</div>
+                            <div className="warga-alur-step-desc">
+                              {alurStep >= 2
+                                ? "Petugas armada telah memindai QR code permanen di lokasi."
+                                : "Identitas dan laporan terbuka otomatis saat QR di-scan petugas."}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="warga-alur-step-item">
+                          <div className={`warga-alur-step-circle ${alurStep >= 3 ? "active" : "pending"}`}>
+                            3
+                          </div>
+                          <div className="warga-alur-step-content">
+                            <div className="warga-alur-step-title">Kebersihan & berat diperiksa</div>
+                            <div className="warga-alur-step-desc">
+                              {alurStep >= 3
+                                ? `Selesai: ${currentSetoran.berat_aktual_kg} kg (${currentSetoran.kondisi_sampah})`
+                                : "Hasil dikirim langsung sebagai pemberitahuan."}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         )}
         {activeMenu === "panduan" && (
@@ -3983,7 +4025,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                         className="warga-preset-pill"
                         onClick={() => handleQuickPreset("verified")}
                       >
-                        ✅ Selesai Divalidasi (3.8 kg, Bersih)
+                        &#x2705; Selesai Divalidasi (3.8 kg, Bersih)
                       </button>
                     </div>
                   </div>
@@ -4297,7 +4339,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                 langsung terbaca:
               </p>
 
-              <div className="warga-preview-code-block">{qrTextContent}</div>
+              <div className="warga-preview-code-block">{legacyQrText}</div>
             </div>
 
             <div className="warga-modal-footer">
@@ -4314,6 +4356,59 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                 onClick={handleCopyQrText}
               >
                 📋 {copyFeedback ? "Tersalin!" : "Salin Teks QR"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: PREVIEW ISI KODE QR PERMANEN                          */}
+      {/* ========================================================= */}
+      {showPermanentQrPreviewModal && (
+        <div
+          className="warga-modal-backdrop"
+          onClick={() => setShowPermanentQrPreviewModal(false)}
+        >
+          <div
+            className="warga-modal-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="warga-modal-header">
+              <h3 className="warga-modal-title">📱 Isi Teks Kode QR Permanen</h3>
+              <button
+                type="button"
+                className="warga-modal-close-btn"
+                onClick={() => setShowPermanentQrPreviewModal(false)}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="warga-modal-body">
+              <p style={{ fontSize: "0.85rem", color: "#475569", margin: 0 }}>
+                Berikut adalah isi data nyata yang terenkode di dalam QR Code Permanen.
+                QR ini ditempel di tempat sampah/pagar rumah. Ketika petugas memindai QR,
+                sistem akan mengenali identitas warga dan mencari setoran aktif:
+              </p>
+
+              <div className="warga-preview-code-block">{permanentQrText}</div>
+            </div>
+
+            <div className="warga-modal-footer">
+              <button
+                type="button"
+                className="warga-btn-secondary"
+                onClick={() => setShowPermanentQrPreviewModal(false)}
+              >
+                Tutup
+              </button>
+              <button
+                type="button"
+                className="warga-btn-primary"
+                onClick={handleCopyPermanentQrText}
+              >
+                📋 {copyPermanentFeedback ? "Tersalin!" : "Salin Teks QR"}
               </button>
             </div>
           </div>
