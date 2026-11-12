@@ -71,7 +71,7 @@ def get_admin_stats(
 ):
     total_users = db.query(User).count()
     active_petugas = (
-        db.query(User).filter(User.role == "petugas", User.is_active == True).count()
+        db.query(User).filter(User.role.in_(["petugas", "petugas_pengangkut"]), User.is_active == True).count()
     )
     return {
         "total_users": total_users,
@@ -140,7 +140,7 @@ def update_user_account(
         raise HTTPException(status_code=404, detail="User tidak ditemukan")
     if data.get("nama_lengkap"):
         u.nama_lengkap = data["nama_lengkap"]
-    if data.get("role") in ("admin", "petugas", "driver", "superadmin", "petugas_tps"):
+    if data.get("role") in ("admin", "petugas", "petugas_pengangkut", "driver", "superadmin", "petugas_tps"):
         u.role = data["role"]
     if "wilayah_kecamatan" in data:
         u.wilayah_kecamatan = (data["wilayah_kecamatan"] or "").strip() or None
@@ -267,7 +267,7 @@ def create_user_account(
         email=email,
         hashed_password=hashed_pw,
         nama_lengkap=data.get("nama_lengkap", "User Si Petasan"),
-        role=data.get("role", "petugas"),
+        role=data.get("role", "petugas_pengangkut"),
         is_active=True,
         wilayah_kecamatan=data.get("wilayah_kecamatan"),
         wilayah_kelurahan=data.get("wilayah_kelurahan"),
@@ -309,8 +309,18 @@ def delete_user_account(
             status_code=400, detail="Tidak dapat menghapus akun sendiri"
         )
 
-    db.delete(user)
-    db.commit()
+    try:
+        db.delete(user)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        err_str = str(e)
+        if "IntegrityError" in err_str or "foreign key" in err_str.lower():
+            raise HTTPException(
+                status_code=400,
+                detail="Gagal menghapus: pengguna ini memiliki data terkait (contoh: setoran sampah). Nonaktifkan atau hapus data terkait terlebih dahulu.",
+            )
+        raise HTTPException(status_code=500, detail=f"Gagal menghapus pengguna: {err_str}")
     return {"message": "User berhasil dihapus"}
 
 

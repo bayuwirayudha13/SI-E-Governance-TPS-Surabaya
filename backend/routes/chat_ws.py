@@ -144,7 +144,7 @@ async def websocket_chat_endpoint(
                     conv.updated_at = get_wib_now()
                     
                     # Mark first response as sent if admin sends message
-                    if user["role"] in ["admin", "superadmin", "petugas"] and not conv.first_admin_response_sent:
+                    if user["role"] in ["admin", "superadmin", "petugas", "petugas_pengangkut"] and not conv.first_admin_response_sent:
                         conv.first_admin_response_sent = True
                     
                     db.commit()

@@ -12,7 +12,7 @@ class RefreshToken(Base):
     )
     user_id = Column(INTEGER(unsigned=True), nullable=False, index=True)
     user_type = Column(
-        Enum("warga", "admin", "petugas", "driver", "superadmin"), nullable=False
+        Enum("warga", "admin", "petugas_pengangkut", "driver", "superadmin"), nullable=False
     )
     token = Column(String(500), unique=True, index=True, nullable=False)
     expires_at = Column(DateTime, nullable=False, index=True)
@@ -29,7 +29,7 @@ class TokenRevocation(Base):
     )
     user_id = Column(INTEGER(unsigned=True), nullable=False, index=True)
     user_type = Column(
-        Enum("warga", "admin", "petugas", "driver", "superadmin"), nullable=False
+        Enum("warga", "admin", "petugas_pengangkut", "driver", "superadmin"), nullable=False
     )
     reason = Column(String(255), nullable=True)
     revoked_at = Column(DateTime, default=get_wib_now)

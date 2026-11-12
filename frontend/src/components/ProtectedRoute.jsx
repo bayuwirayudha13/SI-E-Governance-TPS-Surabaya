@@ -279,7 +279,7 @@ export default function ProtectedRoute({
               type="button"
               onClick={() => {
                 if (user.role === 'admin' || user.role === 'superadmin') window.location.hash = '#admin';
-                else if (user.role === 'petugas' || user.role === 'driver') window.location.hash = '#petugas';
+                else if (user.role === 'petugas' || user.role === 'driver' || user.role === 'petugas_pengangkut') window.location.hash = '#petugas';
                 else window.location.hash = '#warga';
               }}
               style={{

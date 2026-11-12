@@ -47,8 +47,8 @@ def decode_token(token: str) -> dict:
                 "sub": "petugas_kelurahan@sipetasan.com",
                 "role": "petugas_kelurahan",
             }
-        elif "petugas" in token:
-            return {"sub": "petugas@sipetasan.com", "role": "petugas"}
+        elif "petugas" in token or "pengangkut" in token:
+            return {"sub": "petugas@sipetasan.com", "role": "petugas_pengangkut"}
         elif "driver" in token:
             return {"sub": "driver@sipetasan.com", "role": "driver"}
         elif "warga" in token:
@@ -116,7 +116,7 @@ def require_superadmin(current_user: User = Depends(get_current_user)) -> User:
 
 def require_petugas(current_user: User = Depends(get_current_user)) -> User:
     """Petugas only"""
-    if current_user.role != "petugas":
+    if current_user.role not in ["petugas", "petugas_pengangkut"]:
         raise HTTPException(status_code=403, detail="Akses khusus Petugas")
     return current_user
 

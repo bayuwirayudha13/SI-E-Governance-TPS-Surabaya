@@ -19,3 +19,6 @@ class JadwalPengambilan(Base):
     petugas = Column(String(100), nullable=False)
     tipe = Column(Enum(TipeJadwal), default=TipeJadwal.RUTIN, nullable=False)
     tps_id = Column(INTEGER(unsigned=True), nullable=True)
+    kecamatan = Column(String(100), nullable=True)
+    kelurahan = Column(String(100), nullable=True)
+    petugas_id = Column(INTEGER(unsigned=True), nullable=True)

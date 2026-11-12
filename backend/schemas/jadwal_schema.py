@@ -13,9 +13,12 @@ class JadwalCreate(BaseModel):
     waktu_mulai: time
     waktu_selesai: time
     area: str
-    petugas: str
+    petugas: Optional[str] = None
     tipe: TipeJadwal = TipeJadwal.RUTIN
     tps_id: Optional[int] = None
+    kecamatan: Optional[str] = None
+    kelurahan: Optional[str] = None
+    petugas_id: Optional[int] = None
 
 class JadwalUpdate(BaseModel):
     hari: Optional[str] = None
@@ -25,6 +28,9 @@ class JadwalUpdate(BaseModel):
     petugas: Optional[str] = None
     tipe: Optional[TipeJadwal] = None
     tps_id: Optional[int] = None
+    kecamatan: Optional[str] = None
+    kelurahan: Optional[str] = None
+    petugas_id: Optional[int] = None
 
 class JadwalResponse(BaseModel):
     id: int
@@ -35,6 +41,9 @@ class JadwalResponse(BaseModel):
     petugas: str
     tipe: TipeJadwal
     tps_id: Optional[int] = None
+    kecamatan: Optional[str] = None
+    kelurahan: Optional[str] = None
+    petugas_id: Optional[int] = None
 
     class Config:
         from_attributes = True

@@ -132,8 +132,8 @@ def get_current_user(token: str = None, db: Session = Depends(get_db)):
                     "wilayah_kelurahan": getattr(user, "wilayah_kelurahan", None),
                     "wilayah_kota": getattr(user, "wilayah_kota", "Surabaya"),
                 }
-        elif "petugas" in token:
-            user = db.query(User).filter(User.role == "petugas").first()
+        elif "petugas" in token or "pengangkut" in token:
+            user = db.query(User).filter(User.role.in_(["petugas", "petugas_pengangkut"])).first()
             if user:
                 return {
                     "id": user.id,

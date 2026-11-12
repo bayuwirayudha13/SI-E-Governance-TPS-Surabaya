@@ -330,7 +330,7 @@ export const authService = {
         (cleanEmail === "hendra" && password === "petugas123")
       ) {
         const demoPetugas = {
-          role: "petugas",
+          role: "petugas_pengangkut",
           email: cleanEmail.includes("@")
             ? cleanEmail
             : "petugas@sipetasan.com",

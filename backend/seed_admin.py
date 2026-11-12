@@ -18,7 +18,7 @@ def seed_admins():
                 "email": "admin@sampahpintar.com",
                 "password": "admin123",
                 "nama": "Admin Kelurahan",
-                "role": "petugas"
+                "role": "petugas_pengangkut"
             }
         ]
 

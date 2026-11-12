@@ -15,7 +15,7 @@ for c in convs:
     print(f'  ID {c.id}: warga={c.warga_id}, assigned_petugas={c.assigned_petugas_id}, status={c.status}')
 
 # Check petugas/admin users
-users = db.query(User).filter(User.role.in_(['admin', 'superadmin', 'petugas'])).all()
+users = db.query(User).filter(User.role.in_(['admin', 'superadmin', 'petugas_pengangkut', 'petugas'])).all()
 print(f'\nAdmin/Petugas users: {len(users)}')
 for u in users:
     print(f'  ID {u.id}: {u.nama_lengkap} ({u.role})')

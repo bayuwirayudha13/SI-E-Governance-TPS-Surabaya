@@ -90,7 +90,7 @@ export default function SuperadminPanel({
     nama_lengkap: "",
     email: "",
     password: "",
-    role: "petugas",
+    role: "petugas_pengangkut",
     wilayah_kecamatan: "",
     wilayah_kelurahan: "",
     foto_url: "",
@@ -100,6 +100,9 @@ export default function SuperadminPanel({
   const [viewUser, setViewUser] = useState(null);
   const [kecamatanOptions, setKecamatanOptions] = useState([]);
   const [kelurahanOptions, setKelurahanOptions] = useState([]);
+  const [petugasOptions, setPetugasOptions] = useState([]);
+  const [jadwalFilterKec, setJadwalFilterKec] = useState("");
+  const [jadwalFilterKel, setJadwalFilterKel] = useState("");
   const [tpsOptions, setTpsOptions] = useState([]);
   const [newUserFotoFile, setNewUserFotoFile] = useState(null);
   const [newUserFotoPreview, setNewUserFotoPreview] = useState("");
@@ -111,8 +114,14 @@ export default function SuperadminPanel({
     waktu_selesai: "",
     area: "",
     petugas: "",
+    petugas_id: null,
     tipe: "Rutin",
+    tps_id: null,
+    kecamatan: "",
+    kelurahan: "",
   });
+  const [editingJadwal, setEditingJadwal] = useState(null);
+  const [showEditJadwalModal, setShowEditJadwalModal] = useState(false);
   const [newTps, setNewTps] = useState({
     nama: "",
     kecamatan: "",
@@ -264,6 +273,35 @@ export default function SuperadminPanel({
     })();
   }, [newUser.wilayah_kecamatan, newUser.wilayah_kelurahan, editUser?.wilayah_kecamatan, editUser?.wilayah_kelurahan, editUser?.role, newUser.role]);
 
+  // Fetch kelurahan options untuk modal jadwal saat kecamatan berubah
+  useEffect(() => {
+    const kec = newJadwal.kecamatan || editingJadwal?.kecamatan;
+    if (!kec) {
+      setKelurahanOptions([]);
+      return;
+    }
+    (async () => {
+      try {
+        const r = await fetch(
+          `${API_BASE}/api/wilayah/kelurahan?kecamatan=${encodeURIComponent(kec)}`,
+        );
+        if (r.ok) {
+          const d = await r.json();
+          setKelurahanOptions((d || []).map((x) => ({ id: x.id || x.nama, nama: x.nama || x })));
+        } else {
+          setKelurahanOptions([]);
+        }
+      } catch {
+        setKelurahanOptions([]);
+      }
+    })();
+  }, [newJadwal.kecamatan, editingJadwal?.kecamatan]);
+
+  // Fetch petugas list saat kecamatan/kelurahan jadwal berubah
+  useEffect(() => {
+    fetchPetugasList(jadwalFilterKec, jadwalFilterKel);
+  }, [jadwalFilterKec, jadwalFilterKel]);
+
   // Get current date
   const getCurrentDate = () => {
     const days = [
@@ -314,7 +352,6 @@ export default function SuperadminPanel({
         setPetugasList(
           data.filter(
             (u) =>
-              u.role === "petugas" ||
               u.role === "admin" ||
               u.role === "superadmin" ||
               u.role === "driver" ||
@@ -338,7 +375,10 @@ export default function SuperadminPanel({
 
   const loadJadwals = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/jadwal/`);
+      const token = getToken();
+      const response = await fetch(`${API_BASE}/api/jadwal/admin`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (response.ok) {
         const data = await response.json();
         setJadwals(data);
@@ -350,6 +390,25 @@ export default function SuperadminPanel({
       setJadwals([]);
       setError("Gagal memuat jadwal pengambilan. Silakan coba lagi.");
       setTimeout(() => setError(""), 4000);
+    }
+  };
+
+  const fetchPetugasList = async (kec, kel) => {
+    try {
+      const token = getToken();
+      if (!kec || !kel) { setPetugasOptions([]); return; }
+      const r = await fetch(
+        `${API_BASE}/api/jadwal/petugas?kecamatan=${encodeURIComponent(kec)}&kelurahan=${encodeURIComponent(kel)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (r.ok) {
+        const d = await r.json();
+        setPetugasOptions(Array.isArray(d) ? d : []);
+      } else {
+        setPetugasOptions([]);
+      }
+    } catch {
+      setPetugasOptions([]);
     }
   };
 
@@ -836,7 +895,7 @@ export default function SuperadminPanel({
         nama_lengkap: "",
         email: "",
         password: "",
-        role: "petugas",
+        role: "petugas_pengangkut",
         wilayah_kecamatan: "",
         wilayah_kelurahan: "",
         foto_url: "",
@@ -987,12 +1046,27 @@ export default function SuperadminPanel({
     setIsLoading(true);
     setError("");
     try {
+      const token = getToken();
+      // Validate waktu
+      if (newJadwal.tipe !== "Libur" && newJadwal.waktu_selesai <= newJadwal.waktu_mulai) {
+        throw new Error("Waktu selesai harus lebih besar dari waktu mulai");
+      }
+      if (!newJadwal.kecamatan || !newJadwal.kelurahan) {
+        throw new Error("Kecamatan dan kelurahan wajib diisi");
+      }
+      const payload = { ...newJadwal };
       const response = await fetch(`${API_BASE}/api/jadwal/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newJadwal),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
       });
-      if (!response.ok) throw new Error("Gagal menambah jadwal");
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || "Gagal menambah jadwal");
+      }
       setSuccess("Jadwal berhasil ditambahkan");
       setNewJadwal({
         hari: "",
@@ -1000,42 +1074,82 @@ export default function SuperadminPanel({
         waktu_selesai: "",
         area: "",
         petugas: "",
+        petugas_id: null,
         tipe: "Rutin",
+        tps_id: null,
+        kecamatan: "",
+        kelurahan: "",
       });
       setShowAddJadwalModal(false);
       loadJadwals();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Gagal menambah jadwal");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDeleteUser = async (userId) => {
-    if (!window.confirm("Yakin ingin menghapus user ini?")) return;
+  const handleEditJadwal = async (e) => {
+    e.preventDefault();
+    if (!editingJadwal) return;
+    setIsLoading(true);
+    setError("");
     try {
       const token = getToken();
-      const response = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+      const payload = { ...editingJadwal };
+      const response = await fetch(`${API_BASE}/api/jadwal/${editingJadwal.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
       });
-      if (!response.ok) throw new Error("Gagal menghapus user");
-      setSuccess("User berhasil dihapus");
-      loadUsers();
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || "Gagal memperbarui jadwal");
+      }
+      setSuccess("Jadwal berhasil diperbarui");
+      setShowEditJadwalModal(false);
+      setEditingJadwal(null);
+      loadJadwals();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Gagal memperbarui jadwal");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDeleteJadwal = async (jadwalId) => {
     if (!window.confirm("Yakin ingin menghapus jadwal ini?")) return;
     try {
+      const token = getToken();
       const response = await fetch(`${API_BASE}/api/jadwal/${jadwalId}`, {
         method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!response.ok) throw new Error("Gagal menghapus jadwal");
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || "Gagal menghapus jadwal");
+      }
       setSuccess("Jadwal berhasil dihapus");
       loadJadwals();
+    } catch (err) {
+      setError(err.message || "Gagal menghapus jadwal");
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm("Yakin ingin menghapus akun pengguna ini?")) return;
+    try {
+      const token = getToken();
+      const response = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Gagal menghapus pengguna");
+      setSuccess("Pengguna berhasil dihapus");
+      loadUsers();
     } catch (err) {
       setError(err.message);
     }
@@ -3601,7 +3715,10 @@ export default function SuperadminPanel({
                 <button
                   type="button"
                   className="btn-add-primary"
-                  onClick={() => setShowAddJadwalModal(true)}
+                  onClick={() => {
+                    setEditingJadwal(null);
+                    setShowAddJadwalModal(true);
+                  }}
                 >
                   + Tambah Jadwal
                 </button>
@@ -3614,21 +3731,42 @@ export default function SuperadminPanel({
                       <th>AREA</th>
                       <th>WAKTU</th>
                       <th>PETUGAS</th>
+                      <th>KECAMATAN</th>
+                      <th>KELURAHAN</th>
+                      <th>TIPE</th>
                       <th>AKSI</th>
                     </tr>
                   </thead>
                   <tbody>
                     {jadwals.map((j) => (
                       <tr key={j.id}>
-                        <td>
-                          <strong>{j.hari}</strong>
-                        </td>
+                        <td><strong>{j.hari}</strong></td>
                         <td>{j.area}</td>
                         <td>
                           {j.waktu_mulai} - {j.waktu_selesai}
                         </td>
-                        <td>{j.petugas}</td>
+                        <td>{j.petugas || "—"}</td>
+                        <td>{j.kecamatan || "—"}</td>
+                        <td>{j.kelurahan || "—"}</td>
                         <td>
+                          <span className={`status-pill ${j.tipe === "Libur" ? "status-nonaktif" : j.tipe === "Besar" ? "status-aktif" : ""}`}>
+                            {j.tipe}
+                          </span>
+                        </td>
+                        <td style={{display:"flex",gap:"6px"}}>
+                          <button
+                            type="button"
+                            className="btn-table-edit"
+                            style={{background:"#0284c7",color:"#fff",border:"none",padding:"4px 8px",borderRadius:"4px",cursor:"pointer"}}
+                            onClick={() => {
+                              setEditingJadwal({...j});
+                              setJadwalFilterKec(j.kecamatan||"");
+                              setJadwalFilterKel(j.kelurahan||"");
+                              setShowEditJadwalModal(true);
+                            }}
+                          >
+                            Edit
+                          </button>
                           <button
                             type="button"
                             className="btn-table-delete"
@@ -3872,10 +4010,9 @@ export default function SuperadminPanel({
                   options={[
                     { id: "admin", nama: "Admin" },
                     { id: "superadmin", nama: "Superadmin" },
-                    { id: "petugas", nama: "Petugas" },
+                    { id: "petugas_pengangkut", nama: "Petugas Pengangkut" },
                     { id: "driver", nama: "Driver" },
                     { id: "petugas_kelurahan", nama: "Petugas Kelurahan" },
-                    { id: "petugas_pengangkut", nama: "Petugas Pengangkut" },
                     { id: "petugas_tps", nama: "Petugas TPS" },
                   ]}
                   getOptionLabel={(opt) => opt.nama}
@@ -3885,8 +4022,7 @@ export default function SuperadminPanel({
                   required
                 />
               </div>
-              {(newUser.role === "petugas" ||
-                newUser.role === "driver" ||
+              {(newUser.role === "driver" ||
                 newUser.role === "petugas_kelurahan" ||
                 newUser.role === "petugas_pengangkut" ||
                 newUser.role === "petugas_tps") && (
@@ -4085,7 +4221,6 @@ export default function SuperadminPanel({
                   options={[
                     { id: "admin", nama: "Admin" },
                     { id: "superadmin", nama: "Superadmin" },
-                    { id: "petugas", nama: "Petugas" },
                     { id: "driver", nama: "Driver" },
                     { id: "petugas_kelurahan", nama: "Petugas Kelurahan" },
                     { id: "petugas_pengangkut", nama: "Petugas Pengangkut" },
@@ -4097,10 +4232,9 @@ export default function SuperadminPanel({
                   searchPlaceholder="Cari role..."
                 />
               </div>
-              {(editUser.role === "petugas" ||
+              {(editUser.role === "petugas_pengangkut" ||
                 editUser.role === "driver" ||
                 editUser.role === "petugas_kelurahan" ||
-                editUser.role === "petugas_pengangkut" ||
                 editUser.role === "petugas_tps") && (
                 <>
                   <div className="form-group">
@@ -4327,47 +4461,36 @@ export default function SuperadminPanel({
                   }
                 >
                   <option value="">Pilih Hari</option>
-                  {[
-                    "Senin",
-                    "Selasa",
-                    "Rabu",
-                    "Kamis",
-                    "Jumat",
-                    "Sabtu",
-                    "Minggu",
-                  ].map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
+                  {["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu","Minggu"].map((d) => (
+                    <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
               </div>
-              <div className="form-group">
-                <label className="form-label">Waktu Mulai</label>
-                <input
-                  type="time"
-                  required
-                  className="settings-input"
-                  value={newJadwal.waktu_mulai}
-                  onChange={(e) =>
-                    setNewJadwal({ ...newJadwal, waktu_mulai: e.target.value })
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Waktu Selesai</label>
-                <input
-                  type="time"
-                  required
-                  className="settings-input"
-                  value={newJadwal.waktu_selesai}
-                  onChange={(e) =>
-                    setNewJadwal({
-                      ...newJadwal,
-                      waktu_selesai: e.target.value,
-                    })
-                  }
-                />
+              <div style={{display:"flex",gap:"12px"}}>
+                <div className="form-group" style={{flex:1}}>
+                  <label className="form-label">Waktu Mulai</label>
+                  <input
+                    type="time"
+                    required
+                    className="settings-input"
+                    value={newJadwal.waktu_mulai}
+                    onChange={(e) =>
+                      setNewJadwal({ ...newJadwal, waktu_mulai: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="form-group" style={{flex:1}}>
+                  <label className="form-label">Waktu Selesai</label>
+                  <input
+                    type="time"
+                    required
+                    className="settings-input"
+                    value={newJadwal.waktu_selesai}
+                    onChange={(e) =>
+                      setNewJadwal({ ...newJadwal, waktu_selesai: e.target.value })
+                    }
+                  />
+                </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Area / Zona</label>
@@ -4382,15 +4505,77 @@ export default function SuperadminPanel({
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Nama Petugas</label>
-                <input
-                  type="text"
-                  required
+                <label className="form-label">Tipe Jadwal</label>
+                <select
                   className="settings-input"
-                  value={newJadwal.petugas}
+                  value={newJadwal.tipe}
                   onChange={(e) =>
-                    setNewJadwal({ ...newJadwal, petugas: e.target.value })
+                    setNewJadwal({ ...newJadwal, tipe: e.target.value })
                   }
+                >
+                  <option value="Rutin">Rutin</option>
+                  <option value="Besar">Besar</option>
+                  <option value="Libur">Libur</option>
+                </select>
+              </div>
+              <div style={{display:"flex",gap:"12px"}}>
+                <div className="form-group" style={{flex:1}}>
+                  <label className="form-label">Kecamatan</label>
+                  <select
+                    required
+                    className="settings-input"
+                    value={newJadwal.kecamatan}
+                    onChange={(e) => {
+                      const kec = e.target.value;
+                      setNewJadwal({ ...newJadwal, kecamatan: kec, kelurahan: "", petugas_id: null, petugas: "" });
+                      setJadwalFilterKec(kec);
+                      setJadwalFilterKel("");
+                      if (kec) fetchPetugasList(kec, "");
+                    }}
+                  >
+                    <option value="">Pilih Kecamatan</option>
+                    {kecamatanOptions.map((k) => (
+                      <option key={k.id || k.nama} value={k.nama}>{k.nama}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group" style={{flex:1}}>
+                  <label className="form-label">Kelurahan</label>
+                  <select
+                    required
+                    className="settings-input"
+                    value={newJadwal.kelurahan}
+                    onChange={(e) => {
+                      const kel = e.target.value;
+                      setNewJadwal({ ...newJadwal, kelurahan: kel, petugas_id: null, petugas: "" });
+                      setJadwalFilterKel(kel);
+                      if (newJadwal.kecamatan && kel) fetchPetugasList(newJadwal.kecamatan, kel);
+                    }}
+                  >
+                    <option value="">Pilih Kelurahan</option>
+                    {kelurahanOptions.map((k) => (
+                      <option key={k.id || k.nama} value={k.nama}>{k.nama}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Petugas Pengangkut</label>
+                <SearchableSelect
+                  value={newJadwal.petugas_id ? String(newJadwal.petugas_id) : ""}
+                  onChange={(value) => {
+                    const id = value ? parseInt(value) : null;
+                    const p = petugasOptions.find((x) => x.id === id);
+                    setNewJadwal({ ...newJadwal, petugas_id: id, petugas: p ? p.nama_lengkap : "" });
+                  }}
+                  options={petugasOptions.map((p) => ({
+                    id: p.id,
+                    nama: `${p.nama_lengkap} (${p.wilayah_kecamatan}/${p.wilayah_kelurahan})`,
+                  }))}
+                  getOptionLabel={(opt) => opt.nama}
+                  getOptionValue={(opt) => String(opt.id)}
+                  placeholder="Pilih Petugas..."
+                  searchPlaceholder="Cari petugas..."
                 />
               </div>
               <div
@@ -4420,6 +4605,177 @@ export default function SuperadminPanel({
                   disabled={isLoading}
                 >
                   Simpan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Edit Jadwal */}
+      {showEditJadwalModal && editingJadwal && (
+        <div
+          className="modal-overlay"
+          onClick={() => { setShowEditJadwalModal(false); setEditingJadwal(null); }}
+        >
+          <div
+            className="modal-dialog admin-modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3 className="modal-title">Edit Jadwal Pengambilan</h3>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => { setShowEditJadwalModal(false); setEditingJadwal(null); }}
+              >
+                &times;
+              </button>
+            </div>
+            <form onSubmit={handleEditJadwal} style={{ padding: "24px" }}>
+              <div className="form-group">
+                <label className="form-label">Hari</label>
+                <select
+                  required
+                  className="settings-input"
+                  value={editingJadwal.hari}
+                  onChange={(e) => setEditingJadwal({ ...editingJadwal, hari: e.target.value })}
+                >
+                  <option value="">Pilih Hari</option>
+                  {["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu","Minggu"].map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{display:"flex",gap:"12px"}}>
+                <div className="form-group" style={{flex:1}}>
+                  <label className="form-label">Waktu Mulai</label>
+                  <input
+                    type="time"
+                    required
+                    className="settings-input"
+                    value={editingJadwal.waktu_mulai || ""}
+                    onChange={(e) => setEditingJadwal({ ...editingJadwal, waktu_mulai: e.target.value })}
+                  />
+                </div>
+                <div className="form-group" style={{flex:1}}>
+                  <label className="form-label">Waktu Selesai</label>
+                  <input
+                    type="time"
+                    required
+                    className="settings-input"
+                    value={editingJadwal.waktu_selesai || ""}
+                    onChange={(e) => setEditingJadwal({ ...editingJadwal, waktu_selesai: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Area / Zona</label>
+                <input
+                  type="text"
+                  required
+                  className="settings-input"
+                  value={editingJadwal.area || ""}
+                  onChange={(e) => setEditingJadwal({ ...editingJadwal, area: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Tipe Jadwal</label>
+                <select
+                  className="settings-input"
+                  value={editingJadwal.tipe || "Rutin"}
+                  onChange={(e) => setEditingJadwal({ ...editingJadwal, tipe: e.target.value })}
+                >
+                  <option value="Rutin">Rutin</option>
+                  <option value="Besar">Besar</option>
+                  <option value="Libur">Libur</option>
+                </select>
+              </div>
+              <div style={{display:"flex",gap:"12px"}}>
+                <div className="form-group" style={{flex:1}}>
+                  <label className="form-label">Kecamatan</label>
+                  <select
+                    className="settings-input"
+                    value={editingJadwal.kecamatan || ""}
+                    onChange={(e) => {
+                      const kec = e.target.value;
+                      setEditingJadwal({ ...editingJadwal, kecamatan: kec, kelurahan: "", petugas_id: null, petugas: "" });
+                      setJadwalFilterKec(kec);
+                      setJadwalFilterKel("");
+                      if (kec) fetchPetugasList(kec, "");
+                    }}
+                  >
+                    <option value="">Pilih Kecamatan</option>
+                    {kecamatanOptions.map((k) => (
+                      <option key={k.id || k.nama} value={k.nama}>{k.nama}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group" style={{flex:1}}>
+                  <label className="form-label">Kelurahan</label>
+                  <select
+                    className="settings-input"
+                    value={editingJadwal.kelurahan || ""}
+                    onChange={(e) => {
+                      const kel = e.target.value;
+                      setEditingJadwal({ ...editingJadwal, kelurahan: kel, petugas_id: null, petugas: "" });
+                      setJadwalFilterKel(kel);
+                      if (editingJadwal.kecamatan && kel) fetchPetugasList(editingJadwal.kecamatan, kel);
+                    }}
+                  >
+                    <option value="">Pilih Kelurahan</option>
+                    {kelurahanOptions.map((k) => (
+                      <option key={k.id || k.nama} value={k.nama}>{k.nama}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Petugas Pengangkut</label>
+                <SearchableSelect
+                  value={editingJadwal.petugas_id ? String(editingJadwal.petugas_id) : ""}
+                  onChange={(value) => {
+                    const id = value ? parseInt(value) : null;
+                    const p = petugasOptions.find((x) => x.id === id);
+                    setEditingJadwal({ ...editingJadwal, petugas_id: id, petugas: p ? p.nama_lengkap : "" });
+                  }}
+                  options={petugasOptions.map((p) => ({
+                    id: p.id,
+                    nama: `${p.nama_lengkap} ({p.wilayah_kecamatan}/{p.wilayah_kelurahan})`,
+                  }))}
+                  getOptionLabel={(opt) => opt.nama}
+                  getOptionValue={(opt) => String(opt.id)}
+                  placeholder="Pilih Petugas..."
+                  searchPlaceholder="Cari petugas..."
+                />
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "12px",
+                  marginTop: "20px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => { setShowEditJadwalModal(false); setEditingJadwal(null); }}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    border: "1px solid #cbd5e1",
+                    background: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn-add-primary"
+                  disabled={isLoading}
+                >
+                  Simpan Perubahan
                 </button>
               </div>
             </form>

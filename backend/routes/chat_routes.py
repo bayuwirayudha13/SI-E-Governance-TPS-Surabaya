@@ -129,7 +129,7 @@ def list_conversations(
     query = db.query(ChatConversation)
     
     # Petugas only see conversations assigned to them. Admin/Superadmin see all.
-    if admin and admin.role == "petugas":
+    if admin and admin.role in ["petugas", "petugas_pengangkut"]:
         query = query.filter(ChatConversation.assigned_petugas_id == admin.id)
     
     convs = query.order_by(
@@ -234,7 +234,7 @@ def get_greeting_template(
         raise HTTPException(status_code=404, detail="User tidak ditemukan")
     
     # Validate petugas can only see template for their own assigned conversation
-    if admin.role == "petugas" and conv.assigned_petugas_id != admin.id:
+    if admin.role in ["petugas", "petugas_pengangkut"] and conv.assigned_petugas_id != admin.id:
         raise HTTPException(status_code=403, detail="Tidak diizinkan mengakses percakapan ini")
     
     # Get warga info
@@ -243,7 +243,7 @@ def get_greeting_template(
     
     # Get admin/petugas info
     admin_name = admin.nama_lengkap if admin else "Admin"
-    admin_role_label = "Petugas" if admin.role == "petugas" else "Admin"
+    admin_role_label = "Petugas Pengangkut" if admin.role in ["petugas", "petugas_pengangkut"] else "Admin"
     
     # Determine greeting based on WIB time
     now = get_wib_now()

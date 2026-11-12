@@ -3,6 +3,7 @@ import './PetugasTpsPanel.css';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { petugasTpsApi } from '../api/petugasTps';
+import { API_BASE_URL } from '../api/client';
 import pandawaraImg from '../assets/images/berita_pandawara.jpg';
 import kaliTebuImg from '../assets/images/berita_kali_tebu.jpg';
 import bankSampahImg from '../assets/images/bank_sampah.jpg';

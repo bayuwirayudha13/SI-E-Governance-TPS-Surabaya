@@ -29,7 +29,7 @@ def seed_users():
                 "email": "petugas@sipetasan.com",
                 "password": "petugas123",
                 "nama_lengkap": "Petugas TPS",
-                "role": "petugas"
+                "role": "petugas_pengangkut"
             },
             {
                 "username": "driver",

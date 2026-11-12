@@ -210,7 +210,7 @@ export default function Navbar({
                 className="btn-user-avatar-mobile"
                 onClick={() => {
                   if (currentUser.role === 'admin' || currentUser.role === 'superadmin') window.location.hash = '#admin';
-                  else if (currentUser.role === 'driver' || currentUser.role === 'petugas') window.location.hash = '#petugas';
+                  else if (currentUser.role === 'driver' || currentUser.role === 'petugas' || currentUser.role === 'petugas_pengangkut') window.location.hash = '#petugas';
                   else if (currentUser.role === 'petugas_kelurahan') window.location.hash = '#petugas-tps';
                   else window.location.hash = '#warga';
                 }}
@@ -231,7 +231,7 @@ export default function Navbar({
                 <span className="user-desktop-text">
                   {currentUser.role === 'admin' || currentUser.role === 'superadmin'
                     ? 'Admin Panel'
-                    : currentUser.role === 'driver' || currentUser.role === 'petugas'
+                    : currentUser.role === 'driver' || currentUser.role === 'petugas' || currentUser.role === 'petugas_pengangkut'
                     ? 'Petugas Driver / Pengangkut'
                     : currentUser.role === 'petugas_kelurahan'
                     ? 'Petugas Kelurahan'

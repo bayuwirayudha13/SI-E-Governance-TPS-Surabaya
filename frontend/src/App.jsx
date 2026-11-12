@@ -91,7 +91,7 @@ export default function App() {
         nama_lengkap: "Budi",
         nama: "Budi",
         email: "budi@sipetasan.com",
-        role: "petugas",
+        role: "petugas_pengangkut",
         kelurahan: "Sukamaju",
         wilayah_kelurahan: "Sukamaju",
         wilayah_kecamatan: "Gubeng",
@@ -113,7 +113,7 @@ export default function App() {
         nama_lengkap: "Hendra",
         nama: "Hendra",
         email: "hendra@sipetasan.com",
-        role: "petugas",
+        role: "petugas_pengangkut",
         wilayah_kelurahan: "Sukamaju",
         wilayah_kecamatan: "Gubeng",
         wilayah_kota: "Surabaya",
@@ -147,10 +147,7 @@ export default function App() {
       } else if (user.role === "petugas_kelurahan" || user.role === "petugas_tps") {
         setCurrentPage("petugas-tps");
         window.location.hash = "petugas-tps";
-      } else if (
-        user.role === "petugas" ||
-        user.role === "petugas_pengangkut"
-      ) {
+      } else if (user.role === "petugas_pengangkut") {
         setCurrentPage("petugas");
         window.location.hash = "petugas";
       } else if (user.role === "driver") {
@@ -272,7 +269,7 @@ export default function App() {
     } else if (user.role === "petugas_kelurahan" || user.role === "petugas_tps") {
       setCurrentPage("petugas-tps");
       window.location.hash = "petugas-tps";
-    } else if (user.role === "petugas" || user.role === "petugas_pengangkut") {
+    } else if (user.role === "petugas_pengangkut") {
       setCurrentPage("petugas");
       window.location.hash = "petugas";
     } else if (user.role === "driver") {
@@ -363,7 +360,7 @@ export default function App() {
   // If user is inside Petugas Lapangan/Pengangkut Panel (Protected by RBAC: petugas & driver)
   if (currentPage === "petugas") {
     return (
-      <ProtectedRoute allowedRoles={["petugas", "driver"]}>
+      <ProtectedRoute allowedRoles={["petugas", "driver", "petugas_pengangkut"]}>
         <PetugasPanel onLogout={handleLogout} currentUser={currentUser} />
       </ProtectedRoute>
     );

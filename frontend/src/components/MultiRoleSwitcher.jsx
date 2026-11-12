@@ -21,8 +21,8 @@ export default function MultiRoleSwitcher() {
     warga: { id: 1, name: 'Warga Demo', role: 'warga', email: 'bayuwirayudha84@gmail.com' },
     admin: { id: 2, name: 'Admin Desa', role: 'admin', email: 'admin@sampahpintar.com' },
     superadmin: { id: 3, name: 'Superadmin Pusat', role: 'superadmin', email: 'superadmin@sampahpintar.com' },
-    petugasTps: { id: 8, name: 'Budi', nama_lengkap: 'Budi', role: 'petugas', email: 'budi@sipetasan.com', wilayah_kelurahan: 'Sukamaju' },
-    petugasPengangkut: { id: 5, name: 'Hendra', nama_lengkap: 'Hendra', role: 'driver', email: 'hendra@sipetasan.com' }
+    petugasTps: { id: 8, name: 'Budi', nama_lengkap: 'Budi', role: 'petugas_tps', email: 'budi@sipetasan.com', wilayah_kelurahan: 'Sukamaju' },
+    petugasPengangkut: { id: 5, name: 'Hendra', nama_lengkap: 'Hendra', role: 'petugas_pengangkut', email: 'hendra@sipetasan.com' }
   };
 
   return (
