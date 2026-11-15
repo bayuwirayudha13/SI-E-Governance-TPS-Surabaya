@@ -854,7 +854,7 @@ export default function AuthPage({
           </button>
 
           <div className="auth-copyright">
-            &copy; 2025 Dinas Lingkungan Hidup · SampahPintar v2.4.1
+            &copy; 2026 Dinas Lingkungan Hidup · SiPetasan
           </div>
         </div>
       );
@@ -996,7 +996,7 @@ export default function AuthPage({
               marginTop: "48px",
             }}
           >
-            &copy; 2025 Dinas Lingkungan Hidup · SampahPintar v2.4.1
+            &copy; 2026 Dinas Lingkungan Hidup · SiPetasan
           </div>
         </div>
       );
@@ -1172,7 +1172,7 @@ export default function AuthPage({
         </button>
 
         <div className="auth-copyright">
-          &copy; 2025 Dinas Lingkungan Hidup · SampahPintar v2.4.1
+          &copy; 2026 Dinas Lingkungan Hidup · SiPetasan
         </div>
       </div>
     );
@@ -1211,7 +1211,7 @@ export default function AuthPage({
             </div>
 
             <div>
-              <div className="auth-brand-name">SampahPintar</div>
+              <div className="auth-brand-name">SiPetasan</div>
 
               <div className="auth-brand-subtitle">
                 Sistem Manajemen Sampah Kelurahan
@@ -1385,7 +1385,7 @@ export default function AuthPage({
                 marginTop: "48px",
               }}
             >
-              &copy; 2025 Dinas Lingkungan Hidup · SampahPintar v2.4.1
+              &copy; 2026 Dinas Lingkungan Hidup · SiPetasan
             </div>
           </div>
         ) : (
@@ -1432,7 +1432,7 @@ export default function AuthPage({
                 <h2 className="auth-form-title">Masuk</h2>
 
                 <p className="auth-form-subtitle">
-                  Masuk ke akun SampahPintar kamu.
+                  Masuk ke akun SiPetasan kamu.
                 </p>
               </div>
             )}
@@ -1983,7 +1983,7 @@ export default function AuthPage({
 
             {/* COPYRIGHT */}
             <div className="auth-copyright">
-              &copy; 2025 Dinas Lingkungan Hidup · SampahPintar v2.4.1
+              &copy; 2026 Dinas Lingkungan Hidup · SiPetasan
             </div>
           </div>
         )}
