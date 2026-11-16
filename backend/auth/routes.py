@@ -29,6 +29,7 @@ from services.email_service import (
     send_reset_password_email
 )
 from core.database import get_db
+from auth.dependencies import get_current_user_from_token
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
@@ -80,6 +81,13 @@ router = APIRouter(
     prefix="/auth",
     tags=["Authentication"]
 )
+
+
+@router.get("/me")
+def get_authenticated_profile(
+    current_user: dict = Depends(get_current_user_from_token),
+):
+    return current_user
 
 
 class OTPRequest(BaseModel):

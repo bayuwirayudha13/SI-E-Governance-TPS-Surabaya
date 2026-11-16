@@ -3,15 +3,19 @@ from typing import List, Optional
 from core.database import get_db
 from core.security import get_current_user, require_admin, require_superadmin
 from fastapi import APIRouter, Depends, HTTPException, Query
+from auth.dependencies import get_current_user_from_token
+from models.tps_kelurahan import TPSKelurahan
+from models.tps_monitoring_report import TPSMonitoringReport
 from models.tps import TPS
 from models.users import User
-from models.wilayah import Kelurahan
+from models.warga import Warga
+from models.wilayah import Kecamatan, Kelurahan
 from schemas.tps_schema import TPSCreate, TPSResponse, TPSUpdate
 from services.tps_service import (
     get_active_public_tps,
     get_active_public_tps_with_coords,
 )
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 router = APIRouter(prefix="/tps", tags=["TPS Management"])
@@ -26,6 +30,114 @@ def get_public_tps(db: Session = Depends(get_db)):
     """
     tps_list = get_active_public_tps_with_coords(db)
     return tps_list
+
+
+@router.get("/warga")
+def get_warga_tps_capacity(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user_from_token),
+):
+    """Return active TPS in the authenticated resident's district and approved capacity only."""
+    if current_user.get("role") != "warga":
+        raise HTTPException(status_code=403, detail="Akses khusus Warga")
+
+    warga = db.query(Warga).filter(Warga.id == current_user["id"]).first()
+    if not warga:
+        raise HTTPException(status_code=404, detail="Profil warga tidak ditemukan")
+
+    kecamatan = (warga.kecamatan or "").strip()
+    kelurahan = (warga.kelurahan or "").strip()
+    if not kecamatan or not kelurahan:
+        raise HTTPException(status_code=422, detail="Lengkapi kecamatan dan kelurahan pada profil warga")
+
+    valid_kecamatan = db.query(Kecamatan.id).filter(
+        func.lower(func.trim(Kecamatan.nama)) == kecamatan.lower()
+    ).first()
+    valid_kelurahan = db.query(Kelurahan.id).filter(
+        func.lower(func.trim(Kelurahan.nama)) == kelurahan.lower(),
+        func.lower(func.trim(Kelurahan.kecamatan)) == kecamatan.lower(),
+    ).first()
+    if not valid_kecamatan or not valid_kelurahan:
+        raise HTTPException(status_code=422, detail="Wilayah pada profil warga tidak ditemukan di data wilayah")
+
+    latest_approved_report_id = (
+        select(TPSMonitoringReport.id)
+        .where(
+            TPSMonitoringReport.tps_id == TPS.id,
+            TPSMonitoringReport.status_verifikasi == "Disetujui",
+        )
+        .order_by(
+            TPSMonitoringReport.waktu_monitoring.desc(),
+            TPSMonitoringReport.id.desc(),
+        )
+        .limit(1)
+        .correlate(TPS)
+        .scalar_subquery()
+    )
+    kelurahan_names = (
+        select(func.group_concat(func.distinct(Kelurahan.nama)))
+        .select_from(TPSKelurahan)
+        .join(Kelurahan, Kelurahan.id == TPSKelurahan.kelurahan_id)
+        .where(TPSKelurahan.tps_id == TPS.id)
+        .correlate(TPS)
+        .scalar_subquery()
+    )
+    query = (
+        db.query(TPS, TPSMonitoringReport, kelurahan_names.label("kelurahan_list"))
+        .outerjoin(
+            TPSMonitoringReport,
+            TPSMonitoringReport.id == latest_approved_report_id,
+        )
+        .filter(
+            TPS.status == "Aktif",
+            func.lower(func.trim(TPS.kecamatan)) == kecamatan.lower(),
+        )
+        .order_by(TPS.nama)
+    )
+
+    tps_data = []
+    for tps, report, kelurahan_list in query.all():
+        percentage = float(report.persentase_kapasitas) if report else None
+        remaining_percentage = (
+            round(max(0.0, 100.0 - percentage), 2)
+            if percentage is not None
+            else None
+        )
+        capacity_status = None
+        if percentage is not None:
+            capacity_status = (
+                "Aman" if percentage <= 60
+                else "Waspada" if percentage < 80
+                else "Kritis"
+            )
+
+        tps_data.append({
+            "id": tps.id,
+            "nama": tps.nama,
+            "nama_lama": tps.nama_lama,
+            "lokasi": tps.lokasi,
+            "kecamatan": tps.kecamatan,
+            "wilayah_kota": tps.wilayah_kota,
+            "kelurahan_list": kelurahan_list.split(",") if kelurahan_list else [],
+            "latitude": float(tps.latitude) if tps.latitude is not None else None,
+            "longitude": float(tps.longitude) if tps.longitude is not None else None,
+            "jenis_tps": tps.jenis_tps,
+            "jumlah_container": tps.jumlah_container,
+            "daya_tampung_m3": float(tps.daya_tampung_m3) if tps.daya_tampung_m3 is not None else None,
+            "status": tps.status,
+            "persentase_kapasitas": percentage,
+            "persentase_tersisa": remaining_percentage,
+            "volume_aktual_m3": float(report.volume_aktual_m3) if report else None,
+            "waktu_monitoring_terakhir": report.waktu_monitoring.isoformat() if report else None,
+            "waktu_verifikasi_terakhir": report.waktu_verifikasi.isoformat() if report and report.waktu_verifikasi else None,
+            "status_kapasitas": capacity_status,
+            "ada_monitoring_terverifikasi": report is not None,
+        })
+
+    return {
+        "wilayah_warga": {"kecamatan": kecamatan, "kelurahan": kelurahan},
+        "tps": tps_data,
+    }
 
 
 @router.get("/")
@@ -51,7 +163,15 @@ def list_tps(
     - status: filter berdasarkan status (Aktif/Tidak Aktif)
     - min_kapasitas, max_kapasitas: filter berdasarkan daya_tampung_m3
     """
-    query = db.query(TPS)
+    kelurahan_names = (
+        select(func.group_concat(func.distinct(Kelurahan.nama)))
+        .select_from(TPSKelurahan)
+        .join(Kelurahan, Kelurahan.id == TPSKelurahan.kelurahan_id)
+        .where(TPSKelurahan.tps_id == TPS.id)
+        .correlate(TPS)
+        .scalar_subquery()
+    )
+    query = db.query(TPS, kelurahan_names.label("kelurahan"))
 
     if search:
         search_pattern = f"%{search}%"
@@ -96,6 +216,7 @@ def list_tps(
             "lokasi": tps.lokasi,
             "kecamatan": tps.kecamatan,
             "wilayah_kota": tps.wilayah_kota,
+            "kelurahan": kelurahan_names,
             "latitude": str(tps.latitude) if tps.latitude else None,
             "longitude": str(tps.longitude) if tps.longitude else None,
             "jenis_tps": tps.jenis_tps,
@@ -108,7 +229,7 @@ def list_tps(
             "tanggal_update": tps.tanggal_update,
             "catatan": tps.catatan,
         }
-        for tps in results
+        for tps, kelurahan_names in results
     ]
 
 

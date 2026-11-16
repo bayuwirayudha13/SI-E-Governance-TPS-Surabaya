@@ -1,0 +1,221 @@
+.monitoring-verification {
+  padding: 24px;
+  color: #0f172a;
+}
+
+.monitoring-verification__header,
+.monitoring-verification__title,
+.monitoring-verification__actions > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.monitoring-verification__header {
+  margin-bottom: 20px;
+}
+
+.monitoring-verification__header h2,
+.monitoring-verification__title h3 {
+  margin: 0;
+}
+
+.monitoring-verification__header p {
+  margin: 6px 0 0;
+  color: #64748b;
+}
+
+.monitoring-verification__header button,
+.monitoring-verification__actions button {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.monitoring-verification__header button {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.monitoring-verification__header button:disabled,
+.monitoring-verification__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.monitoring-verification__alert,
+.monitoring-verification__empty {
+  padding: 14px 16px;
+  border-radius: 10px;
+  margin: 12px 0;
+}
+
+.monitoring-verification__alert.is-error {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.monitoring-verification__alert.is-success {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.monitoring-verification__empty {
+  text-align: center;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.monitoring-verification__list {
+  display: grid;
+  gap: 16px;
+}
+
+.monitoring-verification__card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px minmax(220px, 280px);
+  gap: 20px;
+  align-items: start;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.monitoring-verification__title {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.monitoring-verification__title span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #92400e;
+  background: #fef3c7;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.monitoring-verification__details dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0 0;
+}
+
+.monitoring-verification__details dl div {
+  min-width: 0;
+}
+
+.monitoring-verification__details dt,
+.monitoring-verification__actions label {
+  margin-bottom: 4px;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.monitoring-verification__details dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.monitoring-verification__notes {
+  margin: 16px 0 0;
+  color: #475569;
+  white-space: pre-wrap;
+}
+
+.monitoring-verification__photo,
+.monitoring-verification__no-photo {
+  display: flex;
+  min-height: 150px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f1f5f9;
+  color: #475569;
+  text-align: center;
+  text-decoration: none;
+}
+
+.monitoring-verification__photo img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+}
+
+.monitoring-verification__photo span {
+  padding-bottom: 8px;
+  color: #166534;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.monitoring-verification__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.monitoring-verification__actions textarea {
+  width: 100%;
+  resize: vertical;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px;
+  font: inherit;
+}
+
+.monitoring-verification__actions > div {
+  justify-content: flex-start;
+}
+
+.monitoring-verification__actions .is-approve {
+  color: #fff;
+  background: #15803d;
+}
+
+.monitoring-verification__actions .is-reject {
+  color: #fff;
+  background: #b91c1c;
+}
+
+@media (max-width: 900px) {
+  .monitoring-verification__card {
+    grid-template-columns: minmax(0, 1fr) minmax(170px, 220px);
+  }
+
+  .monitoring-verification__actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .monitoring-verification {
+    padding: 16px;
+  }
+
+  .monitoring-verification__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .monitoring-verification__card {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .monitoring-verification__actions {
+    grid-column: auto;
+  }
+}

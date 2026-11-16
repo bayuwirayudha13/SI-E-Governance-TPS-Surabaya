@@ -64,49 +64,6 @@ export default function App() {
   // Sync hash routing (support #auth, #masuk, #daftar, #admin, #warga, #petugas, #driver)
   // Restore session on mount
   useEffect(() => {
-    if (window.location.search.includes("demo=warga")) {
-      const demoWarga = {
-        id: 12,
-        nama_lengkap: "Raditya",
-        nama: "Raditya",
-        email: "raditya@sipetasan.com",
-        role: "warga",
-        kelurahan: "Tembok Dukuh",
-        kecamatan: "Bubutan",
-        poin: 650,
-      };
-      authService.setSession("demo_token", demoWarga);
-      setCurrentUser(demoWarga);
-      setCurrentPage("warga");
-      window.location.hash = "warga";
-      return;
-    }
-
-    if (
-      window.location.search.includes("demo=petugas-tps") ||
-      window.location.search.includes("demo=tps")
-    ) {
-      const demoPetugasTps = {
-        id: 8,
-        nama_lengkap: "Budi",
-        nama: "Budi",
-        email: "budi@sipetasan.com",
-        role: "petugas_pengangkut",
-        kelurahan: "Sukamaju",
-        wilayah_kelurahan: "Sukamaju",
-        wilayah_kecamatan: "Gubeng",
-        wilayah_kota: "Surabaya",
-      };
-      authService.setSession("demo_token", demoPetugasTps);
-      setCurrentUser(demoPetugasTps);
-      setCurrentPage("petugas-tps");
-      const h = window.location.hash.toLowerCase();
-      if (!h || h === "#beranda" || h === "#landing") {
-        window.location.hash = "petugas-tps";
-      }
-      return;
-    }
-
     if (window.location.search.includes("demo=petugas")) {
       const demoPetugas = {
         id: 5,
@@ -177,20 +134,11 @@ export default function App() {
         hash === "#petugas-kelurahan" ||
         hash === "#dasbor-tps"
       ) {
-        if (!authService.getCurrentUser()) {
-          const demoPetugasTps = {
-            id: 8,
-            nama_lengkap: "Budi",
-            nama: "Budi",
-            email: "budi@sipetasan.com",
-            role: "petugas",
-            kelurahan: "Sukamaju",
-            wilayah_kelurahan: "Sukamaju",
-            wilayah_kecamatan: "Gubeng",
-            wilayah_kota: "Surabaya",
-          };
-          authService.setSession("demo_token", demoPetugasTps);
-          setCurrentUser(demoPetugasTps);
+        const user = authService.getCurrentUser();
+        if (!user || !["petugas_tps", "petugas_kelurahan"].includes(user.role)) {
+          setCurrentPage("auth");
+          window.location.hash = "auth";
+          return;
         }
         setCurrentPage("petugas-tps");
       } else if (

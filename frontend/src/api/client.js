@@ -27,6 +27,10 @@ const resolveApiBaseUrl = () => {
       return currentOrigin;
     }
 
+    if (envIsLocal && pageIsLocal) {
+      return currentOrigin;
+    }
+
     // Quick tunnel Cloudflare sering berubah. Jika hostname halaman sekarang
     // berbeda dengan env tunnel lama, pakai origin halaman aktif agar tidak
     // terkena ERR_NAME_NOT_RESOLVED.
@@ -37,7 +41,7 @@ const resolveApiBaseUrl = () => {
     // Saat buka lokal (localhost/127.0.0.1) tapi env masih menunjuk tunnel lama,
     // arahkan ke backend lokal agar dev tidak gagal resolve DNS.
     if (isTryCloudflareHost(envHost) && pageIsLocal) {
-      return "http://localhost:8000";
+      return currentOrigin;
     }
 
     return parsed.origin;

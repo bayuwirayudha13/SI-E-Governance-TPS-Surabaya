@@ -138,6 +138,15 @@ export default function SearchableSelect({
     setSearchQuery("");
   };
 
+  const handleRemoveValue = (valueToRemove, e) => {
+    e.stopPropagation();
+    const newValues = valueArray.filter((value) => value !== valueToRemove);
+    if (!isControlled) {
+      setSelectedOptions(newValues);
+    }
+    onChange?.(newValues);
+  };
+
   const handleInputChange = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
@@ -171,8 +180,7 @@ export default function SearchableSelect({
               <span key={i} className="searchable-select-tag">
                 {label}
                 <button type="button" className="searchable-select-tag-remove" onClick={(e) => {
-                  e.stopPropagation();
-                  handleSelect(opt);
+                  handleRemoveValue(v, e);
                 }}>×</button>
               </span>
             );

@@ -48,6 +48,27 @@ export const petugasTpsApi = {
     const response = await api.get(`/api/petugas-tps/tps-info/${tpsId}`);
     return response.data;
   },
+
+  getPendingReports: async () => {
+    const response = await api.get("/api/petugas-tps/pending-reports");
+    return response.data;
+  },
+
+  approveReport: async (reportId) => {
+    const response = await api.post(`/api/petugas-tps/monitoring-reports/${reportId}/approve`);
+    return response.data;
+  },
+
+  rejectReport: async (reportId, reason) => {
+    const formData = new FormData();
+    formData.append("alasan_penolakan", reason);
+    const response = await api.post(
+      `/api/petugas-tps/monitoring-reports/${reportId}/reject`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return response.data;
+  },
 };
 
 export default petugasTpsApi;

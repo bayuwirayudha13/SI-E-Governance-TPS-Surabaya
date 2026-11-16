@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { IconBuilding, IconMapPin, IconSearch, IconX, IconCompass } from './common/AppIcons';
+import { IconBuilding, IconMapPin } from './common/AppIcons';
 
 // Tile URL layers (Identical to HeroMap on Landing Page)
 const TILE_URLS = {
@@ -16,15 +16,19 @@ const TILE_URLS = {
 };
 
 const SURABAYA_CENTER = [-7.2650, 112.7450];
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;'
+}[character]));
 
 export default function KelurahanMap({
   tpsList = [],
   selectedTpsId,
   onSelectTps,
-  selectedKelurahan = 'Tembok Dukuh',
-  onSelectKelurahan,
-  allKelurahanList = [],
-  userRegisteredKelurahan = '',
+  selectedKelurahan = '',
   currentKecamatan = ''
 }) {
   const mapContainerRef = useRef(null);
@@ -35,54 +39,9 @@ export default function KelurahanMap({
 
   const [mapType, setMapType] = useState('osm'); // 'osm' | 'satellite'
   const [filterStatus, setFilterStatus] = useState('Semua'); // Occupancy status filters are unavailable without live fill data.
-  const [searchKelInput, setSearchKelInput] = useState('');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [dropdownPlacement, setDropdownPlacement] = useState('left');
-  const dropdownRef = useRef(null);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    if (!isDropdownOpen) return;
-    const handleOutsideClick = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener('click', handleOutsideClick);
-    return () => document.removeEventListener('click', handleOutsideClick);
-  }, [isDropdownOpen]);
-
-  // Compute smart dropdown alignment so it never overflows off-screen
-  useEffect(() => {
-    if (isDropdownOpen && dropdownRef.current) {
-      const rect = dropdownRef.current.getBoundingClientRect();
-      if (window.innerWidth - rect.left < 340) {
-        setDropdownPlacement('right');
-      } else {
-        setDropdownPlacement('left');
-      }
-    }
-  }, [isDropdownOpen]);
-
-  // Occupancy percentages are not provided by the backend yet, so status filters
-  // such as Aman/Waspada/Overload must not classify TPS using fabricated values.
+  // The backend only returns approved occupancy reports.
   const filteredTps = useMemo(() => tpsList, [tpsList]);
-
-  // Filter kelurahan dropdown options based on search input
-  const filteredKelurahanOptions = useMemo(() => {
-    if (!searchKelInput.trim()) return allKelurahanList.slice(0, 35);
-    const q = searchKelInput.toLowerCase();
-    return allKelurahanList.filter(
-      (k) =>
-        k.nama.toLowerCase().includes(q) ||
-        (k.kecamatan && k.kecamatan.toLowerCase().includes(q))
-    ).slice(0, 40);
-  }, [allKelurahanList, searchKelInput]);
-
-  // Active selected TPS object
-  const currentSelectedTps = useMemo(() => {
-    return tpsList.find((t) => t.id === selectedTpsId) || tpsList[0] || null;
-  }, [tpsList, selectedTpsId]);
 
   // Initialize Leaflet Map
   useEffect(() => {
@@ -198,7 +157,13 @@ export default function KelurahanMap({
 
       const isInactive = tps.status === 'Tidak Aktif';
       const badgeClass = 'gray';
-      const pinColor = isInactive ? '#94a3b8' : '#64748b';
+      const pinColor = isInactive || tps.capacity == null
+        ? '#94a3b8'
+        : tps.statusColor === 'green'
+          ? '#16a34a'
+          : tps.statusColor === 'yellow'
+            ? '#f59e0b'
+            : '#ef4444';
 
       // Custom pulsing HTML marker
       const customIcon = L.divIcon({
@@ -219,28 +184,30 @@ export default function KelurahanMap({
       const marker = L.marker([tps.lat, tps.lng], { icon: customIcon });
       markerRefsMap.current[tps.id] = marker;
 
-      // Popup HTML content with real data from Excel
+      const hasVerifiedMonitoring = Number.isFinite(tps.capacity);
+      const monitoredAt = tps.lastMonitoringAt
+        ? new Date(tps.lastMonitoringAt).toLocaleString('id-ID')
+        : null;
       const popupHtml = `
         <div class="osm-popup-container" style="font-family: inherit; min-width: 250px; padding: 2px;">
           <div class="osm-popup-title-row" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
-            <h4 class="osm-popup-title" style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a;">${tps.nama}</h4>
+            <h4 class="osm-popup-title" style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a;">${escapeHtml(tps.nama)}</h4>
             <span class="map-tooltip-badge ${badgeClass}" style="margin: 0; font-size: 0.72rem; padding: 2px 7px; border-radius: 6px; white-space: nowrap;">
               ${isInactive ? 'Nonaktif' : 'Aktif'}
             </span>
           </div>
 
           <div class="osm-popup-details" style="font-size: 0.8rem; color: #475569; display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px;">
-            <p style="margin: 0;"><strong>Lokasi:</strong> ${tps.lokasi}</p>
-            <p style="margin: 0;"><strong>Kecamatan:</strong> ${tps.kecamatan} (${tps.wilayahKota || 'Surabaya'})</p>
-            <p style="margin: 0;"><strong>Kelurahan:</strong> ${tps.kelurahanList && tps.kelurahanList.length > 0 ? tps.kelurahanList.join(', ') : selectedKelurahan}</p>
-            <p style="margin: 0;"><strong>Jenis:</strong> ${tps.jenisTps || 'Jenis belum tersedia'} &bull; ${tps.jumlahContainer || 'Kontainer belum tersedia'}</p>
-            <p style="margin: 0;"><strong>Daya Tampung Maksimum:</strong> ${tps.dayaTampungM3 != null ? `${tps.dayaTampungM3} m&sup3;` : 'Belum ada data'}</p>
-            <p style="margin: 0;"><strong>Jam Operasional:</strong> ${tps.jamOperasional || 'Belum ada data'}</p>
+            <p style="margin: 0;"><strong>Lokasi:</strong> ${escapeHtml(tps.lokasi || 'Belum ada data')}</p>
+            <p style="margin: 0;"><strong>Kecamatan:</strong> ${escapeHtml(tps.kecamatan)} (${escapeHtml(tps.wilayahKota || 'Surabaya')})</p>
+            <p style="margin: 0;"><strong>Kelurahan:</strong> ${escapeHtml(tps.kelurahanList?.join(', ') || selectedKelurahan || 'Belum ada data')}</p>
+            <p style="margin: 0;"><strong>Jenis:</strong> ${escapeHtml(tps.jenisTps || 'Belum ada data')} &bull; ${escapeHtml(tps.jumlahContainer || 'Kontainer belum tersedia')}</p>
+            <p style="margin: 0;"><strong>Daya Tampung Maksimum:</strong> ${tps.dayaTampungM3 != null ? `${escapeHtml(tps.dayaTampungM3)} m&sup3;` : 'Belum ada data'}</p>
+            <p style="margin: 0;"><strong>Kapasitas terisi:</strong> ${hasVerifiedMonitoring ? `${escapeHtml(tps.capacity)}%` : 'Belum ada laporan terverifikasi'}</p>
+            <p style="margin: 0;"><strong>Kapasitas tersisa:</strong> ${tps.remainingPercent != null ? `${escapeHtml(tps.remainingPercent)}%` : 'Belum ada laporan terverifikasi'}</p>
+            <p style="margin: 0;"><strong>Volume aktual:</strong> ${tps.volumeActualM3 != null ? `${escapeHtml(tps.volumeActualM3)} m&sup3;` : 'Belum ada laporan terverifikasi'}</p>
+            <p style="margin: 0;"><strong>Monitoring terakhir:</strong> ${escapeHtml(monitoredAt || 'Belum ada laporan terverifikasi')}</p>
           </div>
-
-          <p style="margin: 0 0 10px; font-size: 0.72rem; color: #64748b;">
-            Persentase keterisian belum tersedia.
-          </p>
 
           <div style="display: flex; gap: 6px;">
             <button 
@@ -358,11 +325,10 @@ export default function KelurahanMap({
             <span style={{ display: 'inline-flex', alignItems: 'center', color: '#16a34a' }}><IconBuilding size={22} /></span>
             <div>
               <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Wilayah Kelurahan
+                Wilayah Kecamatan
               </div>
               <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
-                Kelurahan {selectedKelurahan}
-                {currentKecamatan ? ` (${currentKecamatan})` : ''}
+                {currentKecamatan || 'Wilayah belum tersedia'}
               </div>
             </div>
           </div>
@@ -389,154 +355,6 @@ export default function KelurahanMap({
           </div>
         </div>
 
-        {/* Kelurahan Switcher Dropdown & Search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative', flexWrap: 'wrap' }}>
-          {userRegisteredKelurahan && userRegisteredKelurahan.toLowerCase() !== selectedKelurahan.toLowerCase() && (
-            <button
-              type="button"
-              onClick={() => onSelectKelurahan && onSelectKelurahan(userRegisteredKelurahan)}
-              style={{
-                background: '#f1f5f9',
-                color: '#0f172a',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '6px 12px',
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-              title="Kembali ke Kelurahan tempat tinggal Anda"
-            >
-              Kelurahan Saya ({userRegisteredKelurahan})
-            </button>
-          )}
-
-          <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block' }}>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsDropdownOpen((prev) => !prev);
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: '#ffffff',
-                border: '1.5px solid #0284c7',
-                color: '#0284c7',
-                borderRadius: '8px',
-                padding: '7px 14px',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 1px 3px rgba(2,132,199,0.1)'
-              }}
-            >
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><IconSearch size={14} /> Ganti Kelurahan</span>
-              <span style={{ fontSize: '0.7rem' }}>{isDropdownOpen ? '▲' : '▼'}</span>
-            </button>
-
-            {isDropdownOpen && (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 6px)',
-                  ...(dropdownPlacement === 'right' ? { right: 0 } : { left: 0 }),
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '14px',
-                  boxShadow: '0 14px 35px rgba(15, 23, 42, 0.22)',
-                  width: '320px',
-                  maxWidth: 'min(340px, calc(100vw - 40px))',
-                  maxHeight: '340px',
-                  overflowY: 'auto',
-                  zIndex: 9999,
-                  padding: '10px'
-                }}
-              >
-                <div style={{ position: 'relative', marginBottom: '8px' }}>
-                  <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', display: 'flex', alignItems: 'center' }}><IconSearch size={14} /></span>
-                  <input
-                    type="text"
-                    placeholder="Cari kelurahan di Surabaya..."
-                    value={searchKelInput}
-                    onChange={(e) => setSearchKelInput(e.target.value)}
-                    autoFocus
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px 8px 30px',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '0.82rem',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                      background: '#f8fafc'
-                    }}
-                  />
-                  {searchKelInput && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchKelInput('')}
-                      style={{
-                        position: 'absolute',
-                        right: '8px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        color: '#94a3b8',
-                        cursor: 'pointer',
-                        fontSize: '0.85rem'
-                      }}
-                     style={{ display: 'flex', alignItems: 'center' }}>
-                      <IconX size={14} />
-                    </button>
-                  )}
-                </div>
-                <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, padding: '4px 8px' }}>
-                  PILIH DARI {allKelurahanList.length} KELURAHAN SURABAYA:
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  {filteredKelurahanOptions.map((k) => (
-                    <button
-                      key={k.id || k.nama}
-                      type="button"
-                      onClick={() => {
-                        if (onSelectKelurahan) onSelectKelurahan(k.nama);
-                        setIsDropdownOpen(false);
-                        setSearchKelInput('');
-                      }}
-                      style={{
-                        textAlign: 'left',
-                        background: k.nama.toLowerCase() === selectedKelurahan.toLowerCase() ? '#f0fdf4' : 'transparent',
-                        color: k.nama.toLowerCase() === selectedKelurahan.toLowerCase() ? '#166534' : '#1e293b',
-                        fontWeight: k.nama.toLowerCase() === selectedKelurahan.toLowerCase() ? 700 : 500,
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '8px 10px',
-                        fontSize: '0.82rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <span>Kel. {k.nama}</span>
-                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Kec. {k.kecamatan}</span>
-                    </button>
-                  ))}
-                  {filteredKelurahanOptions.length === 0 && (
-                    <div style={{ padding: '12px', fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center' }}>
-                      Kelurahan tidak ditemukan
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* Main Interactive Map Canvas Wrapper */}

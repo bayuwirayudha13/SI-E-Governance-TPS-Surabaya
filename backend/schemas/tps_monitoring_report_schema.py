@@ -31,7 +31,9 @@ class TPSMonitoringReportUpdate(BaseModel):
 class TPSMonitoringReportResponse(BaseModel):
     id: int
     petugas_id: int
+    petugas_nama: Optional[str] = None
     tps_id: int
+    tps_nama: Optional[str] = None
     volume_aktual_m3: float
     persentase_kapasitas: float
     foto_url: Optional[str] = None

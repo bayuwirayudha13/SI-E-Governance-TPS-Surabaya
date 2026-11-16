@@ -3,6 +3,7 @@ import { API_BASE_URL } from "../api/client";
 import AdminChat from "./AdminChat";
 import AdminTpsMap from "./AdminTpsMap";
 import TpsDetailModal from "./TpsDetailModal";
+import MonitoringVerificationPanel from "./MonitoringVerificationPanel";
 import { 
   IconTruck, 
   IconTrendingUp, 
@@ -837,6 +838,16 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
 
             <button
               type="button"
+              className={`admin-nav-item ${activeMenu === "monitoring-tps" ? "active" : ""}`}
+              onClick={() => setActiveMenu("monitoring-tps")}
+              title="Verifikasi Monitoring TPS"
+            >
+              <IconCheck size={18} />
+              {!isSidebarCollapsed && <span>Verifikasi Monitoring TPS</span>}
+            </button>
+
+            <button
+              type="button"
               className={`admin-nav-item ${activeMenu === "warga" ? "active" : ""}`}
               onClick={() => setActiveMenu("warga")}
               title="Kelola Warga"
@@ -979,6 +990,7 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
             <h1 className="admin-page-title">
               {activeMenu === "dashboard" && "Dashboard Admin"}
               {activeMenu === "peta-tps" && "Peta Lokasi TPS"}
+              {activeMenu === "monitoring-tps" && "Verifikasi Monitoring TPS"}
               {activeMenu === "warga" && "Kelola Data Warga"}
               {activeMenu === "jadwal" && "Jadwal Pengambilan"}
               {activeMenu === "chat" && "Chat ke Warga"}
@@ -1014,6 +1026,8 @@ export default function AdminPanel({ onLogout, currentUser: userFromProp }) {
             ✕ {error}
           </div>
         )}
+
+        {activeMenu === "monitoring-tps" && <MonitoringVerificationPanel />}
 
         {/* DASHBOARD EKSEKUTIF ADMIN */}
         {activeMenu === "dashboard" &&

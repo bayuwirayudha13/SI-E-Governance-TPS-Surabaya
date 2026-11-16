@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { fetchAllTps, extractRegionsFromTps } from "../api/tpsStats";
-import { API_BASE_URL } from "../api/client";
+import { api, API_BASE_URL } from "../api/client";
+import MonitoringVerificationPanel from "./MonitoringVerificationPanel";
 import TpsMapSuperadmin from "./TpsMapSuperadmin";
 import SearchableSelect from "./common/SearchableSelect";
 import "./common/SearchableSelect.css";
@@ -19,6 +19,12 @@ import {
 } from "./common/AppIcons";
 
 const API_BASE = API_BASE_URL;
+const getRequestErrorMessage = (error) => {
+  if (error instanceof TypeError && error.message === "Failed to fetch") {
+    return `Tidak dapat menghubungi backend di ${API_BASE}. Pastikan server API berjalan.`;
+  }
+  return error?.response?.data?.detail || error?.message || "Permintaan gagal.";
+};
 
 export default function SuperadminPanel({
   onLogout,
@@ -104,6 +110,9 @@ export default function SuperadminPanel({
   const [jadwalFilterKec, setJadwalFilterKec] = useState("");
   const [jadwalFilterKel, setJadwalFilterKel] = useState("");
   const [tpsOptions, setTpsOptions] = useState([]);
+  const [tpsOptionsLoading, setTpsOptionsLoading] = useState(false);
+  const [tpsOptionsError, setTpsOptionsError] = useState("");
+  const [tpsOptionsReload, setTpsOptionsReload] = useState(0);
   const [newUserFotoFile, setNewUserFotoFile] = useState(null);
   const [newUserFotoPreview, setNewUserFotoPreview] = useState("");
   const [editFotoFile, setEditFotoFile] = useState(null);
@@ -195,20 +204,7 @@ export default function SuperadminPanel({
     })();
   }, []);
 
-  // Fetch TPS data from API
-  useEffect(() => {
-    const loadTpsData = async () => {
-      try {
-        const data = await fetchAllTps();
-        setTpsList(data);
-      } catch (err) {
-        console.error("Failed to load TPS data:", err);
-        setTpsList([]);
-      }
-    };
-
-    loadTpsData();
-  }, []);
+  // Fetch TPS data from API - handled by loadTps() in initial useEffect
 
   // load kelurahan saat kecamatan newUser / editUser berubah (dropdown tingkat 2)
   useEffect(() => {
@@ -239,39 +235,46 @@ export default function SuperadminPanel({
     const kec = editUser
       ? editUser.wilayah_kecamatan
       : newUser.wilayah_kecamatan;
-    const kel = editUser
-      ? editUser.wilayah_kelurahan
-      : newUser.wilayah_kelurahan;
     const role = editUser ? editUser.role : newUser.role;
+    let active = true;
+    setTpsOptions([]);
+    setTpsOptionsError("");
 
     if (role !== "petugas_tps" || !kec) {
-      setTpsOptions([]);
-      return;
+      setTpsOptionsLoading(false);
+      return () => {
+        active = false;
+      };
     }
 
+    setTpsOptionsLoading(true);
     (async () => {
       try {
-        let url = `${API_BASE}/api/tps/?kecamatan=${encodeURIComponent(kec)}`;
-        if (kel) {
-          url += `&kelurahan=${encodeURIComponent(kel)}`;
-        }
-        const r = await fetch(url, {
-          headers: { Authorization: `Bearer ${getToken()}` },
+        const response = await api.get("/api/tps/", {
+          params: { kecamatan: kec, status: "Aktif" },
         });
-        if (r.ok) {
-          const d = await r.json();
-          setTpsOptions((d || []).map((x) => ({
-            id: x.id,
-            nama: x.nama,
-            kecamatan: x.kecamatan,
-            kelurahan: x.kelurahan,
+        if (!Array.isArray(response.data)) {
+          throw new Error("Format daftar TPS dari server tidak valid.");
+        }
+        if (active) {
+          setTpsOptions(response.data.map((tps) => ({
+            ...tps,
+            id: Number(tps.id),
           })));
         }
-      } catch {
-        setTpsOptions([]);
+      } catch (requestError) {
+        if (active) {
+          setTpsOptions([]);
+          setTpsOptionsError(getRequestErrorMessage(requestError));
+        }
+      } finally {
+        if (active) setTpsOptionsLoading(false);
       }
     })();
-  }, [newUser.wilayah_kecamatan, newUser.wilayah_kelurahan, editUser?.wilayah_kecamatan, editUser?.wilayah_kelurahan, editUser?.role, newUser.role]);
+    return () => {
+      active = false;
+    };
+  }, [newUser.wilayah_kecamatan, editUser?.wilayah_kecamatan, editUser?.role, newUser.role, tpsOptionsReload]);
 
   // Fetch kelurahan options untuk modal jadwal saat kecamatan berubah
   useEffect(() => {
@@ -338,7 +341,9 @@ export default function SuperadminPanel({
     return targetIndex < todayIndex;
   };
 
-  const getToken = () => sessionStorage.getItem("access_token");
+  const getToken = () =>
+    sessionStorage.getItem("access_token") ||
+    localStorage.getItem("access_token");
 
   const loadUsers = async () => {
     try {
@@ -488,16 +493,28 @@ export default function SuperadminPanel({
 
   const loadTps = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/tps/public`);
+      const token = getToken();
+      const response = await fetch(`${API_BASE}/api/tps/`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setTpsList(data);
       } else {
         const txt = await response.text();
         console.error("Load TPS failed:", response.status, txt);
-        setTpsList([]);
-        setError("Gagal memuat data TPS dari server.");
-        setTimeout(() => setError(""), 4000);
+        // Fallback to public if admin fails
+        const pubRes = await fetch(`${API_BASE}/api/tps/public`);
+        if (pubRes.ok) {
+          const pubData = await pubRes.json();
+          setTpsList(pubData);
+        } else {
+          setTpsList([]);
+          setError("Gagal memuat data TPS dari server.");
+          setTimeout(() => setError(""), 4000);
+        }
       }
     } catch (err) {
       console.error("Load TPS error:", err);
@@ -575,12 +592,15 @@ export default function SuperadminPanel({
 
     // Kelurahan filter
     if (tpsFilterKelurahan) {
-      result = result.filter(
-        (t) =>
-          t.kelurahans &&
-          Array.isArray(t.kelurahans) &&
-          t.kelurahans.some((k) => k.nama === tpsFilterKelurahan),
-      );
+      result = result.filter((t) => {
+        if (t.kelurahan && typeof t.kelurahan === "string") {
+          return t.kelurahan.split(",").some(k => k.trim() === tpsFilterKelurahan);
+        }
+        if (t.kelurahans && Array.isArray(t.kelurahans)) {
+          return t.kelurahans.some((k) => (k.nama || k) === tpsFilterKelurahan);
+        }
+        return t.lokasi === tpsFilterKelurahan;
+      });
     }
 
     // Status filter
@@ -742,7 +762,7 @@ export default function SuperadminPanel({
       setShowAddTpsModal(false);
       loadTps();
     } catch (err) {
-      setError(err.message);
+      setError(getRequestErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -846,6 +866,7 @@ export default function SuperadminPanel({
           wilayah_kecamatan: newUser.wilayah_kecamatan || null,
           wilayah_kelurahan: newUser.wilayah_kelurahan || null,
           wilayah_kota: "Surabaya",
+          tps_ids: newUser.role === "petugas_tps" ? newUser.tps_ids || [] : [],
         }),
       });
       let txt = await response.text();
@@ -868,28 +889,6 @@ export default function SuperadminPanel({
           console.warn(fe);
         }
       }
-      // Assign TPS if role is petugas_tps
-      if (uid && newUser.role === "petugas_tps" && newUser.tps_ids && newUser.tps_ids.length > 0) {
-        try {
-          const assignResponse = await fetch(`${API_BASE}/api/petugas-tps/assignments`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              user_id: uid,
-              tps_ids: newUser.tps_ids,
-            }),
-          });
-          if (!assignResponse.ok) {
-            const errTxt = await assignResponse.text();
-            console.warn("Failed to assign TPS:", errTxt);
-          }
-        } catch (assignErr) {
-          console.warn("Failed to assign TPS:", assignErr);
-        }
-      }
       setSuccess("User berhasil ditambahkan");
       setNewUser({
         nama_lengkap: "",
@@ -906,7 +905,7 @@ export default function SuperadminPanel({
       setShowAddUserModal(false);
       loadUsers();
     } catch (err) {
-      setError(err.message);
+    setError(getRequestErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -916,14 +915,15 @@ export default function SuperadminPanel({
     let tps_ids = [];
     if (u.role === "petugas_tps") {
       try {
-        const r = await fetch(`${API_BASE}/api/petugas-tps/assignments/${u.id}`, {
-          headers: { Authorization: `Bearer ${getToken()}` },
-        });
-        if (r.ok) {
-          const data = await r.json();
-          tps_ids = data.map(a => a.tps_id);
+        const response = await api.get(`/api/petugas-tps/assignments/user/${u.id}`);
+        if (Array.isArray(response.data)) {
+          tps_ids = response.data
+            .map((assignment) => Number(assignment.tps_id))
+            .filter(Number.isSafeInteger);
         }
-      } catch {}
+      } catch (requestError) {
+        setError(getRequestErrorMessage(requestError));
+      }
     }
     setEditUser({
       id: u.id,
@@ -962,6 +962,7 @@ export default function SuperadminPanel({
           wilayah_kelurahan: editUser.wilayah_kelurahan || "",
           wilayah_kota: "Surabaya",
           foto_url: fotoUrl,
+          tps_ids: editUser.role === "petugas_tps" ? editUser.tps_ids || [] : [],
         }),
       });
       let txt = await r.text();
@@ -972,59 +973,13 @@ export default function SuperadminPanel({
         } catch {}
         throw new Error(m);
       }
-      // Update TPS assignments if role is petugas_tps
-      if (editUser.role === "petugas_tps") {
-        try {
-          // Get current assignments
-          const currentAssignmentsResponse = await fetch(`${API_BASE}/api/petugas-tps/assignments/${editUser.id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          let currentTpsIds = [];
-          if (currentAssignmentsResponse.ok) {
-            const data = await currentAssignmentsResponse.json();
-            currentTpsIds = data.map(a => a.tps_id);
-          }
-          
-          const newTpsIds = editUser.tps_ids || [];
-          
-          // Find TPS to remove
-          const toRemove = currentTpsIds.filter(id => !newTpsIds.includes(id));
-          // Find TPS to add
-          const toAdd = newTpsIds.filter(id => !currentTpsIds.includes(id));
-          
-          // Remove old assignments
-          for (const tpsId of toRemove) {
-            await fetch(`${API_BASE}/api/petugas-tps/assignments/${editUser.id}/${tpsId}`, {
-              method: "DELETE",
-              headers: { Authorization: `Bearer ${token}` },
-            });
-          }
-          
-          // Add new assignments
-          if (toAdd.length > 0) {
-            await fetch(`${API_BASE}/api/petugas-tps/assignments`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                user_id: editUser.id,
-                tps_ids: toAdd,
-              }),
-            });
-          }
-        } catch (assignErr) {
-          console.warn("Failed to update TPS assignments:", assignErr);
-        }
-      }
       setSuccess("Petugas berhasil diperbarui");
       setEditUser(null);
       setEditFotoFile(null);
       setEditFotoPreview("");
       loadUsers();
     } catch (err) {
-      setError(err.message);
+      setError(getRequestErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -1151,7 +1106,7 @@ export default function SuperadminPanel({
       setSuccess("Pengguna berhasil dihapus");
       loadUsers();
     } catch (err) {
-      setError(err.message);
+      setError(getRequestErrorMessage(err));
     }
   };
 
@@ -1210,7 +1165,7 @@ export default function SuperadminPanel({
       setSettings({ ...settings, current_password: "", new_password: "" });
       loadSettings();
     } catch (err) {
-      setError(err.message);
+      setError(getRequestErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -1488,6 +1443,18 @@ export default function SuperadminPanel({
 
             <button
               type="button"
+              className={`drawer-item ${activeMenu === "monitoring-tps" ? "active" : ""}`}
+              onClick={() => {
+                setActiveMenu("monitoring-tps");
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon"><IconCheck size={19} /></span>
+              <span className="drawer-label">Verifikasi Monitoring TPS</span>
+            </button>
+
+            <button
+              type="button"
               className={`drawer-item ${activeMenu === "jadwal" ? "active" : ""}`}
               onClick={() => {
                 setActiveMenu("jadwal");
@@ -1742,6 +1709,16 @@ export default function SuperadminPanel({
 
             <button
               type="button"
+              className={`admin-nav-item ${activeMenu === "monitoring-tps" ? "active" : ""}`}
+              onClick={() => setActiveMenu("monitoring-tps")}
+              title="Verifikasi Monitoring TPS"
+            >
+              <IconCheck size={18} />
+              {!isSidebarCollapsed && <span>Verifikasi Monitoring TPS</span>}
+            </button>
+
+            <button
+              type="button"
               className={`admin-nav-item ${activeMenu === "jadwal" ? "active" : ""}`}
               onClick={() => setActiveMenu("jadwal")}
               title="Jadwal Pengambilan"
@@ -1848,6 +1825,7 @@ export default function SuperadminPanel({
               {activeMenu === "pengguna" && "Data Pengguna & Warga"}
               {activeMenu === "petugas" && "Kelola Petugas & Admin"}
               {activeMenu === "tps" && "Kelola TPS"}
+              {activeMenu === "monitoring-tps" && "Verifikasi Monitoring TPS"}
               {activeMenu === "jadwal" && "Jadwal Pengambilan Sampah"}
               {activeMenu === "pengaturan" && "Pengaturan Website"}
             </h1>
@@ -1881,6 +1859,8 @@ export default function SuperadminPanel({
             ✕ {error}
           </div>
         )}
+
+        {activeMenu === "monitoring-tps" && <MonitoringVerificationPanel />}
 
         {/* DASHBOARD EKSEKUTIF SUPERADMIN */}
         {activeMenu === "dashboard" &&
@@ -3349,8 +3329,8 @@ export default function SuperadminPanel({
                             >
                               <option value="">Semua Kecamatan</option>
                               {kecamatanOptions.map((k) => (
-                                <option key={k} value={k}>
-                                  {k}
+                                <option key={k.id || k.nama || k} value={k.nama || k}>
+                                  {k.nama || k}
                                 </option>
                               ))}
                             </select>
@@ -4074,17 +4054,30 @@ export default function SuperadminPanel({
                     onChange={(value) =>
                       setNewUser({ ...newUser, tps_ids: value || [] })
                     }
-                    options={tpsOptions.length > 0 ? tpsOptions : tpsList}
-                    getOptionLabel={(opt) => `${opt.nama} (${opt.kecamatan}${opt.kelurahan ? `, ${opt.kelurahan}` : ''})`}
-                    getOptionValue={(opt) => opt.id}
+                    options={tpsOptions}
+                    getOptionLabel={(opt) => `${opt.nama} (${opt.kecamatan}${opt.kelurahan ? `, ${opt.kelurahan}` : ', kelurahan belum tercatat'})`}
+                    getOptionValue={(opt) => Number(opt.id)}
                     getOptionDescription={(opt) => opt.kecamatan}
                     placeholder="— Pilih TPS —"
                     searchPlaceholder="Cari TPS..."
                     multiple
-                    disabled={!newUser.wilayah_kecamatan}
+                    disabled={!newUser.wilayah_kecamatan || tpsOptionsLoading || Boolean(tpsOptionsError) || tpsOptions.length === 0}
                   />
                   <small style={{ color: '#64748b', fontSize: '0.8rem' }}>
-                    {newUser.wilayah_kecamatan ? "Pilih satu atau beberapa TPS" : "Pilih Kecamatan terlebih dahulu untuk menampilkan daftar TPS"}
+                    {tpsOptionsLoading
+                      ? "Memuat daftar TPS..."
+                      : tpsOptionsError
+                        ? <>
+                            {tpsOptionsError}{" "}
+                            <button type="button" onClick={() => setTpsOptionsReload((value) => value + 1)}>
+                              Coba lagi
+                            </button>
+                          </>
+                        : !newUser.wilayah_kecamatan
+                          ? "Pilih Kecamatan terlebih dahulu untuk menampilkan daftar TPS"
+                          : tpsOptions.length === 0
+                            ? "Tidak ada TPS aktif di kecamatan ini."
+                            : "Pilih satu atau beberapa TPS"}
                   </small>
                 </div>
               )}
@@ -4112,7 +4105,10 @@ export default function SuperadminPanel({
                 <button
                   type="submit"
                   className="btn-add-primary"
-                  disabled={isLoading}
+                  disabled={isLoading || (newUser.role === "petugas_tps" && (
+                    tpsOptionsLoading || Boolean(tpsOptionsError) ||
+                    tpsOptions.length === 0 || !newUser.tps_ids?.length
+                  ))}
                 >
                   Simpan
                 </button>
@@ -4283,17 +4279,30 @@ export default function SuperadminPanel({
                     onChange={(value) =>
                       setEditUser({ ...editUser, tps_ids: value || [] })
                     }
-                    options={tpsOptions.length > 0 ? tpsOptions : tpsList}
-                    getOptionLabel={(opt) => `${opt.nama} (${opt.kecamatan}${opt.kelurahan ? `, ${opt.kelurahan}` : ''})`}
-                    getOptionValue={(opt) => opt.id}
+                    options={tpsOptions}
+                    getOptionLabel={(opt) => `${opt.nama} (${opt.kecamatan}${opt.kelurahan ? `, ${opt.kelurahan}` : ', kelurahan belum tercatat'})`}
+                    getOptionValue={(opt) => Number(opt.id)}
                     getOptionDescription={(opt) => opt.kecamatan}
                     placeholder="— Pilih TPS —"
                     searchPlaceholder="Cari TPS..."
                     multiple
-                    disabled={!editUser.wilayah_kecamatan}
+                    disabled={!editUser.wilayah_kecamatan || tpsOptionsLoading || Boolean(tpsOptionsError) || tpsOptions.length === 0}
                   />
                   <small style={{ color: '#64748b', fontSize: '0.8rem' }}>
-                    {editUser.wilayah_kecamatan ? "Pilih satu atau beberapa TPS" : "Pilih Kecamatan terlebih dahulu untuk menampilkan daftar TPS"}
+                    {tpsOptionsLoading
+                      ? "Memuat daftar TPS..."
+                      : tpsOptionsError
+                        ? <>
+                            {tpsOptionsError}{" "}
+                            <button type="button" onClick={() => setTpsOptionsReload((value) => value + 1)}>
+                              Coba lagi
+                            </button>
+                          </>
+                        : !editUser.wilayah_kecamatan
+                          ? "Pilih Kecamatan terlebih dahulu untuk menampilkan daftar TPS"
+                          : tpsOptions.length === 0
+                            ? "Tidak ada TPS aktif di kecamatan ini."
+                            : "Pilih satu atau beberapa TPS"}
                   </small>
                 </div>
               )}
@@ -4321,7 +4330,10 @@ export default function SuperadminPanel({
                 <button
                   type="submit"
                   className="btn-add-primary"
-                  disabled={isLoading}
+                  disabled={isLoading || (editUser.role === "petugas_tps" && (
+                    tpsOptionsLoading || Boolean(tpsOptionsError) ||
+                    tpsOptions.length === 0 || !editUser.tps_ids?.length
+                  ))}
                 >
                   Simpan
                 </button>

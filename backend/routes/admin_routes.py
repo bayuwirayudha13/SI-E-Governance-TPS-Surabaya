@@ -25,6 +25,11 @@ from schemas.user_schema import (
     PetugasResponse,
     PetugasUpdate,
 )
+from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+from models.wilayah import Kecamatan, Kelurahan
+from services.petugas_tps_assignment_service import validate_petugas_tps_scope
 router = APIRouter(prefix="/admin", tags=["Admin Panel"])
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
@@ -50,6 +55,8 @@ def get_current_user_from_token(
     user = db.query(User).filter(User.email == email).first()
     if not user:
         raise HTTPException(status_code=401, detail="User tidak ditemukan")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="User tidak aktif")
     return user
 
 
@@ -63,6 +70,71 @@ def get_current_superadmin(user: User = Depends(get_current_user_from_token)) ->
     if user.role != "superadmin":
         raise HTTPException(status_code=403, detail="Akses khusus Super Admin")
     return user
+
+
+VALID_USER_ROLES = {
+    "admin",
+    "petugas_pengangkut",
+    "petugas_kelurahan",
+    "driver",
+    "superadmin",
+    "petugas_tps",
+}
+
+
+def validate_user_area_and_tps(db: Session, role: str, kecamatan: Optional[str], kelurahan: Optional[str], tps_ids: list[int]) -> tuple[Optional[str], Optional[str], list[int]]:
+    if not isinstance(role, str):
+        raise HTTPException(status_code=400, detail="Role pengguna tidak valid")
+    if kecamatan is not None and not isinstance(kecamatan, str):
+        raise HTTPException(status_code=400, detail="Kecamatan tugas tidak valid")
+    if kelurahan is not None and not isinstance(kelurahan, str):
+        raise HTTPException(status_code=400, detail="Kelurahan tugas tidak valid")
+    if not isinstance(tps_ids, list) or any(
+        not isinstance(tps_id, int) or isinstance(tps_id, bool) or tps_id <= 0
+        for tps_id in tps_ids
+    ):
+        raise HTTPException(status_code=400, detail="Daftar penugasan TPS tidak valid")
+
+    kecamatan = (kecamatan or "").strip() or None
+    kelurahan = (kelurahan or "").strip() or None
+    tps_ids = list(dict.fromkeys(tps_ids))
+
+    if role not in VALID_USER_ROLES:
+        raise HTTPException(status_code=400, detail="Role pengguna tidak valid")
+    if role == "petugas_tps" and not kecamatan:
+        raise HTTPException(status_code=400, detail="Petugas TPS wajib memiliki kecamatan tugas")
+    if role == "petugas_kelurahan" and (not kecamatan or not kelurahan):
+        raise HTTPException(status_code=400, detail="Petugas Kelurahan wajib memiliki kecamatan dan kelurahan tugas")
+
+    if kecamatan and not db.query(Kecamatan.id).filter(
+        func.lower(func.trim(Kecamatan.nama)) == kecamatan.lower()
+    ).first():
+        raise HTTPException(status_code=400, detail="Kecamatan tidak ditemukan pada data wilayah")
+    if kelurahan and not db.query(Kelurahan.id).filter(
+        func.lower(func.trim(Kelurahan.nama)) == kelurahan.lower(),
+        func.lower(func.trim(Kelurahan.kecamatan)) == (kecamatan or "").lower(),
+    ).first():
+        raise HTTPException(status_code=400, detail="Kelurahan tidak ditemukan pada kecamatan yang dipilih")
+
+    if role == "petugas_tps":
+        try:
+            tps_ids = validate_petugas_tps_scope(db, kecamatan, kelurahan, tps_ids)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    elif tps_ids:
+        raise HTTPException(status_code=400, detail="Penugasan TPS hanya dapat diberikan kepada Petugas TPS")
+
+    return kecamatan, kelurahan, tps_ids
+
+
+def replace_user_tps_assignments(db: Session, user_id: int, tps_ids: list[int]) -> None:
+    db.query(PetugasTPSAssignment).filter(
+        PetugasTPSAssignment.user_id == user_id
+    ).delete(synchronize_session=False)
+    db.add_all(
+        PetugasTPSAssignment(user_id=user_id, tps_id=tps_id)
+        for tps_id in tps_ids
+    )
 
 
 @router.get("/stats")
@@ -138,14 +210,29 @@ def update_user_account(
     u = db.query(User).filter(User.id == user_id).first()
     if not u:
         raise HTTPException(status_code=404, detail="User tidak ditemukan")
+    role = data.get("role", u.role)
+    assigned_ids = [
+        row[0]
+        for row in db.query(PetugasTPSAssignment.tps_id)
+        .filter(PetugasTPSAssignment.user_id == u.id)
+        .all()
+    ]
+    requested_ids = data.get("tps_ids", assigned_ids) or []
+    if role != "petugas_tps":
+        requested_ids = []
+    kecamatan, kelurahan, requested_ids = validate_user_area_and_tps(
+        db,
+        role,
+        data.get("wilayah_kecamatan", u.wilayah_kecamatan),
+        data.get("wilayah_kelurahan", u.wilayah_kelurahan),
+        requested_ids,
+    )
+
     if data.get("nama_lengkap"):
         u.nama_lengkap = data["nama_lengkap"]
-    if data.get("role") in ("admin", "petugas", "petugas_pengangkut", "driver", "superadmin", "petugas_tps"):
-        u.role = data["role"]
-    if "wilayah_kecamatan" in data:
-        u.wilayah_kecamatan = (data["wilayah_kecamatan"] or "").strip() or None
-    if "wilayah_kelurahan" in data:
-        u.wilayah_kelurahan = (data["wilayah_kelurahan"] or "").strip() or None
+    u.role = role
+    u.wilayah_kecamatan = kecamatan
+    u.wilayah_kelurahan = kelurahan
     if "wilayah_kota" in data:
         u.wilayah_kota = (data["wilayah_kota"] or "").strip() or "Surabaya"
     if "foto_url" in data:
@@ -155,21 +242,12 @@ def update_user_account(
     if data.get("password"):
         u.hashed_password = pwd_context.hash(data["password"])
 
-    # Handle TPS assignment for Petugas TPS
-    if u.role == "petugas_tps" and "tps_ids" in data:
-        tps_ids = data.get("tps_ids") or []
-        # Remove existing assignments
-        db.query(PetugasTPSAssignment).filter(
-            PetugasTPSAssignment.user_id == u.id
-        ).delete()
-        # Add new assignments
-        for tps_id in tps_ids:
-            tps = db.query(TPS).filter(TPS.id == tps_id).first()
-            if tps:
-                assignment = PetugasTPSAssignment(user_id=u.id, tps_id=tps_id)
-                db.add(assignment)
-
-    db.commit()
+    replace_user_tps_assignments(db, u.id, requested_ids)
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Gagal menyimpan perubahan pengguna dan penugasan TPS") from exc
     db.refresh(u)
     return {
         "message": "User berhasil diperbarui",
@@ -224,17 +302,28 @@ def update_user_wilayah(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User tidak ditemukan")
-    # optional: validasi kecamatan/kelurahan ada di master wilayah
-    kec = data.get("wilayah_kecamatan")
-    kel = data.get("wilayah_kelurahan")
+    kec = data.get("wilayah_kecamatan", user.wilayah_kecamatan)
+    kel = data.get("wilayah_kelurahan", user.wilayah_kelurahan)
     kota = data.get("wilayah_kota", "Surabaya")
-    if kec is not None:
-        user.wilayah_kecamatan = kec.strip() if kec.strip() else None
-    if kel is not None:
-        user.wilayah_kelurahan = kel.strip() if kel.strip() else None
+    tps_ids = [
+        row[0]
+        for row in db.query(PetugasTPSAssignment.tps_id)
+        .filter(PetugasTPSAssignment.user_id == user.id)
+        .all()
+    ]
+    kec, kel, tps_ids = validate_user_area_and_tps(
+        db, user.role, kec, kel, tps_ids if user.role == "petugas_tps" else []
+    )
+    user.wilayah_kecamatan = kec
+    user.wilayah_kelurahan = kel
     if kota is not None:
         user.wilayah_kota = kota.strip() if kota.strip() else "Surabaya"
-    db.commit()
+    replace_user_tps_assignments(db, user.id, tps_ids)
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Gagal memperbarui wilayah dan penugasan TPS") from exc
     db.refresh(user)
     return {
         "message": "Wilayah kerja petugas diperbarui",
@@ -261,31 +350,35 @@ def create_user_account(
     if existing:
         raise HTTPException(status_code=400, detail="Email sudah terdaftar")
 
+    role = data.get("role", "petugas_pengangkut")
+    kecamatan, kelurahan, tps_ids = validate_user_area_and_tps(
+        db,
+        role,
+        data.get("wilayah_kecamatan"),
+        data.get("wilayah_kelurahan"),
+        data.get("tps_ids") or [],
+    )
     hashed_pw = pwd_context.hash(data.get("password", "password123"))
     new_user = User(
         username=data.get("username", email.split("@")[0]),
         email=email,
         hashed_password=hashed_pw,
         nama_lengkap=data.get("nama_lengkap", "User Si Petasan"),
-        role=data.get("role", "petugas_pengangkut"),
+        role=role,
         is_active=True,
-        wilayah_kecamatan=data.get("wilayah_kecamatan"),
-        wilayah_kelurahan=data.get("wilayah_kelurahan"),
+        wilayah_kecamatan=kecamatan,
+        wilayah_kelurahan=kelurahan,
         wilayah_kota=data.get("wilayah_kota", "Surabaya"),
     )
     db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    # Handle TPS assignment for Petugas TPS
-    if new_user.role == "petugas_tps" and data.get("tps_ids"):
-        tps_ids = data.get("tps_ids")
-        for tps_id in tps_ids:
-            tps = db.query(TPS).filter(TPS.id == tps_id).first()
-            if tps:
-                assignment = PetugasTPSAssignment(user_id=new_user.id, tps_id=tps_id)
-                db.add(assignment)
+    try:
+        db.flush()
+        replace_user_tps_assignments(db, new_user.id, tps_ids)
         db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Gagal membuat akun dan penugasan TPS") from exc
+    db.refresh(new_user)
 
     return {
         "message": "User berhasil dibuat",

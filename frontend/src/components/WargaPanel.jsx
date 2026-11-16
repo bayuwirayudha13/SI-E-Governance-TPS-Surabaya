@@ -20,7 +20,6 @@ import {
   IconX
 } from "./common/AppIcons";
 import { api, API_BASE_URL } from "../api/client";
-import { fetchPublicTps } from "../api/tps";
 import danaLogoImg from "../assets/ewallet/dana.png";
 import ovoLogoImg from "../assets/ewallet/ovo_badge.png";
 import gopayLogoImg from "../assets/ewallet/gopay.png";
@@ -28,13 +27,6 @@ import shopeepayLogoImg from "../assets/ewallet/shopeepay.png";
 import KelurahanMap from "./KelurahanMap";
 import WargaChat from "./WargaChat";
 import LaporanWargaModal from "./LaporanWargaModal";
-import {
-  TPS_SURABAYA_ALL,
-  KELURAHAN_SURABAYA_ALL,
-  KECAMATAN_SURABAYA_LIST,
-  getTpsByKelurahan,
-  getTpsByKecamatan,
-} from "../data/tpsSurabayaData";
 
 // Real Scannable QR Code Component
 function RealQRCode({ text, size = 210, color = "#166534", onGenerated }) {
@@ -180,70 +172,6 @@ const PLASTIC_TYPES = [
     sub: "Casing elektronik, helm, galon PC",
     rate: 20,
     color: "#334155",
-  },
-];
-
-// TPS Tracking data
-const TPS_LIST = [
-  {
-    id: "mawar",
-    name: "TPS Mawar",
-    capacity: 68,
-    status: "AMAN",
-    color: "green",
-    dotColor: "#16a34a",
-    x: 190,
-    y: 150,
-  },
-  {
-    id: "melati",
-    name: "TPS Melati",
-    capacity: 82,
-    status: "HAMPIR PENUH",
-    color: "yellow",
-    dotColor: "#f59e0b",
-    x: 350,
-    y: 165,
-  },
-  {
-    id: "kenanga",
-    name: "TPS Kenanga",
-    capacity: 94,
-    status: "OVERLOAD",
-    color: "red",
-    dotColor: "#ef4444",
-    x: 320,
-    y: 240,
-  },
-  {
-    id: "flamboyan",
-    name: "TPS Flamboyan",
-    capacity: 45,
-    status: "AMAN",
-    color: "green",
-    dotColor: "#16a34a",
-    x: 260,
-    y: 215,
-  },
-  {
-    id: "cempaka",
-    name: "TPS Cempaka",
-    capacity: 77,
-    status: "HAMPIR PENUH",
-    color: "yellow",
-    dotColor: "#f59e0b",
-    x: 390,
-    y: 242,
-  },
-  {
-    id: "dahlia",
-    name: "TPS Dahlia",
-    capacity: 31,
-    status: "AMAN",
-    color: "green",
-    dotColor: "#16a34a",
-    x: 228,
-    y: 260,
   },
 ];
 
@@ -461,9 +389,10 @@ const DEFAULT_TUKAR_HISTORY = [
   },
 ];
 
-export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
+export default function WargaPanel({ onLogout, wargaId, currentUser }) {
   const [dbUser, setDbUser] = useState(currentUser || null);
   const [userData, setUserData] = useState(null);
+  const [profileRegion, setProfileRegion] = useState(null);
   const [activeMenu, setActiveMenu] = useState(() => {
     const hash = window.location.hash.toLowerCase();
     if (hash === "#dashboard" || hash === "#warga") return "dashboard";
@@ -528,12 +457,12 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
   const displayWargaName =
     activeUser?.nama_lengkap || activeUser?.nama || "Warga";
   const displayWargaEmail = activeUser?.email || "warga@sipetasan.com";
-  const displayKecamatanRaw = activeUser?.kecamatan || "";
-  const displayKelurahanRaw = activeUser?.kelurahan || "";
+  const displayKecamatanRaw = profileRegion?.kecamatan || activeUser?.kecamatan || "";
+  const displayKelurahanRaw = profileRegion?.kelurahan || activeUser?.kelurahan || "";
   const displayAvatar = displayWargaName.charAt(0).toUpperCase();
 
   const [selectedKelurahan, setSelectedKelurahan] = useState(() => {
-    return displayKelurahanRaw || "Tembok Dukuh";
+    return displayKelurahanRaw || "";
   });
 
   useEffect(() => {
@@ -648,93 +577,73 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
 
   const [allTps, setAllTps] = useState([]);
   const [tpsLoading, setTpsLoading] = useState(false);
+  const [tpsError, setTpsError] = useState("");
 
-  // Load TPS from API with rich fallback & data enrichment
+  // The backend derives the district from the authenticated resident profile.
   useEffect(() => {
+    let active = true;
     async function loadTps() {
       setTpsLoading(true);
+      setTpsError("");
       try {
-        const data = await fetchPublicTps();
-        if (Array.isArray(data) && data.length > 0) {
-          // Enrich backend records with coordinates, kelurahanList & operational details from verified dataset
-          const enriched = data.map((dbTps) => {
-            const match = TPS_SURABAYA_ALL.find(
-              (s) =>
-                s.nama?.toLowerCase() === dbTps.nama?.toLowerCase() ||
-                (dbTps.id && String(s.id).toLowerCase() === String(dbTps.id).toLowerCase())
-            );
-            if (match) {
-              return {
-                ...match,
-                ...dbTps,
-                lat: Number.isFinite(dbTps.lat) ? dbTps.lat : match.lat,
-                lng: Number.isFinite(dbTps.lng) ? dbTps.lng : match.lng,
-                kelurahanList:
-                  dbTps.kelurahanList && dbTps.kelurahanList.length > 0 && dbTps.kelurahanList[0] !== dbTps.lokasi
-                    ? dbTps.kelurahanList
-                    : match.kelurahanList,
-                capacity: dbTps.capacity || match.capacity || 50,
-                kapasitasPersen: dbTps.kapasitasPersen || match.kapasitasPersen || 50,
-                statusColor: dbTps.statusColor || match.statusColor || "green",
-                statusText: dbTps.statusText || match.statusText || "Aman",
-                dotColor: dbTps.dotColor || match.dotColor || "#16a34a",
-                jenisTps: dbTps.jenisTps || match.jenisTps,
-                dayaTampungM3: dbTps.dayaTampungM3 || match.dayaTampungM3,
-                jumlahContainer: dbTps.jumlahContainer || match.jumlahContainer,
-              };
-            }
-            return dbTps;
-          });
-          setAllTps(enriched);
-        } else {
-          // Fallback to verified 231 Surabaya TPS dataset if API returns empty
-          setAllTps(TPS_SURABAYA_ALL);
+        const { data } = await api.get("/api/tps/warga");
+        if (!Array.isArray(data?.tps) || !data?.wilayah_warga) {
+          throw new Error("Format data TPS warga dari server tidak valid.");
         }
+        if (!active) return;
+
+        const normalized = data.tps.map((tps) => {
+          const percentage = tps.persentase_kapasitas == null
+            ? null
+            : Number(tps.persentase_kapasitas);
+          const statusColor = tps.status_kapasitas === "Aman"
+            ? "green"
+            : tps.status_kapasitas === "Waspada"
+              ? "yellow"
+              : tps.status_kapasitas === "Kritis"
+                ? "red"
+                : "gray";
+          return {
+            ...tps,
+            lat: tps.latitude == null ? null : Number(tps.latitude),
+            lng: tps.longitude == null ? null : Number(tps.longitude),
+            kelurahanList: Array.isArray(tps.kelurahan_list) ? tps.kelurahan_list : [],
+            dayaTampungM3: tps.daya_tampung_m3,
+            jenisTps: tps.jenis_tps,
+            jumlahContainer: tps.jumlah_container,
+            capacity: Number.isFinite(percentage) ? percentage : null,
+            remainingPercent: tps.persentase_tersisa == null ? null : Number(tps.persentase_tersisa),
+            volumeActualM3: tps.volume_aktual_m3 == null ? null : Number(tps.volume_aktual_m3),
+            lastMonitoringAt: tps.waktu_monitoring_terakhir,
+            statusColor,
+            statusText: tps.status_kapasitas || "Belum ada monitoring terverifikasi",
+            dotColor: statusColor === "green"
+              ? "#16a34a"
+              : statusColor === "yellow"
+                ? "#f59e0b"
+                : statusColor === "red"
+                  ? "#ef4444"
+                  : "#94a3b8",
+          };
+        });
+        setProfileRegion(data.wilayah_warga);
+        setAllTps(normalized);
       } catch (error) {
-        console.error("Error loading TPS in WargaPanel:", error);
-        setAllTps(TPS_SURABAYA_ALL);
+        if (!active) return;
+        console.error("Error loading resident TPS:", error);
+        setAllTps([]);
+        setTpsError(error?.response?.data?.detail || error.message || "Gagal memuat TPS dari server.");
       } finally {
-        setTpsLoading(false);
+        if (active) setTpsLoading(false);
       }
     }
     loadTps();
+    return () => {
+      active = false;
+    };
   }, []);
 
-  // Real TPS serving the selected Kelurahan or Kecamatan
-  const kelurahanTpsList = useMemo(() => {
-    const source = allTps && allTps.length > 0 ? allTps : TPS_SURABAYA_ALL;
-    if (!source || source.length === 0) return [];
-
-    // 1. Try matching by selected kelurahan
-    const filteredByKel = source.filter((tps) => {
-      const matchKel =
-        tps.kelurahanList?.some(
-          (k) => k.toLowerCase() === selectedKelurahan.toLowerCase(),
-        ) ||
-        tps.lokasi?.toLowerCase().includes(selectedKelurahan.toLowerCase()) ||
-        tps.nama?.toLowerCase().includes(selectedKelurahan.toLowerCase());
-      return matchKel;
-    });
-
-    if (filteredByKel.length > 0) return filteredByKel;
-
-    // 2. Prioritize matching by kecamatan if kelurahan returns none
-    const targetKec =
-      displayKecamatanRaw ||
-      KELURAHAN_SURABAYA_ALL.find(
-        (k) => k.nama.toLowerCase() === selectedKelurahan.toLowerCase(),
-      )?.kecamatan;
-
-    if (targetKec) {
-      const matchKec = source.filter(
-        (tps) => tps.kecamatan?.toLowerCase() === targetKec.toLowerCase(),
-      );
-      if (matchKec.length > 0) return matchKec;
-    }
-
-    // 3. Fallback: top 5 TPS from verified source
-    return source.slice(0, 5);
-  }, [allTps, selectedKelurahan, displayKecamatanRaw]);
+  const kelurahanTpsList = useMemo(() => allTps, [allTps]);
 
   const [selectedTpsId, setSelectedTpsId] = useState("");
 
@@ -742,7 +651,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
     if (kelurahanTpsList.length > 0) {
       if (
         !selectedTpsId ||
-        !kelurahanTpsList.some((t) => t.id === selectedTpsId)
+        !kelurahanTpsList.some((t) => String(t.id) === String(selectedTpsId))
       ) {
         setSelectedTpsId(kelurahanTpsList[0].id);
       }
@@ -753,9 +662,9 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
 
   const selectedTps = useMemo(() => {
     return (
-      kelurahanTpsList.find((t) => t.id === selectedTpsId) ||
+      kelurahanTpsList.find((t) => String(t.id) === String(selectedTpsId)) ||
       kelurahanTpsList[0] ||
-      TPS_SURABAYA_ALL[0]
+      null
     );
   }, [kelurahanTpsList, selectedTpsId]);
 
@@ -2243,21 +2152,13 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
             <div className="warga-two-col-grid">
               <div className="warga-panel-card">
                 <h3 className="warga-card-title">
-                  TPS Terdekat Saya — Kel.{" "}
-                  {selectedKelurahan || user?.kelurahan || "Kelurahan"}
+                  TPS Aktif di Kecamatan {displayKecamatanRaw || "Anda"}
                 </h3>
                 <div className="warga-tps-progress-list">
                   {kelurahanTpsList.slice(0, 3).map((tps) => {
-                    const isCritical =
-                      tps.statusColor === "red" || tps.capacity >= 90;
-                    const isWarning =
-                      tps.statusColor === "yellow" ||
-                      (tps.capacity >= 75 && tps.capacity < 90);
-                    const colorClass = isCritical
-                      ? "red"
-                      : isWarning
-                        ? "yellow"
-                        : "green";
+                    const colorClass = tps.capacity == null
+                      ? "gray"
+                      : tps.statusColor;
                     return (
                       <div
                         key={tps.id}
@@ -2275,13 +2176,13 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                             <span className="warga-tps-name">{tps.nama}</span>
                           </div>
                           <span className={`warga-tps-pct ${colorClass}`}>
-                            {tps.capacity}%
+                            {tps.capacity == null ? "Belum tersedia" : `${tps.capacity}%`}
                           </span>
                         </div>
                         <div className="warga-bar-track">
                           <div
                             className={`warga-bar-fill ${colorClass}`}
-                            style={{ width: `${tps.capacity}%` }}
+                            style={{ width: `${tps.capacity ?? 0}%` }}
                           ></div>
                         </div>
                       </div>
@@ -3613,7 +3514,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
         {activeMenu === "chat" && <WargaChat />}
         {activeMenu === "tracking" && (
           <div className="warga-content-body">
-            {/* Real TPS Chips of Selected Kelurahan */}
+            {/* TPS available across the resident's registered district */}
             <div
               className="warga-panel-card"
               style={{ padding: "16px 20px", marginBottom: "18px" }}
@@ -3635,11 +3536,11 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                     color: "#334155",
                   }}
                 >
-                  Pilih titik TPS yang melayani{" "}
-                  <strong>Kelurahan {selectedKelurahan}</strong>:
+                  TPS Aktif di Kecamatan{" "}
+                  <strong>{displayKecamatanRaw || "profil Anda"}</strong>:
                 </div>
                 <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
-                  Menampilkan {kelurahanTpsList.length} TPS terverifikasi DLH
+                  Menampilkan {kelurahanTpsList.length} TPS dari database
                 </span>
               </div>
               <div
@@ -3647,21 +3548,12 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                 style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
               >
                 {kelurahanTpsList.map((tps) => {
-                  const isCritical =
-                    tps.statusColor === "red" || tps.capacity >= 90;
-                  const isWarning =
-                    tps.statusColor === "yellow" ||
-                    (tps.capacity >= 75 && tps.capacity < 90);
-                  const colorClass = isCritical
-                    ? "red"
-                    : isWarning
-                      ? "yellow"
-                      : "green";
+                  const colorClass = tps.capacity == null ? "gray" : tps.statusColor;
                   return (
                     <button
                       key={tps.id}
                       type="button"
-                      className={`warga-tps-chip ${selectedTpsId === tps.id ? "active" : ""}`}
+                      className={`warga-tps-chip ${String(selectedTpsId) === String(tps.id) ? "active" : ""}`}
                       onClick={() => setSelectedTpsId(tps.id)}
                     >
                       <span
@@ -3677,7 +3569,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                         }}
                       ></span>
                       <span>
-                        {tps.nama} ({tps.capacity}%)
+                        {tps.nama} ({tps.capacity == null ? "Belum ada data kapasitas" : `${tps.capacity}%`})
                       </span>
                     </button>
                   );
@@ -3696,33 +3588,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                   selectedTpsId={selectedTpsId}
                   onSelectTps={(tps) => setSelectedTpsId(tps.id)}
                   selectedKelurahan={selectedKelurahan}
-                  onSelectKelurahan={(kel) => {
-                    setSelectedKelurahan(kel);
-                    const source = allTps && allTps.length > 0 ? allTps : TPS_SURABAYA_ALL;
-                    const nextList = source.filter(
-                      (tps) =>
-                        tps.kelurahanList?.some(
-                          (k) => k.toLowerCase() === kel.toLowerCase(),
-                        ) ||
-                        tps.lokasi?.toLowerCase().includes(kel.toLowerCase()) ||
-                        tps.nama?.toLowerCase().includes(kel.toLowerCase()),
-                    );
-                    if (nextList.length > 0) {
-                      setSelectedTpsId(nextList[0].id);
-                    } else {
-                      const targetKec = KELURAHAN_SURABAYA_ALL.find(
-                        (k) => k.nama.toLowerCase() === kel.toLowerCase()
-                      )?.kecamatan;
-                      const kecList = targetKec ? source.filter(t => t.kecamatan?.toLowerCase() === targetKec.toLowerCase()) : [];
-                      if (kecList.length > 0) setSelectedTpsId(kecList[0].id);
-                    }
-                  }}
-                  allKelurahanList={KELURAHAN_SURABAYA_ALL}
-                  allKecamatanList={KECAMATAN_SURABAYA_LIST}
-                  userRegisteredKelurahan={displayKelurahanRaw}
-                  currentKecamatan={
-                    selectedTps?.kecamatan || displayKecamatanRaw
-                  }
+                  currentKecamatan={displayKecamatanRaw}
                 />
               </div>
 
@@ -3747,14 +3613,12 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                             fontWeight: 600,
                           }}
                         >
-                          TPS Terpilih &bull; Kel. {selectedKelurahan}
+                          TPS Terpilih &bull; Kecamatan {displayKecamatanRaw}
                         </span>
                         <span
-                          className={`warga-status-tag ${selectedTps.statusColor || "green"}`}
+                          className={`warga-status-tag ${selectedTps.statusColor}`}
                         >
-                          {selectedTps.statusText
-                            ? selectedTps.statusText.toUpperCase()
-                            : selectedTps.status || "AMAN"}
+                          {selectedTps.statusText.toUpperCase()}
                         </span>
                       </div>
 
@@ -3783,8 +3647,8 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                         style={{ height: "8px", marginBottom: "8px" }}
                       >
                         <div
-                          className={`warga-bar-fill ${selectedTps.statusColor || "green"}`}
-                          style={{ width: `${selectedTps.capacity}%` }}
+                          className={`warga-bar-fill ${selectedTps.statusColor}`}
+                          style={{ width: `${selectedTps.capacity ?? 0}%` }}
                         ></div>
                       </div>
 
@@ -3799,10 +3663,13 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                         }}
                       >
                         <span>Kapasitas Terisi</span>
-                        <span>{selectedTps.capacity}%</span>
+                        <span>
+                          {selectedTps.capacity == null
+                            ? "Belum ada laporan terverifikasi"
+                            : `${selectedTps.capacity}%`}
+                        </span>
                       </div>
 
-                      {/* Real TPS specs from Excel */}
                       <div
                         style={{
                           display: "grid",
@@ -3818,17 +3685,48 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                       >
                         <div>
                           <span style={{ color: "#64748b" }}>Jenis:</span>{" "}
-                          <strong>{selectedTps.jenisTps || "Compactor"}</strong>
+                          <strong>{selectedTps.jenisTps || "Belum ada data"}</strong>
                         </div>
                         <div>
                           <span style={{ color: "#64748b" }}>
                             Daya Tampung:
                           </span>{" "}
-                          <strong>{selectedTps.dayaTampungM3} m³</strong>
+                          <strong>
+                            {selectedTps.dayaTampungM3 == null
+                              ? "Belum ada data"
+                              : `${selectedTps.dayaTampungM3} m³`}
+                          </strong>
                         </div>
                         <div style={{ gridColumn: "span 2" }}>
                           <span style={{ color: "#64748b" }}>Kontainer:</span>{" "}
-                          <strong>{selectedTps.jumlahContainer}</strong>
+                          <strong>{selectedTps.jumlahContainer || "Belum ada data"}</strong>
+                        </div>
+
+                        <div style={{ fontSize: "0.82rem", color: "#475569", marginBottom: "14px" }}>
+                          <div>
+                            Persentase tersisa:{" "}
+                            <strong>
+                              {selectedTps.remainingPercent == null
+                                ? "Belum ada laporan terverifikasi"
+                                : `${selectedTps.remainingPercent}%`}
+                            </strong>
+                          </div>
+                          <div>
+                            Volume aktual:{" "}
+                            <strong>
+                              {selectedTps.volumeActualM3 == null
+                                ? "Belum ada laporan terverifikasi"
+                                : `${selectedTps.volumeActualM3} m³`}
+                            </strong>
+                          </div>
+                          <div>
+                            Monitoring terakhir:{" "}
+                            <strong>
+                              {selectedTps.lastMonitoringAt
+                                ? new Date(selectedTps.lastMonitoringAt).toLocaleString("id-ID")
+                                : "Belum ada laporan terverifikasi"}
+                            </strong>
+                          </div>
                         </div>
                         <div style={{ gridColumn: "span 2" }}>
                           <span style={{ color: "#64748b" }}>
@@ -3899,7 +3797,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
 
                     {/* Card 2: Recommendation Info Banner */}
                     <div
-                      className={`warga-recommendation-card ${selectedTps.statusColor || "green"}`}
+                      className={`warga-recommendation-card ${selectedTps.statusColor}`}
                     >
                       <div className="warga-rec-icon-box">
                         {selectedTps.statusColor === "green" && <IconCheck size={20} />}
@@ -3915,7 +3813,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                         {selectedTps.statusColor === "red" &&
                           "TPS Sedang Overload!"}
                         {selectedTps.statusColor === "gray" &&
-                          "TPS Sedang Tidak Aktif"}
+                          "Data kapasitas belum tersedia"}
                       </h5>
                       <p className="warga-rec-desc">
                         {selectedTps.statusColor === "green" &&
@@ -3923,9 +3821,9 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                         {selectedTps.statusColor === "yellow" &&
                           `Kapasitas sudah mencapai ${selectedTps.capacity}%. Disarankan menyetorkan sampah sebelum jam sibuk pukul 12:00 WIB.`}
                         {selectedTps.statusColor === "red" &&
-                          `Rute dialihkan otomatis: TPS ini overload (${selectedTps.capacity}%). Disarankan beralih ke TPS lain di Kelurahan ${selectedKelurahan} yang masih aman.`}
+                          `Kapasitas TPS ini mencapai ${selectedTps.capacity}%. Pertimbangkan TPS lain di Kecamatan ${displayKecamatanRaw} yang memiliki kapasitas lebih rendah.`}
                         {selectedTps.statusColor === "gray" &&
-                          `TPS ini sedang dalam status tidak aktif atau pemeliharaan oleh DLH Surabaya.`}
+                          "Belum ada laporan monitoring yang disetujui Admin atau Superadmin untuk TPS ini."}
                       </p>
                     </div>
                   </>
@@ -3936,7 +3834,7 @@ export default function WargaPanel({ onLogout, wargaId = 12, currentUser }) {
                   >
                     {tpsLoading
                       ? "Memuat data TPS dari server..."
-                      : "Belum ada data TPS untuk wilayah ini dari database."}
+                      : tpsError || "Belum ada TPS aktif di kecamatan terdaftar."}
                   </div>
                 )}
               </div>
