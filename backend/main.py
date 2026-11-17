@@ -80,8 +80,22 @@ app.add_middleware(
 )
 
 # Ensure uploads directory
-os.makedirs("uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Ensure uploads directory
+if os.getenv("VERCEL"):
+    UPLOAD_ROOT = "/tmp/uploads"
+else:
+    UPLOAD_ROOT = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "uploads"
+    )
+
+os.makedirs(UPLOAD_ROOT, exist_ok=True)
+
+app.mount(
+    "/uploads",
+    StaticFiles(directory=UPLOAD_ROOT),
+    name="uploads"
+)
 
 # Database
 try:

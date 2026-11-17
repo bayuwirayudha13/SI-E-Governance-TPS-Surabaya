@@ -41,14 +41,19 @@ from services.tps_monitoring_report_service import (
     get_tps_monitoring_reports_by_tps_id,
     reject_tps_monitoring_report,
 )
-from sqlalchemy.orm import Session
-import os
+if os.getenv("VERCEL"):
+    UPLOAD_DIR = "/tmp/uploads/monitoring"
+else:
+    UPLOAD_DIR = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "uploads",
+        "monitoring"
+    )
+
 import math
 
 router = APIRouter(prefix="/petugas-tps", tags=["Petugas TPS"])
 
-UPLOAD_DIR = "uploads/monitoring"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 MAX_MONITORING_PHOTO_SIZE = 10 * 1024 * 1024
 
 
