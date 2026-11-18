@@ -1,25 +1,45 @@
-import React, { useState } from 'react';
-import { tpsList } from '../data/mockData';
+import React, { useState, useEffect } from 'react';
+import { fetchPublicTps } from '../api/tps';
 
 export default function TpsMapModal({ isOpen, onClose }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('Semua');
   const [reportingTps, setReportingTps] = useState(null);
   const [reportSuccess, setReportSuccess] = useState(false);
+  const [tpsList, setTpsList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      if (!isOpen) return;
+      setIsLoading(true);
+      try {
+        const data = await fetchPublicTps();
+        if (Array.isArray(data)) {
+          setTpsList(data);
+        }
+      } catch (err) {
+        console.error('Error fetching TPS in TpsMapModal:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const filteredList = tpsList.filter((tps) => {
     const matchesSearch = 
-      tps.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tps.kecamatan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tps.kelurahan.toLowerCase().includes(searchTerm.toLowerCase());
+      (tps.nama && tps.nama.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (tps.kecamatan && tps.kecamatan.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (tps.lokasi && tps.lokasi.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesStatus = 
       filterStatus === 'Semua' || 
-      (filterStatus === 'Aman' && tps.status === 'Hijau') ||
-      (filterStatus === 'Waspada' && tps.status === 'Kuning') ||
-      (filterStatus === 'Kritis' && tps.status === 'Merah');
+      (filterStatus === 'Aman' && (tps.status_kapasitas === 'Aman' || tps.status === 'Hijau')) ||
+      (filterStatus === 'Waspada' && (tps.status_kapasitas === 'Waspada' || tps.status === 'Kuning')) ||
+      (filterStatus === 'Kritis' && (tps.status_kapasitas === 'Kritis' || tps.status === 'Merah'));
 
     return matchesSearch && matchesStatus;
   });
@@ -40,7 +60,7 @@ export default function TpsMapModal({ isOpen, onClose }) {
           <div>
             <h3 className="modal-title">Direktori Web-GIS TPS Surabaya</h3>
             <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-              Monitoring 231 Titik Penampungan Sementara &bull; Data Terupdate
+              Monitoring Titik Penampungan Sementara &bull; Data Terupdate dari Database
             </span>
           </div>
           <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Tutup">
@@ -130,7 +150,7 @@ export default function TpsMapModal({ isOpen, onClose }) {
               <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
                 <input
                   type="text"
-                  placeholder="Cari nama TPS, kecamatan, atau kelurahan..."
+                  placeholder="Cari nama TPS atau kecamatan..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
@@ -168,13 +188,20 @@ export default function TpsMapModal({ isOpen, onClose }) {
 
               {/* TPS List Table / Cards */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '420px', overflowY: 'auto' }}>
-                {filteredList.length === 0 ? (
+                {isLoading ? (
+                  <div style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
+                    Memuat data TPS dari database...
+                  </div>
+                ) : filteredList.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
                     Tidak ada TPS yang sesuai dengan filter pencarian.
                   </div>
                 ) : (
                   filteredList.map((tps) => {
-                    const badgeClass = tps.status === 'Merah' ? 'red' : tps.status === 'Kuning' ? 'yellow' : 'green';
+                    const isCritical = tps.status_kapasitas === 'Kritis' || tps.status === 'Merah';
+                    const isWarning = tps.status_kapasitas === 'Waspada' || tps.status === 'Kuning';
+                    const badgeClass = isCritical ? 'red' : isWarning ? 'yellow' : 'green';
+                    const pct = tps.persentase_kapasitas ?? tps.kapasitasPersen ?? 0;
                     
                     return (
                       <div
@@ -196,15 +223,15 @@ export default function TpsMapModal({ isOpen, onClose }) {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                             <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{tps.nama}</strong>
                             <span className={`map-tooltip-badge ${badgeClass}`} style={{ margin: 0 }}>
-                              {tps.kapasitasPersen}% &bull; {tps.statusText}
+                              {pct > 0 ? `${pct}% • ` : ''}{tps.status_kapasitas || tps.statusText || (isCritical ? 'Kritis' : isWarning ? 'Waspada' : 'Aman')}
                             </span>
                           </div>
 
                           <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                            Kec. {tps.kecamatan} &bull; Kel. {tps.kelurahan} &bull; Jam: {tps.jamOperasional}
+                            Kec. {tps.kecamatan || '—'} &bull; Lokasi: {tps.lokasi || '—'}
                           </div>
                           <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: '3px' }}>
-                            Daya tampung: {tps.kapasitasM3} m³ &bull; Terakhir update: {tps.terakhirUpdate}
+                            Daya tampung: {tps.daya_tampung_m3 || tps.kapasitasM3 || '—'} m³ &bull; Status: {tps.status}
                           </div>
                         </div>
 
@@ -219,9 +246,9 @@ export default function TpsMapModal({ isOpen, onClose }) {
                             marginBottom: '6px'
                           }}>
                             <div style={{
-                              width: `${tps.kapasitasPersen}%`,
+                              width: `${pct}%`,
                               height: '100%',
-                              background: tps.status === 'Merah' ? '#ef4444' : tps.status === 'Kuning' ? '#f59e0b' : '#10b981',
+                              background: isCritical ? '#ef4444' : isWarning ? '#f59e0b' : '#10b981',
                               borderRadius: '999px'
                             }}></div>
                           </div>
@@ -232,7 +259,10 @@ export default function TpsMapModal({ isOpen, onClose }) {
                               fontSize: '0.76rem',
                               color: '#b91c1c',
                               fontWeight: 600,
-                              textDecoration: 'underline'
+                              textDecoration: 'underline',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer'
                             }}
                           >
                             Lapor Kendala
