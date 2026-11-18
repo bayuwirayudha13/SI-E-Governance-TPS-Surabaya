@@ -1,66 +1,19 @@
-
-import os
-
-
-import httpx
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 from core.config import (
-    BREVO_API_KEY,
-    BREVO_SENDER_EMAIL,
-    BREVO_SENDER_NAME,
+    SMTP_HOST,
+    SMTP_PORT,
+    SMTP_EMAIL,
+    SMTP_PASSWORD,
 )
-
-BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
-
-
-def _send_email(receiver_email: str, subject: str, body: str):
-    if not BREVO_API_KEY:
-        raise RuntimeError("BREVO_API_KEY belum dikonfigurasi")
-
-    if not BREVO_SENDER_EMAIL:
-        raise RuntimeError("BREVO_SENDER_EMAIL belum dikonfigurasi")
-
-    payload = {
-        "sender": {
-            "name": BREVO_SENDER_NAME,
-            "email": BREVO_SENDER_EMAIL,
-        },
-        "to": [{"email": receiver_email}],
-        "subject": subject,
-        "textContent": body,
-    }
-
-    headers = {
-        "accept": "application/json",
-        "api-key": BREVO_API_KEY,
-        "content-type": "application/json",
-    }
-
-    try:
-        response = httpx.post(
-            BREVO_API_URL,
-            json=payload,
-            headers=headers,
-            timeout=15.0,
-        )
-        response.raise_for_status()
-
-    except httpx.HTTPStatusError as exc:
-        raise RuntimeError(
-            f"Brevo API error {exc.response.status_code}: "
-            f"{exc.response.text}"
-        ) from exc
-
-    except httpx.RequestError as exc:
-        raise RuntimeError(
-            f"Koneksi ke Brevo gagal: {exc}"
-        ) from exc
 
 
 def send_otp_email(receiver_email: str, otp: str):
     subject = "Kode OTP SI-PETASAN SUROBOYO"
 
-    body = f"""\
+    body = f"""
 Halo,
 
 Berikut adalah kode OTP untuk verifikasi akun SI-PETASAN SUROBOYO:
@@ -75,13 +28,33 @@ Terima kasih,
 SI-PETASAN SUROBOYO
 """
 
-    _send_email(receiver_email, subject, body)
+    message = MIMEMultipart()
+    message["From"] = SMTP_EMAIL
+    message["To"] = receiver_email
+    message["Subject"] = subject
 
+    message.attach(
+        MIMEText(body, "plain")
+    )
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        server.starttls()
+
+        server.login(
+            SMTP_EMAIL,
+            SMTP_PASSWORD
+        )
+
+        server.sendmail(
+            SMTP_EMAIL,
+            receiver_email,
+            message.as_string()
+        )
 
 def send_reset_password_email(receiver_email: str, otp: str):
     subject = "Kode OTP Reset Password SI-PETASAN SUROBOYO"
 
-    body = f"""\
+    body = f"""
 Halo,
 
 Kami menerima permintaan untuk mereset password akun
@@ -99,4 +72,19 @@ Terima kasih,
 SI-PETASAN SUROBOYO
 """
 
-    _send_email(receiver_email, subject, body)
+    message = MIMEMultipart()
+    message["From"] = SMTP_EMAIL
+    message["To"] = receiver_email
+    message["Subject"] = subject
+
+    message.attach(MIMEText(body, "plain"))
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        server.starttls()
+        server.login(SMTP_EMAIL, SMTP_PASSWORD)
+
+        server.sendmail(
+            SMTP_EMAIL,
+            receiver_email,
+            message.as_string()
+        )
