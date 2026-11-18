@@ -20,6 +20,7 @@ from models.petugas_tps_assignment import PetugasTPSAssignment
 from models.tps import TPS
 from models.tps_monitoring_report import TPSMonitoringReport
 from models.users import User
+from sqlalchemy.orm import Session
 from schemas.petugas_tps_assignment_schema import PetugasTPSAssignmentResponse
 from schemas.tps_monitoring_report_schema import (
     TPSMonitoringReportCreate,
