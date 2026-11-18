@@ -156,6 +156,8 @@ export default function KelurahanMap({
       latLngBounds.push([tps.lat, tps.lng]);
 
       const isInactive = tps.status === 'Tidak Aktif';
+      const hasVerifiedMonitoring = Number.isFinite(tps.capacity);
+      const displayText = isInactive ? 'OFF' : (hasVerifiedMonitoring ? `${Math.round(tps.capacity)}%` : 'TPS');
       const badgeClass = 'gray';
       const pinColor = isInactive || tps.capacity == null
         ? '#94a3b8'
@@ -175,7 +177,7 @@ export default function KelurahanMap({
           <div class="osm-marker-pin" style="--marker-color: ${pinColor}">
             <div class="osm-marker-pulse"></div>
             <div class="osm-marker-dot" style="background: ${pinColor}; width: 28px; height: 28px;">
-              <span>${isInactive ? 'OFF' : 'TPS'}</span>
+              <span style="font-size: ${hasVerifiedMonitoring ? '0.72rem' : '0.68rem'}; font-weight: 700; color: #fff;">${displayText}</span>
             </div>
           </div>
         `
@@ -184,7 +186,6 @@ export default function KelurahanMap({
       const marker = L.marker([tps.lat, tps.lng], { icon: customIcon });
       markerRefsMap.current[tps.id] = marker;
 
-      const hasVerifiedMonitoring = Number.isFinite(tps.capacity);
       const monitoredAt = tps.lastMonitoringAt
         ? new Date(tps.lastMonitoringAt).toLocaleString('id-ID')
         : null;
@@ -325,10 +326,10 @@ export default function KelurahanMap({
             <span style={{ display: 'inline-flex', alignItems: 'center', color: '#16a34a' }}><IconBuilding size={22} /></span>
             <div>
               <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Wilayah Kecamatan
+                Wilayah Kelurahan &amp; Kecamatan
               </div>
               <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
-                {currentKecamatan || 'Wilayah belum tersedia'}
+                Kel. {selectedKelurahan || 'Romokalisari'} <span style={{ fontWeight: 500, color: '#64748b', fontSize: '0.88rem' }}>&bull; Kec. {currentKecamatan || 'Surabaya'}</span>
               </div>
             </div>
           </div>

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { IconMapPin } from './common/AppIcons';
-import { fetchPublicTps } from '../api/tps';
+import { tpsList } from '../data/mockData';
 
 // Stable module-level constants
 const SURABAYA_CENTER = [-7.2650, 112.7450];
@@ -26,30 +26,7 @@ export default function HeroMap({ onOpenTpsModal }) {
   const markersLayerRef = useRef(null);
 
   const [mapType, setMapType] = useState('osm'); // 'osm' | 'satellite'
-  const [filterStatus, setFilterStatus] = useState('Semua'); // 'Semua' | 'Aktif' | 'Tidak Aktif'
-  const [tpsList, setTpsList] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Load TPS from API only (same as Superadmin TpsMapSuperadmin)
-  useEffect(() => {
-    async function loadPublicTps() {
-      setIsLoading(true);
-      try {
-        const data = await fetchPublicTps();
-        if (Array.isArray(data) && data.length > 0) {
-          setTpsList(data);
-        } else {
-          setTpsList([]);
-        }
-      } catch (error) {
-        console.error('Error loading TPS in HeroMap:', error);
-        setTpsList([]);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadPublicTps();
-  }, []);
+  const [filterStatus, setFilterStatus] = useState('Semua'); // 'Semua' | 'Aman' | 'Waspada' | 'Kritis'
 
   // Initialize Map
   useEffect(() => {
@@ -124,29 +101,23 @@ export default function HeroMap({ onOpenTpsModal }) {
     const markersGroup = markersLayerRef.current;
     markersGroup.clearLayers();
 
-    // Filter TPS by status (same as TpsMapSuperadmin)
-    const filtered = filterStatus === 'Semua'
-      ? tpsList
-      : tpsList.filter(tps => tps.status === filterStatus);
-
-    // Render markers for filtered TPS records with valid coordinates
-    filtered.forEach((tps) => {
-      renderSingleMarker(tps, markersGroup);
+    const filtered = tpsList.filter((tps) => {
+      if (filterStatus === 'Semua') return true;
+      if (filterStatus === 'Aman') return tps.status === 'Hijau';
+      if (filterStatus === 'Waspada') return tps.status === 'Kuning';
+      if (filterStatus === 'Kritis') return tps.status === 'Merah';
+      return true;
     });
 
-    function renderSingleMarker(tps, group) {
-      // Use latitude/longitude from API (normalizeTpsData provides both lat/lng and latitude/longitude)
-      const lat = Number.isFinite(tps.lat) ? tps.lat : (Number.isFinite(tps.latitude) ? tps.latitude : null);
-      const lng = Number.isFinite(tps.lng) ? tps.lng : (Number.isFinite(tps.longitude) ? tps.longitude : null);
-      
-      if (lat === null || lng === null) return;
+    filtered.forEach((tps) => {
+      if (!tps.lat || !tps.lng) return;
 
-      const isInactive = tps.status === 'Tidak Aktif';
-      const pinColor = isInactive ? '#94a3b8' : '#16a34a';
-      const badgeText = isInactive ? 'Nonaktif' : 'Aktif';
-      const badgeClass = isInactive ? 'gray' : 'green';
+      const isCritical = tps.status === 'Merah';
+      const isWarning = tps.status === 'Kuning';
+      const badgeClass = isCritical ? 'red' : isWarning ? 'yellow' : 'green';
+      const pinColor = isCritical ? '#ef4444' : isWarning ? '#f59e0b' : '#10b981';
 
-      // Custom pulsing HTML marker matching superadmin design
+      // Custom pulsing HTML marker
       const customIcon = L.divIcon({
         className: 'osm-custom-marker-wrapper',
         iconSize: [36, 36],
@@ -155,35 +126,35 @@ export default function HeroMap({ onOpenTpsModal }) {
         html: `
           <div class="osm-marker-pin" style="--marker-color: ${pinColor}">
             <div class="osm-marker-pulse"></div>
-            <div class="osm-marker-dot" style="background: ${pinColor}; width: 28px; height: 28px;">
-              <span style="font-size: 0.7rem; font-weight: 700; color: #fff;">${isInactive ? 'OFF' : 'TPS'}</span>
+            <div class="osm-marker-dot" style="background: ${pinColor};">
+              <span>${tps.kapasitasPersen}%</span>
             </div>
           </div>
-        `,
+        `
       });
 
-      const marker = L.marker([lat, lng], { icon: customIcon });
+      const marker = L.marker([tps.lat, tps.lng], { icon: customIcon });
 
-      // Custom popup HTML matching TpsMapSuperadmin
+      // Custom popup HTML
       const popupHtml = `
-        <div class="osm-popup-container" style="font-family: inherit; min-width: 280px; padding: 2px;">
-          <div class="osm-popup-title-row" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px;">
-            <h4 class="osm-popup-title" style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #0f172a;">${tps.nama}</h4>
-            <span class="map-tooltip-badge ${badgeClass}" style="font-size: 0.72rem; padding: 3px 8px; border-radius: 6px; white-space: nowrap; background: ${isInactive ? '#f1f5f9' : '#dcfce7'}; color: ${isInactive ? '#64748b' : '#166534'}; font-weight: 700;">
-              ${badgeText}
-            </span>
+        <div class="osm-popup-container">
+          <div class="osm-popup-title-row">
+            <h4 class="osm-popup-title">${tps.nama}</h4>
+            <span class="map-tooltip-badge ${badgeClass}">${tps.statusText || (isCritical ? 'Kritis' : isWarning ? 'Waspada' : 'Aman')}</span>
           </div>
-          <div class="osm-popup-details" style="font-size: 0.82rem; color: #334155; line-height: 1.6;">
-            <p style="margin: 4px 0;"><strong>Lokasi:</strong> ${tps.lokasi || tps.kecamatan || '-'}</p>
-            <p style="margin: 4px 0;"><strong>Kecamatan:</strong> ${tps.kecamatan || '-'}</p>
-            <p style="margin: 4px 0;"><strong>Jam Operasional:</strong> ${tps.jamOperasional || '06:00 - 20:00 WIB'}</p>
-            <p style="margin: 4px 0;"><strong>📦 Daya Tampung Maksimum:</strong> ${tps.dayaTampungM3 != null ? `${tps.dayaTampungM3} m&sup3;` : 'Belum ada data'}</p>
+          <div class="osm-popup-details">
+            <p><strong>Lokasi:</strong> Kec. ${tps.kecamatan || '-'}, Kel. ${tps.kelurahan || '-'}</p>
+            <p><strong>Jam Operasional:</strong> ${tps.jamOperasional || '06:00 - 18:00 WIB'}</p>
+            <p><strong>Daya Tampung:</strong> ${tps.kapasitasM3 != null ? `${tps.kapasitasM3} m&sup3;` : 'Standar'} (${tps.kapasitasPersen}%)</p>
+            <p><strong>Terakhir Diperbarui:</strong> ${tps.terakhirUpdate || 'Baru saja'}</p>
+          </div>
+          <div class="osm-popup-bar-track">
+            <div class="osm-popup-bar-fill ${badgeClass}" style="width: ${tps.kapasitasPersen}%;"></div>
           </div>
           <button 
             type="button" 
             id="osm-btn-${tps.id}"
             class="osm-popup-action-btn"
-            style="margin-top: 10px; width: 100%; padding: 8px 12px; background: #16a34a; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;"
           >
             Lihat Detail & Lapor Kendala &rarr;
           </button>
@@ -191,17 +162,14 @@ export default function HeroMap({ onOpenTpsModal }) {
       `;
 
       marker.bindPopup(popupHtml, {
-        maxWidth: 300,
-        className: 'osm-styled-leaflet-popup',
-        autoPan: true,
-        autoPanPaddingTopLeft: [20, 135],
-        autoPanPaddingBottomRight: [20, 70],
+        maxWidth: 290,
+        className: 'osm-styled-leaflet-popup'
       });
 
       marker.on('click', () => {
         marker.openPopup();
         if (mapInstanceRef.current) {
-          mapInstanceRef.current.panTo([lat + 0.015, lng], { animate: true, duration: 0.35 });
+          mapInstanceRef.current.panTo([tps.lat + 0.015, tps.lng], { animate: true, duration: 0.35 });
         }
       });
 
@@ -215,9 +183,9 @@ export default function HeroMap({ onOpenTpsModal }) {
         }
       });
 
-      marker.addTo(group);
-    }
-  }, [filterStatus, tpsList, onOpenTpsModal]);
+      marker.addTo(markersGroup);
+    });
+  }, [filterStatus, onOpenTpsModal]);
 
   // Reset view to center of Surabaya
   const handleResetView = () => {
@@ -240,8 +208,9 @@ export default function HeroMap({ onOpenTpsModal }) {
 
         {/* Legend Indicators */}
         <div className="map-status-indicators" style={{ fontSize: '0.76rem' }}>
-          <span title="TPS Aktif"><span className="status-dot green"></span>Aktif</span>
-          <span title="TPS Nonaktif"><span className="status-dot gray"></span>Nonaktif</span>
+          <span title="Daya tampung aman"><span className="status-dot green"></span>Aman (&le;60%)</span>
+          <span title="Mendekati batas"><span className="status-dot yellow"></span>Waspada (61-79%)</span>
+          <span title="Perlu pengangkutan segera"><span className="status-dot red"></span>Kritis (&ge;80%)</span>
         </div>
       </div>
 
@@ -269,7 +238,7 @@ export default function HeroMap({ onOpenTpsModal }) {
 
         {/* Status Filters */}
         <div className="osm-filter-chips">
-          {['Semua', 'Aktif', 'Tidak Aktif'].map((status) => (
+          {['Semua', 'Aman', 'Waspada', 'Kritis'].map((status) => (
             <button
               key={status}
               type="button"

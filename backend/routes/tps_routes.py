@@ -90,7 +90,12 @@ def get_warga_tps_capacity(
         )
         .filter(
             TPS.status == "Aktif",
-            func.lower(func.trim(TPS.kecamatan)) == kecamatan.lower(),
+            or_(
+                func.lower(func.trim(TPS.kecamatan)) == kecamatan.lower(),
+                TPS.id.in_(
+                    select(TPSKelurahan.tps_id).where(TPSKelurahan.kelurahan_id == valid_kelurahan.id)
+                ),
+            ),
         )
         .order_by(TPS.nama)
     )

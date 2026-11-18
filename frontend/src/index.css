@@ -330,7 +330,7 @@ img {
 
 /* Mobile search icon button */
 .mobile-search-btn {
-  display: none;
+  display: none !important;
   width: 38px;
   height: 38px;
   border-radius: 50%;
@@ -438,15 +438,16 @@ img {
 
 .mobile-filter-chip {
   padding: 6px 14px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.82rem;
+  font-weight: 550;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.18s ease;
   user-select: none;
+  white-space: nowrap;
 }
 
 .mobile-filter-chip:hover {
@@ -595,47 +596,63 @@ img {
   background: #f8fafc;
 }
 
+.drawer-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #64748b;
+  padding: 10px 18px 4px 18px;
+}
+
 .drawer-item {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 15px;
   width: calc(100% - 16px);
-  margin: 2px 8px;
+  margin: 3px 8px;
   padding: 10px 14px;
   border-radius: 10px;
   border: none;
   background: transparent;
-  color: #0f0f0f;
-  font-size: 0.9rem;
-  font-weight: 500;
+  color: #1e293b;
+  font-size: 0.92rem;
+  font-weight: 550;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: all 0.18s ease;
   box-sizing: border-box;
 }
 
 .drawer-item:hover {
-  background: #f8fafc;
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
-/* Active item (e.g. Beranda) styled exactly like YouTube active pill */
+/* Active item (e.g. Beranda) styled with modern emerald accent */
 .drawer-item.active {
-  background: #f2f2f2;
+  background: #ecfdf5;
   font-weight: 700;
-  color: #0f0f0f;
+  color: #047857;
+  border-left: 3px solid #059669;
 }
 
 .drawer-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  color: #0f0f0f;
+  width: 22px;
+  color: #64748b;
   flex-shrink: 0;
+  transition: color 0.18s ease;
+}
+
+.drawer-item:hover .drawer-icon {
+  color: #0f172a;
 }
 
 .drawer-item.active .drawer-icon {
-  color: #0f0f0f;
+  color: #047857;
 }
 
 .drawer-label {
@@ -773,7 +790,7 @@ img {
   }
 
   .mobile-search-btn {
-    display: flex;
+    display: none !important;
   }
 
   .mobile-chip-bar {
@@ -4411,5 +4428,80 @@ img {
   100% {
     transform: scale(1);
     box-shadow: 0 4px 14px rgba(0,0,0,0.35), 0 0 0 3px rgba(255,255,255,0.85);
+  }
+}
+/* ==========================================================================
+   MOBILE FULL-SCREEN TAB BAR (IMAGE 2 MOCKUP 1:1 - NO SCROLL)
+   ========================================================================== */
+.mobile-tab-nav {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .mobile-chip-bar {
+    display: none !important;
+  }
+
+  .mobile-tab-nav {
+    display: flex;
+    width: 100%;
+    align-items: stretch;
+    justify-content: space-between;
+    padding: 0 4px;
+    background: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    box-sizing: border-box;
+    overflow: hidden; /* Strictly 1 screen, non-scrolling */
+  }
+
+  .mobile-tab-item {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 3px 12px 3px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.65);
+    cursor: pointer;
+    position: relative;
+    transition: color 0.18s ease;
+    box-sizing: border-box;
+    text-align: center;
+  }
+
+  .mobile-tab-item:hover {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .mobile-tab-item.active {
+    color: #ffffff;
+  }
+
+  /* Active underline indicator like in Image 2 */
+  .mobile-tab-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 26px;
+    max-width: 85%;
+    height: 2.5px;
+    background: #ffffff;
+    border-radius: 999px;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+  }
+
+  .mobile-tab-text {
+    font-size: clamp(0.66rem, 2.5vw, 0.75rem);
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    display: block;
+    word-break: normal;
+    overflow-wrap: break-word;
+    white-space: normal;
   }
 }

@@ -16,6 +16,7 @@ import {
   IconMap,
   IconCheck,
   IconCalendar,
+  IconInfo,
 } from "./common/AppIcons";
 
 const API_BASE = API_BASE_URL;
@@ -2159,10 +2160,16 @@ export default function SuperadminPanel({
                   >
                     <div className="stat-card-header">
                       <div
-                        className="stat-icon-wrap icon-orange"
-                        style={{ background: "#fee2e2", color: "#dc2626" }}
+                        className="stat-icon-wrap"
+                        style={{
+                          background: "#e0e7ff",
+                          color: "#4f46e5",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
                       >
-                        ℹ️
+                        <IconInfo size={20} />
                       </div>
                       <span
                         style={{

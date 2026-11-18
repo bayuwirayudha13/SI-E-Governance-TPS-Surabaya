@@ -3536,8 +3536,9 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
                     color: "#334155",
                   }}
                 >
-                  TPS Aktif di Kecamatan{" "}
-                  <strong>{displayKecamatanRaw || "profil Anda"}</strong>:
+                  TPS Melayani Wilayah Kelurahan{" "}
+                  <strong style={{ color: "#166534" }}>{displayKelurahanRaw || "profil Anda"}</strong>{" "}
+                  <span style={{ color: "#64748b", fontWeight: 500 }}>(Kecamatan {displayKecamatanRaw || "Surabaya"}):</span>
                 </div>
                 <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
                   Menampilkan {kelurahanTpsList.length} TPS dari database
@@ -3549,6 +3550,9 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
               >
                 {kelurahanTpsList.map((tps) => {
                   const colorClass = tps.capacity == null ? "gray" : tps.statusColor;
+                  const servesMyKelurahan = tps.kelurahanList?.some(
+                    (k) => k.toLowerCase() === (displayKelurahanRaw || "").toLowerCase()
+                  );
                   return (
                     <button
                       key={tps.id}
@@ -3571,6 +3575,21 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
                       <span>
                         {tps.nama} ({tps.capacity == null ? "Belum ada data kapasitas" : `${tps.capacity}%`})
                       </span>
+                      {servesMyKelurahan && (
+                        <span
+                          style={{
+                            fontSize: "0.68rem",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            background: "rgba(22, 101, 52, 0.12)",
+                            color: "#166534",
+                            fontWeight: 700,
+                            marginLeft: "4px",
+                          }}
+                        >
+                          Kelurahan Anda
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -3613,7 +3632,7 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
                             fontWeight: 600,
                           }}
                         >
-                          TPS Terpilih &bull; Kecamatan {displayKecamatanRaw}
+                          TPS Terpilih &bull; Kelurahan {selectedTps.kelurahanList?.join(", ") || displayKelurahanRaw} (Kec. {displayKecamatanRaw})
                         </span>
                         <span
                           className={`warga-status-tag ${selectedTps.statusColor}`}
@@ -3700,6 +3719,14 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
                         <div style={{ gridColumn: "span 2" }}>
                           <span style={{ color: "#64748b" }}>Kontainer:</span>{" "}
                           <strong>{selectedTps.jumlahContainer || "Belum ada data"}</strong>
+                        </div>
+                        <div style={{ gridColumn: "span 2" }}>
+                          <span style={{ color: "#64748b" }}>Cakupan Kelurahan:</span>{" "}
+                          <strong style={{ color: "#166534" }}>
+                            {selectedTps.kelurahanList && selectedTps.kelurahanList.length > 0
+                              ? selectedTps.kelurahanList.join(", ")
+                              : `Kelurahan ${displayKelurahanRaw || "-"}`}
+                          </strong>
                         </div>
 
                         <div style={{ fontSize: "0.82rem", color: "#475569", marginBottom: "14px" }}>
@@ -3834,7 +3861,7 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
                   >
                     {tpsLoading
                       ? "Memuat data TPS dari server..."
-                      : tpsError || "Belum ada TPS aktif di kecamatan terdaftar."}
+                      : tpsError || `Belum ada TPS aktif di Kelurahan ${displayKelurahanRaw || "-"} / Kecamatan ${displayKecamatanRaw || "-"}.`}
                   </div>
                 )}
               </div>
