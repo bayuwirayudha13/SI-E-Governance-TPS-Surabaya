@@ -311,7 +311,7 @@ if __name__ == "__main__":
 
 origins = [
     "http://localhost:5173",
-    os.getenv("FRONTEND_URL", ""), # Isi di Variables Railway jika frontend sudah online
+    os.getenv("https://si-e-governance-tps-surabaya.pages.dev", ""), # Isi di Variables Railway jika frontend sudah online
 ]
 
 app.add_middleware(
@@ -321,3 +321,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+allow_origins=[
+    "http://localhost:5173",
+    "https://si-e-governance-tps-surabaya.pages.dev",  # Ganti dengan URL .pages.dev Anda
+],
