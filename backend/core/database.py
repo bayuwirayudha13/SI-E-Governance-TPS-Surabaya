@@ -1,5 +1,5 @@
-
 import os
+import tempfile
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -9,15 +9,12 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 load_dotenv()
 
-# Lokal: Laragon
-# Deployment: DATABASE_URL dari Environment Variables
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "mysql+pymysql://root:@localhost:3306/sipk_tps_baru"
 )
 
 url = make_url(DATABASE_URL)
-
 connect_args = {}
 
 if url.get_backend_name() == "mysql":
@@ -25,16 +22,19 @@ if url.get_backend_name() == "mysql":
 
     # SSL untuk database cloud seperti Aiven
     if url.host not in ("localhost", "127.0.0.1"):
+        ca_cert_content = os.getenv("DB_CA_CERT")
         ca_cert_path = Path(__file__).resolve().parents[1] / "ca.pem"
 
-        if not ca_cert_path.is_file():
-            raise FileNotFoundError(
-                f"Sertifikat CA tidak ditemukan: {ca_cert_path}"
-            )
-
-        connect_args["ssl"] = {
-            "ca": str(ca_cert_path)
-        }
+        if ca_cert_content:
+            # Tulis isi sertifikat dari env var ke file sementara
+            tmp_ca = tempfile.NamedTemporaryFile(delete=False, suffix=".pem")
+            tmp_ca.write(ca_cert_content.replace("\\n", "\n").encode("utf-8"))
+            tmp_ca.close()
+            connect_args["ssl"] = {"ca": tmp_ca.name}
+        elif ca_cert_path.is_file():
+            connect_args["ssl"] = {"ca": str(ca_cert_path)}
+        else:
+            connect_args["ssl"] = {"ssl_mode": "REQUIRED"}
 
 engine = create_engine(
     DATABASE_URL,
