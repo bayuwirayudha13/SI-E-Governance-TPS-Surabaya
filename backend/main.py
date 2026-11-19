@@ -69,17 +69,6 @@ allow_origins = [
     origin.strip() for origin in cors_origins_env.split(",") if origin.strip()
 ]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "https://si-e-governance-tps-surabaya.pages.dev",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Ensure uploads directory
 # Ensure uploads directory
 if os.getenv("VERCEL"):
@@ -327,3 +316,15 @@ allow_origins=[
     "http://localhost:5173",
     "https://si-e-governance-tps-surabaya.pages.dev",  # Ganti dengan URL .pages.dev Anda
 ],
+
+# Letakkan blok ini SETELAH semua middleware lain di backend/main.py
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "https://si-e-governance-tps-surabaya.pages.dev",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
