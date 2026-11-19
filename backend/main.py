@@ -71,9 +71,10 @@ allow_origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allow_origins,
-    # support local dev origin (localhost/127.0.0.1 di port apa pun) + cloudflare quick tunnel
-    allow_origin_regex=r"^https://.*\.trycloudflare\.com$|^http://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_origins=[
+        "http://localhost:5173",
+        "https://si-e-governance-tps-surabaya.pages.dev",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
