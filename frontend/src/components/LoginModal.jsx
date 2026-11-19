@@ -1,10 +1,13 @@
 import React, { useState } from "react";
+import { loginUser } from "../services/api"; // Sesuaikan path relatifnya
 
 export default function LoginModal({ isOpen, onClose }) {
   const [role, setRole] = useState("warga");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loggedInUser, setLoggedInUser] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
 
@@ -36,11 +39,28 @@ export default function LoginModal({ isOpen, onClose }) {
     },
   ];
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const currentRole = roles.find((r) => r.id === role);
-    setLoggedInUser({
-      name:
+    setError("");
+    setLoading(true);
+
+    const backendRoleMap = {
+      warga: "warga",
+      driver: "driver",
+      kelurahan: "petugas_kelurahan",
+      tps: "petugas_kelurahan",
+      admin: "admin",
+    };
+
+    try {
+      const result = await loginUser({
+        identifier,
+        password,
+        role: backendRoleMap[role] || role,
+      });
+
+      const currentRole = roles.find((r) => r.id === role);
+      const fallbackName =
         role === "warga"
           ? "Ibu Siti Aminah (Warga RW 04)"
           : role === "kelurahan"
@@ -49,18 +69,27 @@ export default function LoginModal({ isOpen, onClose }) {
               ? "Agus Triyono (Petugas TPS Wonokromo)"
               : role === "driver"
                 ? "Supardi (Driver Armada Truk 08 DLH)"
-                : "Dr. Ir. Hendro, M.T. (Admin DLH Surabaya)",
-      roleLabel: currentRole.label,
-    });
+                : "Dr. Ir. Hendro, M.T. (Admin DLH Surabaya)";
+
+      setLoggedInUser({
+        name: result?.user?.nama || result?.user?.name || result?.nama || result?.name || fallbackName,
+        roleLabel: currentRole.label,
+        token: result?.access_token || "JWT-DLH-SBY-OK",
+      });
+    } catch (err) {
+      setError(err.message || "Gagal masuk. Periksa kembali kredensial Anda.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleQuickLogin = (roleId) => {
     const backendRoleMap = {
-      'warga': 'warga',
-      'driver': 'driver',
-      'kelurahan': 'petugas_kelurahan',
-      'tps': 'petugas_kelurahan',
-      'admin': 'admin'
+      warga: "warga",
+      driver: "driver",
+      kelurahan: "petugas_kelurahan",
+      tps: "petugas_kelurahan",
+      admin: "admin",
     };
     setRole(roleId);
     const backendRole = backendRoleMap[roleId] || roleId;
@@ -73,9 +102,11 @@ export default function LoginModal({ isOpen, onClose }) {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem("access_token");
     setLoggedInUser(null);
     setIdentifier("");
     setPassword("");
+    setError("");
   };
 
   return (
@@ -191,7 +222,8 @@ export default function LoginModal({ isOpen, onClose }) {
                 }}
               >
                 <div>
-                  &bull; Sesi Aktif Token: <code>JWT-DLH-SBY-OK</code>
+                  &bull; Sesi Aktif Token:{" "}
+                  <code>{loggedInUser.token.slice(0, 24)}...</code>
                 </div>
                 <div>
                   &bull; Status Keamanan: Terverifikasi SSW (Surabaya Single
@@ -412,9 +444,26 @@ export default function LoginModal({ isOpen, onClose }) {
                 />
               </div>
 
+              {error && (
+                <div
+                  style={{
+                    marginBottom: "12px",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    color: "#b91c1c",
+                    fontSize: "0.82rem",
+                  }}
+                >
+                  {error}
+                </div>
+              )}
+
               {/* Submit Button */}
               <button
                 type="submit"
+                disabled={loading}
                 className="btn-pill-dark"
                 style={{
                   width: "100%",
@@ -423,7 +472,7 @@ export default function LoginModal({ isOpen, onClose }) {
                   marginBottom: "14px",
                 }}
               >
-                <span>Masuk Sekarang</span>
+                <span>{loading ? "Memproses..." : "Masuk Sekarang"}</span>
                 <svg
                   width="16"
                   height="16"
@@ -539,4 +588,4 @@ export default function LoginModal({ isOpen, onClose }) {
       </div>
     </div>
   );
-}
+}  

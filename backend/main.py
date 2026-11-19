@@ -307,3 +307,17 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+
+origins = [
+    "http://localhost:5173",
+    os.getenv("FRONTEND_URL", ""), # Isi di Variables Railway jika frontend sudah online
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin for origin in origins if origin],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)

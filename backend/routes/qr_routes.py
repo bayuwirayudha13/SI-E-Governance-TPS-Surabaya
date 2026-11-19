@@ -158,10 +158,10 @@ def scan_qr(payload: ScanRequest, authorization: Optional[str] = Header(None), d
             id = 42
             nama = parsed.get("nama") or "Budi Santoso"
             alamat_rumah = parsed.get("alamat_rumah") or parsed.get("alamat_raw") or "Jl. Mawar No. 12"
-            kelurahan = parsed.get("kelurahan") or "Sukamaju"
+            kelurahan = parsed.get("kelurahan") or getattr(warga, "kelurahan", None) or "Sukamaju"
         warga = MockWarga()
     
-    kelurahan_final = parsed.get("kelurahan") or getattr(warga, "kelurahan", None) or "Sukamaju"
+    kelurahan_final = parsed.get("kelurahan") or getattr(warga, "kelurahan", None)
     alamat_final = parsed.get("alamat_rumah") or parsed.get("alamat_raw") or getattr(warga, "alamat_rumah", None) or "Jl. Mawar"
     nama_final = parsed.get("nama") or getattr(warga, "nama", None) or "Budi Santoso"
     jenis_final = parsed.get("jenis_sampah") or "Botol Plastik (PET), Kardus"
@@ -253,7 +253,7 @@ def create_pengambilan(
     # Prioritas: form dari frontend > parsed QR > warga DB > default
     nama_final = nama or parsed.get("nama") or getattr(warga, "nama", None) or "Budi Santoso"
     alamat_final = alamat or parsed.get("alamat_rumah") or parsed.get("alamat_raw") or getattr(warga, "alamat_rumah", None) or "Jl. Mawar"
-    kelurahan_final = kelurahan or parsed.get("kelurahan") or getattr(warga, "kelurahan", None) or "Sukamaju"
+    kelurahan_final = kelurahan or parsed.get("kelurahan") or getattr(warga, "kelurahan", None)
     jenis_final = jenis_sampah or parsed.get("jenis_sampah") or "Botol Plastik (PET), Kardus"
     berat_final = berat or parsed.get("berat") or "3.5 kg"
 

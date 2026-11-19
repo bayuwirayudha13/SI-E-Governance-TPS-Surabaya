@@ -106,20 +106,21 @@ def scan_qr_validate(
     if setoran and setoran.status not in ["Menunggu Penjemputan", "Sedang Diproses"]:
         raise HTTPException(status_code=400, detail=f"Setoran sudah {setoran.status}")
 
-    # Check petugas authority
-    petugas_kelurahan = current_user.wilayah_kelurahan
-    petugas_kecamatan = current_user.wilayah_kecamatan
+    # Check petugas authority (SKIP for petugas_pengangkut to allow scanning across Surabaya)
+    if current_user.role != 'petugas_pengangkut':
+        petugas_kelurahan = current_user.wilayah_kelurahan
+        petugas_kecamatan = current_user.wilayah_kecamatan
 
-    if petugas_kelurahan and warga.kelurahan != petugas_kelurahan:
-        raise HTTPException(
-            status_code=403,
-            detail=f"Setoran di luar wilayah tugas Anda (Kelurahan {petugas_kelurahan})",
-        )
-    elif petugas_kecamatan and warga.kecamatan != petugas_kecamatan:
-        raise HTTPException(
-            status_code=403,
-            detail=f"Setoran di luar wilayah tugas Anda (Kecamatan {petugas_kecamatan})",
-        )
+        if petugas_kelurahan and warga.kelurahan != petugas_kelurahan:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Setoran di luar wilayah tugas Anda (Kelurahan {petugas_kelurahan})",
+            )
+        elif petugas_kecamatan and warga.kecamatan != petugas_kecamatan:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Setoran di luar wilayah tugas Anda (Kecamatan {petugas_kecamatan})",
+            )
 
     # If there's an active setoran, mark as being processed
     if setoran:
@@ -207,9 +208,14 @@ async def complete_verification(
 def get_queue(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
-    """Get pending setoran queue filtered by petugas wilayah"""
+    """Get pending setoran queue filtered by petugas wilayah (petugas_pengangkut sees all)"""
     kelurahan = current_user.wilayah_kelurahan
     kecamatan = current_user.wilayah_kecamatan
+
+    # Allow petugas_pengangkut to see all pending setoran across Surabaya
+    if current_user.role == 'petugas_pengangkut':
+        kelurahan = None
+        kecamatan = None
 
     pending = get_pending_queue(db, kecamatan, kelurahan)
 
