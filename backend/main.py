@@ -63,21 +63,21 @@ app = FastAPI(title="SampahPintar API")
 # CORS
 cors_origins_env = os.getenv(
     "CORS_ALLOW_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173",
+    "http://localhost:5173,http://127.0.0.1:5173,https://si-e-governance-tps-surabaya-production.up.railway.app",
 )
 allow_origins = [
     origin.strip() for origin in cors_origins_env.split(",") if origin.strip()
 ]
 
-# Ensure uploads directory
-# Ensure uploads directory
-if os.getenv("VERCEL"):
-    UPLOAD_ROOT = "/tmp/uploads"
-else:
-    UPLOAD_ROOT = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "uploads"
-    )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allow_origins,
+    # support local dev, cloudflare, and railway domains
+    allow_origin_regex=r"^https://.*\.trycloudflare\.com$|^https://.*\.up\.railway\.app$|^http://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 os.makedirs(UPLOAD_ROOT, exist_ok=True)
 
