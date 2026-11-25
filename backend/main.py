@@ -63,7 +63,7 @@ app = FastAPI(title="SampahPintar API")
 # CORS
 cors_origins_env = os.getenv(
     "CORS_ALLOW_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173,https://si-e-governance-tps-surabaya-production.up.railway.app",
+    "http://localhost:5173,http://127.0.0.1:5173,https://si-e-governance-tps-surabaya-production.up.railway.app,https://si-e-governance-tps-surabaya.pages.dev",
 )
 allow_origins = [
     origin.strip() for origin in cors_origins_env.split(",") if origin.strip()
@@ -72,8 +72,8 @@ allow_origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
-    # support local dev, cloudflare, and railway domains
-    allow_origin_regex=r"^https://.*\.trycloudflare\.com$|^https://.*\.up\.railway\.app$|^http://(localhost|127\.0\.0\.1)(:\d+)?$",
+    # support local dev, cloudflare pages, and railway domains
+    allow_origin_regex=r"^https://.*\.trycloudflare\.com$|^https://.*\.pages\.dev$|^https://.*\.up\.railway\.app$|^http://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -297,34 +297,3 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-
-
-origins = [
-    "http://localhost:5173",
-    os.getenv("https://si-e-governance-tps-surabaya.pages.dev", ""), # Isi di Variables Railway jika frontend sudah online
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[origin for origin in origins if origin],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-allow_origins=[
-    "http://localhost:5173",
-    "https://si-e-governance-tps-surabaya.pages.dev",  # Ganti dengan URL .pages.dev Anda
-],
-
-# Letakkan blok ini SETELAH semua middleware lain di backend/main.py
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "https://si-e-governance-tps-surabaya.pages.dev",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
