@@ -4249,7 +4249,7 @@ img {
     bottom: 0;
     width: 280px;
     max-width: 82vw;
-    height: 100vh;
+    height: 100dvh;
     background: #ffffff;
     color: #0f172a;
     z-index: 9999;
@@ -4372,7 +4372,7 @@ img {
     margin-top: auto;
     border-top: 1px solid #f1f5f9;
     background: #ffffff;
-    padding: 12px 14px;
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom)) 14px;
     display: flex;
     flex-direction: column;
     gap: 10px;
