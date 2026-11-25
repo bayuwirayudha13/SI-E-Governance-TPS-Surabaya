@@ -79,6 +79,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Ensure uploads directory
+if os.getenv("VERCEL"):
+    UPLOAD_ROOT = "/tmp/uploads"
+else:
+    UPLOAD_ROOT = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "uploads"
+    )
+
 os.makedirs(UPLOAD_ROOT, exist_ok=True)
 
 app.mount(
