@@ -3100,9 +3100,7 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
                   </div>
                 )}
 
-                <div className="warga-qr-code-pill">
-                  {permanentQrText || "QR token belum tersedia"}
-                </div>
+
 
                 <p className="warga-qr-address-sub">
                   {userData?.kelurahan || "Sukamaju"} &bull; RT 03
