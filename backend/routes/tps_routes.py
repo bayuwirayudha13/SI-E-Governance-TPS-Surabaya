@@ -202,8 +202,6 @@ def list_tps(
 
     # Kelurahan filter: join tps_kelurahan table
     if kelurahan:
-        from models.tps_kelurahan import TPSKelurahan
-
         query = (
             query.join(TPSKelurahan, TPS.id == TPSKelurahan.tps_id)
             .join(Kelurahan, TPSKelurahan.kelurahan_id == Kelurahan.id)
