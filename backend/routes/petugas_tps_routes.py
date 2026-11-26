@@ -4,6 +4,7 @@ import math
 from typing import List, Optional
 from datetime import datetime
 from uuid import uuid4
+from core.supabase import supabase
 
 from core.database import get_db
 from core.security import (
@@ -20,7 +21,6 @@ from models.petugas_tps_assignment import PetugasTPSAssignment
 from models.tps import TPS
 from models.tps_monitoring_report import TPSMonitoringReport
 from models.users import User
-from sqlalchemy.orm import Session
 from schemas.petugas_tps_assignment_schema import PetugasTPSAssignmentResponse
 from schemas.tps_monitoring_report_schema import (
     TPSMonitoringReportCreate,
@@ -87,33 +87,71 @@ def serialize_monitoring_report(report: TPSMonitoringReport) -> dict:
     }
 
 
+
 def store_monitoring_photo(photo: UploadFile, petugas_id: int, tps_id: int) -> str:
     allowed_types = {
         "image/jpeg": ".jpg",
         "image/png": ".png",
         "image/webp": ".webp",
     }
-    extension = allowed_types.get(photo.content_type or "")
+
+    content_type = photo.content_type or ""
+    extension = allowed_types.get(content_type)
+
     if not extension:
-        raise HTTPException(status_code=400, detail="Foto harus berformat JPG, PNG, atau WEBP")
+        raise HTTPException(
+            status_code=400,
+            detail="Foto harus berformat JPG, PNG, atau WEBP"
+        )
 
     content = photo.file.read(MAX_MONITORING_PHOTO_SIZE + 1)
+
     if len(content) > MAX_MONITORING_PHOTO_SIZE:
         raise HTTPException(status_code=413, detail="Ukuran foto maksimal 10 MB")
+
     if not content:
         raise HTTPException(status_code=400, detail="File foto kosong")
-    if extension == ".jpg" and not content.startswith(b"\xff\xd8\xff"):
-        raise HTTPException(status_code=400, detail="Isi file bukan gambar JPG yang valid")
-    if extension == ".png" and not content.startswith(b"\x89PNG\r\n\x1a\n"):
-        raise HTTPException(status_code=400, detail="Isi file bukan gambar PNG yang valid")
-    if extension == ".webp" and (len(content) < 12 or content[:4] != b"RIFF" or content[8:12] != b"WEBP"):
-        raise HTTPException(status_code=400, detail="Isi file bukan gambar WEBP yang valid")
 
-    filename = f"{petugas_id}_{tps_id}_{uuid4().hex}{extension}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    with open(filepath, "wb") as buffer:
-        buffer.write(content)
-    return f"/{filepath}".replace("\\", "/")
+    if extension == ".jpg" and not content.startswith(b"\xff\xd8\xff"):
+        raise HTTPException(status_code=400, detail="File JPG tidak valid")
+
+    if extension == ".png" and not content.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise HTTPException(status_code=400, detail="File PNG tidak valid")
+
+    if extension == ".webp" and (
+        len(content) < 12
+        or content[:4] != b"RIFF"
+        or content[8:12] != b"WEBP"
+    ):
+        raise HTTPException(status_code=400, detail="File WEBP tidak valid")
+
+    filename = (
+        f"petugas_{petugas_id}/tps_{tps_id}/{uuid4().hex}{extension}"
+    )
+
+    try:
+        supabase.storage.from_("foto-monitoring").upload(
+            path=filename,
+            file=content,
+            file_options={
+                "content-type": content_type,
+                "upsert": "false",
+            },
+        )
+
+        foto_url = supabase.storage.from_(
+            "foto-monitoring"
+        ).get_public_url(filename)
+
+        return foto_url
+
+    except Exception as exc:
+        print(f"Supabase monitoring upload error: {exc}")
+        raise HTTPException(
+            status_code=500,
+            detail="Gagal mengunggah foto monitoring"
+        ) from exc
+
 
 
 # --- Superadmin: List Petugas TPS users ---

@@ -19,3 +19,4 @@ class Warga(Base):
     qr_token = Column(String(64), unique=True, index=True, nullable=True)
     qr_created_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=get_wib_now)
+    foto_profil = Column(String(500), nullable=True)

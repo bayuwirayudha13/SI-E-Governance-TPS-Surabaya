@@ -12,6 +12,7 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Column, DateTime, Integer, String, create_engine, func, text
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
+from routes.warga_profile_routes import router as warga_profile_router
 
 load_dotenv()
 
@@ -63,7 +64,7 @@ app = FastAPI(title="SampahPintar API")
 # CORS
 cors_origins_env = os.getenv(
     "CORS_ALLOW_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173,https://si-e-governance-tps-surabaya-production.up.railway.app,https://si-e-governance-tps-surabaya.pages.dev",
+    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173",
 )
 allow_origins = [
     origin.strip() for origin in cors_origins_env.split(",") if origin.strip()
@@ -72,13 +73,14 @@ allow_origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
-    # support local dev, cloudflare pages, and railway domains
-    allow_origin_regex=r"^https://.*\.trycloudflare\.com$|^https://.*\.pages\.dev$|^https://.*\.up\.railway\.app$|^http://(localhost|127\.0\.0\.1)(:\d+)?$",
+    # support local dev origin (localhost/127.0.0.1 di port apa pun) + cloudflare quick tunnel
+    allow_origin_regex=r"^https://.*\.trycloudflare\.com$|^http://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Ensure uploads directory
 # Ensure uploads directory
 if os.getenv("VERCEL"):
     UPLOAD_ROOT = "/tmp/uploads"
@@ -294,6 +296,7 @@ app.include_router(chat_router, prefix="/api")
 app.include_router(chat_ws_router)
 app.include_router(petugas_integrated_router, prefix="/api")
 app.include_router(petugas_tps_router, prefix="/api")
+app.include_router(warga_profile_router, prefix="/api")
 
 # Mount frontend dist folder AFTER all API routes
 frontend_dist_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")

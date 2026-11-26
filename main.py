@@ -28,3 +28,9 @@ def test_db():
             "message": "Gagal terhubung ke MySQL",
             "detail": str(e)
         }
+
+app.include_router(
+    warga_profile_router,
+    prefix="/api",
+    tags=["Warga Profile"]
+)

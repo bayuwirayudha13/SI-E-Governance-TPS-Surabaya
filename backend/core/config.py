@@ -13,3 +13,6 @@ BREVO_SENDER_NAME = os.getenv(
 OTP_EXPIRE_MINUTES = int(
     os.getenv("OTP_EXPIRE_MINUTES", "5")
 )
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY")

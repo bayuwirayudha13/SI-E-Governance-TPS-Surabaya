@@ -32,34 +32,6 @@ def get_current_user_from_token(
             raise ValueError("Invalid scheme")
     except ValueError:
         raise HTTPException(status_code=401, detail="Invalid authorization header")
-
-    # Handle demo tokens (avoid 500 when database user record doesn't exist)
-    if token.startswith("demo-token-"):
-        role_type = token.replace("demo-token-", "")
-        demo_map = {
-            "superadmin": {"id": 1, "email": "superadmin@sipetasan.com", "role": "superadmin", "nama_lengkap": "Super Admin DLH Surabaya"},
-            "admin": {"id": 2, "email": "admin@sipetasan.com", "role": "admin", "nama_lengkap": "Admin DLH"},
-            "petugas": {"id": 3, "email": "petugas@sipetasan.com", "role": "petugas_pengangkut", "nama_lengkap": "Petugas"},
-            "pengangkut": {"id": 3, "email": "petugas@sipetasan.com", "role": "petugas_pengangkut", "nama_lengkap": "Petugas Pengangkut"},
-            "driver": {"id": 4, "email": "driver@sipetasan.com", "role": "driver", "nama_lengkap": "Driver Armada"},
-            "warga": {"id": 5, "email": "warga@sipetasan.com", "role": "warga", "nama_lengkap": "Warga"},
-        }
-        demo = demo_map.get(role_type)
-        if demo:
-            return {
-                **demo,
-                "username": demo["email"].split("@")[0],
-                "full_name": demo["nama_lengkap"],
-                "wilayah_kecamatan": None,
-                "wilayah_kelurahan": None,
-                "wilayah_kota": "Surabaya",
-                "foto_url": None,
-                "is_active": True,
-                "kecamatan": None,
-                "kelurahan": None,
-                "alamat_rumah": None,
-                "total_poin": 0,
-            }
     
     # Decode JWT
     try:
@@ -94,6 +66,7 @@ def get_current_user_from_token(
             "wilayah_kota": getattr(user, "wilayah_kota", None),
             "foto_url": getattr(user, "foto_url", None),
             "is_active": getattr(user, "is_active", True),
+            "foto_profil": warga.foto_profil,
         }
     
     # Query Warga table for warga role

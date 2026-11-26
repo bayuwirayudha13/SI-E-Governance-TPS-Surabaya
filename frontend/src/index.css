@@ -3035,7 +3035,6 @@ img {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   padding: 24px 16px;
   flex-shrink: 0;
   position: sticky;
@@ -3113,7 +3112,7 @@ img {
 
 .admin-nav-section {
   margin-top: 20px;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;
