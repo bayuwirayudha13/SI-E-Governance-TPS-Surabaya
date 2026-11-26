@@ -12,6 +12,7 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Column, DateTime, Integer, String, create_engine, func, text
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
+from routes.warga_profile_routes import router as warga_profile_router
 
 load_dotenv()
 
@@ -295,6 +296,7 @@ app.include_router(chat_router, prefix="/api")
 app.include_router(chat_ws_router)
 app.include_router(petugas_integrated_router, prefix="/api")
 app.include_router(petugas_tps_router, prefix="/api")
+app.include_router(warga_profile_router, prefix="/api")
 
 # Mount frontend dist folder AFTER all API routes
 frontend_dist_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")

@@ -101,7 +101,6 @@
   padding: 24px 16px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   flex-shrink: 0;
   position: sticky;
   top: 0;
@@ -109,6 +108,16 @@
   box-sizing: border-box;
   z-index: 40;
   transition: none;
+  overflow: hidden;
+}
+
+/* Wrapper div (first child) becomes scrollable column */
+.petugas-sidebar > div:first-child {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Logo Brand Row */
@@ -179,7 +188,10 @@
 /* Menu Nav Section */
 .petugas-nav-section {
   margin-top: 32px;
-  flex-grow: 1;
+  flex: 1 1 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
 }
 
 .petugas-nav-label {
@@ -245,6 +257,7 @@
   flex-direction: column;
   gap: 10px;
   padding-top: 16px;
+  flex-shrink: 0;
 }
 
 .petugas-profile-card {

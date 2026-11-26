@@ -3,7 +3,10 @@ import re
 import shutil
 from datetime import date, datetime
 from typing import Optional
+from uuid import uuid4
+from core.supabase import supabase
 
+MAX_PHOTO_SIZE = 10 * 1024 * 1024
 
 from core.database import get_db
 from core.security import require_petugas
@@ -174,11 +177,7 @@ async def complete_verification(
     # Upload foto
     foto_url = None
     if foto_bukti:
-        filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{setoran_id}_{foto_bukti.filename}"
-        filepath = os.path.join(UPLOAD_DIR, filename)
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(foto_bukti.file, buffer)
-        foto_url = f"/uploads/pengambilan/{filename}"
+        foto_url = upload_foto_pengangkutan (foto_bukti, setoran_id)
 
     # Update setoran with verification data
     update_data = Setoran_SampahUpdate(
@@ -350,3 +349,73 @@ def get_setoran_detail(
         if setoran.waktu_validasi
         else None,
     }
+
+
+def upload_foto_pengangkutan(
+    foto: UploadFile,
+    setoran_id: int
+) -> str:
+    allowed_types = {
+        "image/jpeg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+    }
+
+    content_type = foto.content_type or ""
+    extension = allowed_types.get(content_type)
+
+    if not extension:
+        raise HTTPException(
+            status_code=400,
+            detail="Foto harus berformat JPG, PNG, atau WEBP"
+        )
+
+    content = foto.file.read(MAX_PHOTO_SIZE + 1)
+
+    if len(content) > MAX_PHOTO_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="Ukuran foto maksimal 10 MB"
+        )
+
+    if not content:
+        raise HTTPException(
+            status_code=400,
+            detail="Foto tidak boleh kosong"
+        )
+
+    if extension == ".jpg" and not content.startswith(b"\xff\xd8\xff"):
+        raise HTTPException(400, detail="File JPG tidak valid")
+
+    if extension == ".png" and not content.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise HTTPException(400, detail="File PNG tidak valid")
+
+    if extension == ".webp" and (
+        len(content) < 12
+        or content[:4] != b"RIFF"
+        or content[8:12] != b"WEBP"
+    ):
+        raise HTTPException(400, detail="File WEBP tidak valid")
+
+    filename = f"setoran_{setoran_id}/{uuid4().hex}{extension}"
+
+    try:
+        bucket = supabase.storage.from_("foto-pengangkutan")
+
+        bucket.upload(
+            path=filename,
+            file=content,
+            file_options={
+                "content-type": content_type,
+                "upsert": "false",
+            },
+        )
+
+        return bucket.get_public_url(filename)
+
+    except Exception as exc:
+        print(f"Upload foto pengangkutan gagal: {exc}")
+        raise HTTPException(
+            status_code=500,
+            detail="Gagal mengunggah foto bukti pengangkutan"
+        ) from exc

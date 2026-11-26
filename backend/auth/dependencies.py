@@ -66,6 +66,7 @@ def get_current_user_from_token(
             "wilayah_kota": getattr(user, "wilayah_kota", None),
             "foto_url": getattr(user, "foto_url", None),
             "is_active": getattr(user, "is_active", True),
+            "foto_profil": warga.foto_profil,
         }
     
     # Query Warga table for warga role

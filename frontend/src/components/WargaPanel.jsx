@@ -28,6 +28,8 @@ import KelurahanMap from "./KelurahanMap";
 import WargaChat from "./WargaChat";
 import LaporanWargaModal from "./LaporanWargaModal";
 
+console.log("API BASE URL:", API_BASE_URL);
+
 // Real Scannable QR Code Component
 function RealQRCode({ text, size = 210, color = "#166534", onGenerated }) {
   const [dataUrl, setDataUrl] = useState("");
@@ -404,6 +406,7 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
     if (hash === "#chat" || hash === "#chat-admin") return "chat";
     if (hash === "#tracking") return "tracking";
     if (hash === "#riwayat-pengambilan") return "riwayat-pengambilan";
+    if (hash === "#profil" || hash === "#profil-pengaturan") return "profil";
     return "qr-status";
   });
 
@@ -459,7 +462,52 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
   const displayWargaEmail = activeUser?.email || "warga@sipetasan.com";
   const displayKecamatanRaw = profileRegion?.kecamatan || activeUser?.kecamatan || "";
   const displayKelurahanRaw = profileRegion?.kelurahan || activeUser?.kelurahan || "";
+  const displayFotoProfil = activeUser?.foto_profil || null;
   const displayAvatar = displayWargaName.charAt(0).toUpperCase();
+
+  // Helper to render avatar with photo support
+  const renderAvatar = (size = "sm") => {
+    const sizes = {
+      sm: { width: "38px", height: "38px", fontSize: "1rem" },
+      lg: { width: "48px", height: "48px", fontSize: "1.25rem" },
+      xl: { width: "60px", height: "60px", fontSize: "1.5rem" },
+      mobile: { width: "32px", height: "32px", fontSize: "1rem" },
+    };
+    const s = sizes[size] || sizes.sm;
+    if (displayFotoProfil) {
+      return (
+        <img
+          src={displayFotoProfil}
+          alt={displayWargaName}
+          style={{
+            width: s.width,
+            height: s.height,
+            borderRadius: "50%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      );
+    }
+    return (
+      <div
+        style={{
+          width: s.width,
+          height: s.height,
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontWeight: 700,
+          fontSize: s.fontSize,
+          background: "#166534",
+          color: "#fff",
+        }}
+      >
+        {displayAvatar}
+      </div>
+    );
+  };
 
   const [selectedKelurahan, setSelectedKelurahan] = useState(() => {
     return displayKelurahanRaw || "";
@@ -680,7 +728,31 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
   const [setoranHistory, setSetoranHistory] = useState([]); // All setoran for riwayat
   const [qrPollingInterval, setQrPollingInterval] = useState(null);
   const [showRincianModal, setShowRincianModal] = useState(false);
-  const [showLaporanModal, setShowLaporanModal] = useState(false);
+
+  // =========================================================
+  // PROFIL & PENGATURAN STATE
+  // =========================================================
+  const [profileForm, setProfileForm] = useState({
+    nama: "",
+    no_hp: "",
+    alamat_rumah: "",
+    kecamatan: "",
+    kelurahan: "",
+  });
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileMsg, setProfileMsg] = useState(null); // { type, text }
+  const [kecamatanOptions, setKecamatanOptions] = useState([]);
+  const [kelurahanOptions, setKelurahanOptions] = useState([]);
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isDeletingPhoto, setIsDeletingPhoto] = useState(false);
+
+  const showLaporanModalState = useState(false);
+  const showLaporanModal = showLaporanModalState[0];
+  const setShowLaporanModal = showLaporanModalState[1];
+
   const [modalMode, setModalMode] = useState("edit");
   const [activeModalTab, setActiveModalTab] = useState("utama");
   const [rincianForm, setRincianForm] = useState({});
@@ -890,6 +962,8 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
       else if (hash === "#chat" || hash === "#chat-admin")
         setActiveMenu("chat");
       else if (hash === "#tracking") setActiveMenu("tracking");
+      else if (hash === "#profil" || hash === "#profil-pengaturan")
+        setActiveMenu("profil");
       else if (hash === "#dashboard" || hash === "#warga")
         setActiveMenu("dashboard");
     };
@@ -1045,6 +1119,231 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
       setPoints((prev) => prev);
       setErrorMsg("Gagal memuat data warga. Silakan coba lagi.");
       setTimeout(() => setErrorMsg(""), 4000);
+    }
+  };
+
+  // =========================================================
+  // PROFIL & PENGATURAN API HANDLERS
+  // =========================================================
+  const loadProfileData = async () => {
+    setProfileLoading(true);
+    try {
+      const res = await api.get("/api/warga/profile");
+      if (res.data) {
+        const d = res.data;
+        setProfileForm({
+          nama: d.nama || "",
+          no_hp: d.no_hp || "",
+          alamat_rumah: d.alamat_rumah || "",
+          kecamatan: d.kecamatan || "",
+          kelurahan: d.kelurahan || "",
+        });
+        updateLocalUserData(d);
+      }
+    } catch (err) {
+      console.error("Gagal memuat profil:", err);
+      setProfileMsg({
+        type: "error",
+        text: err.response?.data?.detail || "Gagal memuat profil dari server.",
+      });
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const updateLocalUserData = (profileData) => {
+    setUserData((prev) => ({
+      ...prev,
+      ...profileData,
+      nama_lengkap: profileData.nama || prev?.nama_lengkap || prev?.nama,
+    }));
+    try {
+      const stored = JSON.parse(sessionStorage.getItem("auth_user") || "{}");
+      const updated = {
+        ...stored,
+        ...profileData,
+        nama_lengkap: profileData.nama || stored?.nama_lengkap || stored?.nama,
+      };
+      sessionStorage.setItem("auth_user", JSON.stringify(updated));
+      if (localStorage.getItem("auth_user")) {
+        localStorage.setItem("auth_user", JSON.stringify(updated));
+      }
+      setDbUser(updated);
+    } catch (e) {
+      console.warn("Error updating session storage:", e);
+    }
+  };
+
+  const loadKecamatanOptions = async () => {
+    try {
+      const res = await api.get("/api/wilayah/kecamatan");
+      if (Array.isArray(res.data)) {
+        setKecamatanOptions(res.data);
+      }
+    } catch (err) {
+      console.warn("Gagal memuat data kecamatan:", err);
+    }
+  };
+
+  const loadKelurahanOptions = async (kec) => {
+    if (!kec) {
+      setKelurahanOptions([]);
+      return;
+    }
+    try {
+      const res = await api.get("/api/wilayah/kelurahan", {
+        params: { kecamatan: kec },
+      });
+      if (Array.isArray(res.data)) {
+        setKelurahanOptions(res.data);
+      }
+    } catch (err) {
+      console.warn("Gagal memuat data kelurahan:", err);
+      setKelurahanOptions([]);
+    }
+  };
+
+  useEffect(() => {
+    if (activeMenu === "profil") {
+      loadProfileData();
+      loadKecamatanOptions();
+    }
+  }, [activeMenu]);
+
+  useEffect(() => {
+    if (profileForm.kecamatan) {
+      loadKelurahanOptions(profileForm.kecamatan);
+    } else {
+      setKelurahanOptions([]);
+    }
+  }, [profileForm.kecamatan]);
+
+  const handleSelectPhoto = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      setProfileMsg({
+        type: "error",
+        text: "Format file harus JPEG, PNG, atau WEBP.",
+      });
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setProfileMsg({
+        type: "error",
+        text: "Ukuran foto maksimal 2 MB.",
+      });
+      e.target.value = "";
+      return;
+    }
+
+    setProfileMsg(null);
+    setSelectedPhotoFile(file);
+    setPhotoPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleUploadPhoto = async () => {
+    if (!selectedPhotoFile) return;
+
+    setIsUploadingPhoto(true);
+    setProfileMsg(null);
+
+    const formData = new FormData();
+    formData.append("file", selectedPhotoFile);
+
+    try {
+      const res = await api.post("/api/warga/profile/photo", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data && res.data.foto_profil) {
+        updateLocalUserData({ foto_profil: res.data.foto_profil });
+        setSelectedPhotoFile(null);
+        setPhotoPreviewUrl(null);
+        setProfileMsg({
+          type: "success",
+          text: res.data.message || "Foto profil berhasil diperbarui!",
+        });
+      }
+    } catch (err) {
+      console.error("Gagal unggah foto:", err);
+      setProfileMsg({
+        type: "error",
+        text: err.response?.data?.detail || "Gagal mengunggah foto profil.",
+      });
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleDeletePhoto = async () => {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus foto profil?")) return;
+
+    setIsDeletingPhoto(true);
+    setProfileMsg(null);
+
+    try {
+      const res = await api.delete("/api/warga/profile/photo");
+      updateLocalUserData({ foto_profil: null });
+      setSelectedPhotoFile(null);
+      setPhotoPreviewUrl(null);
+      setProfileMsg({
+        type: "success",
+        text: res.data.message || "Foto profil berhasil dihapus!",
+      });
+    } catch (err) {
+      console.error("Gagal hapus foto:", err);
+      setProfileMsg({
+        type: "error",
+        text: err.response?.data?.detail || "Gagal menghapus foto profil.",
+      });
+    } finally {
+      setIsDeletingPhoto(false);
+    }
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+
+    if (!profileForm.nama.trim() || profileForm.nama.trim().length < 2) {
+      setProfileMsg({
+        type: "error",
+        text: "Nama lengkap minimal 2 karakter.",
+      });
+      return;
+    }
+
+    setIsSavingProfile(true);
+    setProfileMsg(null);
+
+    try {
+      const res = await api.put("/api/warga/profile", {
+        nama: profileForm.nama.trim(),
+        no_hp: profileForm.no_hp.trim() || null,
+        alamat_rumah: profileForm.alamat_rumah.trim() || null,
+        kecamatan: profileForm.kecamatan.trim() || null,
+        kelurahan: profileForm.kelurahan.trim() || null,
+      });
+
+      if (res.data) {
+        updateLocalUserData(res.data);
+        setProfileMsg({
+          type: "success",
+          text: res.data.message || "Profil berhasil diperbarui!",
+        });
+      }
+    } catch (err) {
+      console.error("Gagal simpan profil:", err);
+      setProfileMsg({
+        type: "error",
+        text: err.response?.data?.detail || "Gagal menyimpan perubahan profil.",
+      });
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -1280,7 +1579,7 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
             </span>
           </button>
           <div className="warga-mobile-avatar" title={displayWargaName}>
-            {displayAvatar}
+            {renderAvatar("mobile")}
           </div>
         </div>
       </header>
@@ -1596,6 +1895,32 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
 
             <button
               type="button"
+              className={`drawer-item ${activeMenu === "profil" ? "active" : ""}`}
+              onClick={() => {
+                setActiveMenu("profil");
+                setMobileDrawerOpen(false);
+              }}
+            >
+              <span className="drawer-icon">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+              </span>
+              <span className="drawer-label">Profil &amp; Pengaturan</span>
+            </button>
+
+            <button
+              type="button"
               className="drawer-item"
               onClick={() => {
                 setActiveMenu("tracking");
@@ -1652,18 +1977,8 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
         {/* Pinned Bottom-Left Profile & Logout Footer */}
         <div className="warga-drawer-footer">
           <div className="warga-drawer-user-card">
-            <div
-              className="warga-avatar-sm"
-              style={{
-                width: "38px",
-                height: "38px",
-                fontSize: "1rem",
-                background: "#166534",
-                color: "#fff",
-                flexShrink: 0,
-              }}
-            >
-              {displayAvatar}
+            <div style={{ flexShrink: 0 }}>
+              {renderAvatar("sm")}
             </div>
             <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
               <div
@@ -2008,6 +2323,27 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
                 </svg>
                 {!isSidebarCollapsed && <span>Tracking TPS</span>}
               </button>
+              <button
+                type="button"
+                className={`warga-nav-btn ${activeMenu === "profil" ? "active" : ""}`}
+                onClick={() => setActiveMenu("profil")}
+                title="Profil & Pengaturan"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                {!isSidebarCollapsed && <span>Profil &amp; Pengaturan</span>}
+              </button>
             </nav>
           </div>
         </div>
@@ -2016,7 +2352,9 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
             className="warga-profile-pill"
             title={`${displayWargaName} (${displayWargaEmail})`}
           >
-            <div className="warga-avatar-sm">{displayAvatar}</div>
+            <div style={{ flexShrink: 0 }}>
+              {renderAvatar("sm")}
+            </div>
             {!isSidebarCollapsed && (
               <div className="warga-profile-info">
                 <div className="warga-profile-name">{displayWargaName}</div>
@@ -2068,6 +2406,7 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
               {activeMenu === "panduan" && "Panduan Pemilahan"}
               {activeMenu === "chat" && "Chat Admin"}
               {activeMenu === "tracking" && "Tracking TPS"}
+              {activeMenu === "profil" && "Profil & Pengaturan"}
             </h2>
             <div className="warga-page-date">{getFormattedDate()}</div>
           </div>
@@ -2078,7 +2417,7 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
                 {points.toLocaleString("id-ID")} pts
               </span>
             </div>
-            <div className="warga-avatar-lg">{displayAvatar}</div>
+            {renderAvatar("lg")}
           </div>
         </header>
         {depositSuccessMsg && (
@@ -3505,6 +3844,255 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
                     </span>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+        {activeMenu === "profil" && (
+          <div className="warga-content-body">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "20px" }}>
+              {/* FOTO PROFIL CARD */}
+              <div className="warga-panel-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "28px 24px" }}>
+                <div style={{ position: "relative", marginBottom: "16px" }}>
+                  <div style={{
+                    width: "120px", height: "120px", borderRadius: "50%",
+                    overflow: "hidden", display: "flex", alignItems: "center",
+                    justifyContent: "center", background: "#166534",
+                    color: "#fff", fontSize: "2.5rem", fontWeight: 800,
+                    border: "4px solid #e0f2fe",
+                  }}>
+                    {photoPreviewUrl ? (
+                      <img
+                        src={photoPreviewUrl}
+                        alt="Preview foto profil"
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    ) : displayFotoProfil ? (
+                      <img
+                        src={displayFotoProfil}
+                        alt={displayWargaName}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    ) : (
+                      displayAvatar
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById("foto-profil-input")?.click()}
+                    disabled={isUploadingPhoto || isDeletingPhoto}
+                    style={{
+                      position: "absolute", bottom: "4px", right: "4px",
+                      width: "34px", height: "34px", borderRadius: "50%",
+                      background: "#0284c7", color: "#fff", border: "2px solid #fff",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+                    }}
+                    title="Ganti foto profil"
+                  >
+                    <IconCamera size={16} />
+                  </button>
+                </div>
+                <h3 className="warga-card-title" style={{ margin: "0 0 6px" }}>
+                  Foto Profil
+                </h3>
+                <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0 0 12px", textAlign: "center" }}>
+                  Format: JPEG, PNG, WEBP. Maksimal 2 MB.
+                </p>
+                <input
+                  id="foto-profil-input"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  style={{ display: "none" }}
+                  onChange={handleSelectPhoto}
+                />
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "center" }}>
+                  <button
+                    type="button"
+                    onClick={handleUploadPhoto}
+                    disabled={!selectedPhotoFile || isUploadingPhoto || isDeletingPhoto}
+                    style={{
+                      padding: "8px 20px", borderRadius: "8px",
+                      background: selectedPhotoFile ? "#166534" : "#e2e8f0",
+                      color: selectedPhotoFile ? "#fff" : "#94a3b8",
+                      border: "none", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem",
+                    }}
+                  >
+                    {isUploadingPhoto ? "Mengunggah..." : "Unggah Foto"}
+                  </button>
+                  {(displayFotoProfil || photoPreviewUrl) && (
+                    <button
+                      type="button"
+                      onClick={handleDeletePhoto}
+                      disabled={isDeletingPhoto || isUploadingPhoto}
+                      style={{
+                        padding: "8px 20px", borderRadius: "8px",
+                        background: "#fee2e2", color: "#b91c1c", border: "none",
+                        cursor: "pointer", fontWeight: 700, fontSize: "0.85rem",
+                      }}
+                    >
+                      {isDeletingPhoto ? "Menghapus..." : "Hapus Foto"}
+                    </button>
+                  )}
+                </div>
+                {selectedPhotoFile && (
+                  <p style={{ fontSize: "0.78rem", color: "#0284c7", marginTop: "10px", fontWeight: 600 }}>
+                    Foto baru dipilih: {selectedPhotoFile.name} •{" "}
+                    {(selectedPhotoFile.size / 1024).toFixed(1)} KB
+                  </p>
+                )}
+              </div>
+
+              {/* FORM PROFIL CARD */}
+              <div className="warga-panel-card" style={{ padding: "24px" }}>
+                <h3 className="warga-card-title" style={{ marginBottom: "18px" }}>
+                  Data Pribadi
+                </h3>
+                {profileLoading && (
+                  <div style={{
+                    padding: "14px 16px", background: "#f1f5f9", borderRadius: "8px",
+                    color: "#475569", fontSize: "0.88rem", marginBottom: "14px",
+                  }}>
+                    ⏳ Memuat data profil...
+                  </div>
+                )}
+                {profileMsg && (
+                  <div
+                    style={{
+                      padding: "12px 16px",
+                      background: profileMsg.type === "success" ? "#d1fae5" : "#fee2e2",
+                      color: profileMsg.type === "success" ? "#065f46" : "#b91c1c",
+                      borderRadius: "8px",
+                      fontSize: "0.86rem",
+                      marginBottom: "14px",
+                    }}
+                  >
+                    {profileMsg.text}
+                  </div>
+                )}
+                <form
+                  onSubmit={handleSaveProfile}
+                  style={{ display: "flex", flexDirection: "column", gap: "14px" }}
+                >
+                  <div className="warga-form-group">
+                    <label className="warga-form-label">Nama Lengkap *</label>
+                    <input
+                      type="text"
+                      className="warga-form-input"
+                      value={profileForm.nama}
+                      onChange={(e) =>
+                        setProfileForm({ ...profileForm, nama: e.target.value })
+                      }
+                      placeholder="Nama lengkap sesuai KTP"
+                      minLength={2}
+                      maxLength={100}
+                      required
+                    />
+                  </div>
+                  <div className="warga-form-group">
+                    <label className="warga-form-label">Email</label>
+                    <input
+                      type="email"
+                      className="warga-form-input"
+                      value={displayWargaEmail}
+                      readOnly
+                      style={{
+                        background: "#f8fafc",
+                        color: "#64748b",
+                        cursor: "not-allowed",
+                      }}
+                    />
+                    <p style={{ fontSize: "0.75rem", color: "#94a3b8", margin: "4px 0 0" }}>
+                      Email tidak dapat diubah.
+                    </p>
+                  </div>
+                  <div className="warga-form-group">
+                    <label className="warga-form-label">Nomor HP</label>
+                    <input
+                      type="tel"
+                      className="warga-form-input"
+                      value={profileForm.no_hp}
+                      onChange={(e) =>
+                        setProfileForm({
+                          ...profileForm,
+                          no_hp: e.target.value.replace(/[^\d+]/g, ""),
+                        })
+                      }
+                      placeholder="08xxxxxxxxxx"
+                      maxLength={20}
+                    />
+                  </div>
+                  <div className="warga-form-group">
+                    <label className="warga-form-label">Alamat Rumah</label>
+                    <input
+                      type="text"
+                      className="warga-form-input"
+                      value={profileForm.alamat_rumah}
+                      onChange={(e) =>
+                        setProfileForm({ ...profileForm, alamat_rumah: e.target.value })
+                      }
+                      placeholder="Contoh: Jl. Melati No. 12 RT 01/RW 02"
+                      maxLength={255}
+                    />
+                  </div>
+                  <div className="warga-form-row-2">
+                    <div className="warga-form-group">
+                      <label className="warga-form-label">Kecamatan</label>
+                      <select
+                        className="warga-form-select"
+                        value={profileForm.kecamatan}
+                        onChange={(e) => {
+                          const kec = e.target.value;
+                          setProfileForm({
+                            ...profileForm,
+                            kecamatan: kec,
+                            kelurahan: "",
+                          });
+                        }}
+                      >
+                        <option value="">-- Pilih Kecamatan --</option>
+                        {kecamatanOptions.map((k) => (
+                          <option key={k.id} value={k.nama}>
+                            {k.nama}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="warga-form-group">
+                      <label className="warga-form-label">Kelurahan</label>
+                      <select
+                        className="warga-form-select"
+                        value={profileForm.kelurahan}
+                        onChange={(e) =>
+                          setProfileForm({ ...profileForm, kelurahan: e.target.value })
+                        }
+                        disabled={!profileForm.kecamatan}
+                      >
+                        <option value="">
+                          -- {profileForm.kecamatan ? "Pilih Kelurahan" : "Pilih kecamatan dulu"} --
+                        </option>
+                        {kelurahanOptions.map((l) => (
+                          <option key={l.id} value={l.nama}>
+                            {l.nama}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    className="warga-btn-primary"
+                    disabled={profileLoading || isSavingProfile}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      fontSize: "0.95rem",
+                      marginTop: "4px",
+                    }}
+                  >
+                    {isSavingProfile ? "Menyimpan..." : "Simpan Perubahan"}
+                  </button>
+                </form>
               </div>
             </div>
           </div>
