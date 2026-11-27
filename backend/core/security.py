@@ -69,39 +69,6 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="Token tidak ditemukan")
 
     token = authorization.split(" ")[1]
-
-    # Handle demo tokens (avoid 500 when database user record doesn't exist)
-    if token.startswith("demo-token-"):
-        role_type = token.replace("demo-token-", "")
-        # First try finding real user in db by role/email
-        demo_email_map = {
-            "superadmin": "superadmin@sipetasan.com",
-            "admin": "admin@sipetasan.com",
-            "petugas": "petugas@sipetasan.com",
-            "driver": "driver@sipetasan.com",
-            "warga": "warga@sipetasan.com",
-        }
-        target_email = demo_email_map.get(role_type)
-        if target_email:
-            existing = db.query(User).filter(User.email == target_email).first()
-            if existing:
-                return existing
-
-        # Fallback dummy object if not in DB
-        class DummyUser:
-            pass
-
-        u = DummyUser()
-        u.id = 1
-        u.email = target_email or f"{role_type}@sipetasan.com"
-        u.role = "superadmin" if "superadmin" in token else "admin" if "admin" in token else "petugas_pengangkut"
-        u.nama_lengkap = "Demo User"
-        u.is_active = True
-        u.wilayah_kecamatan = None
-        u.wilayah_kelurahan = None
-        u.wilayah_kota = "Surabaya"
-        return u
-
     payload = decode_token(token)
     email: str = payload.get("sub")
 

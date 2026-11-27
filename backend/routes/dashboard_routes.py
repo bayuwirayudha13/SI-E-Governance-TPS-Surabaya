@@ -36,7 +36,7 @@ def get_dashboard_stats(
         func.count(TPS.id).label("count")
     ).group_by(TPS.status).all()
     
-    # TPS by wilayah_kota (region) 
+    # TPS by wilayah_kota (region)
     region_stats = db.query(
         TPS.wilayah_kota,
         func.count(TPS.id).label("total_tps"),
