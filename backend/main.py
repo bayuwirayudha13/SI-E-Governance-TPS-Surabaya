@@ -60,6 +60,17 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Setup
 app = FastAPI(title="SampahPintar API")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://si-e-governance-tps-surabaya.pages.dev",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # CORS
 cors_origins_env = os.getenv(
