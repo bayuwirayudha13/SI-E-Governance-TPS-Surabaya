@@ -3258,9 +3258,10 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
                       {item.foto_bukti_url && (
                         <button
                           onClick={() => {
-                            setSelectedScanFoto(
-                               resolveFotoUrl(item.foto_bukti_url),
-                            );
+                              console.log("URL FOTO ASLI:", item.foto_bukti_url);
+                                console.log("URL FOTO HASIL:", resolveFotoUrl(item.foto_bukti_url));
+
+                                setSelectedScanFoto(resolveFotoUrl(item.foto_bukti_url));
                             setShowScanFotoModal(true);
                           }}
                           style={{
