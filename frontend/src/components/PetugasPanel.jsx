@@ -4,6 +4,23 @@ import DriverRouteMap from "./DriverRouteMap";
 import { api, authService, API_BASE_URL } from "../api/client";
 import { Html5Qrcode } from "html5-qrcode";
 
+import { Html5Qrcode } from "html5-qrcode";
+
+// Mengatasi URL foto Supabase dan URL foto lokal/relatif
+const resolveFotoUrl = (fotoUrl) => {
+  if (!fotoUrl) return "";
+
+  const url = String(fotoUrl).trim();
+
+  if (/^https?:\/\//i.test(url)) return url;
+
+  if (/^https?\/\//i.test(url)) {
+    return url.replace(/^(https?)\/\//i, "$1://");
+  }
+
+  return `${API_BASE_URL.replace(/\/+$/, "")}/${url.replace(/^\/+/, "")}`;
+};
+
 export default function PetugasPanel({
   onLogout,
   officerName = "Hendra",
@@ -3009,7 +3026,7 @@ export default function PetugasPanel({
                       <strong>Foto Bukti Pengambilan:</strong>
                       <div style={{ marginTop: "8px" }}>
                         <img
-                          src={`${API_BASE_URL}${selectedHistoryItem.foto_bukti_url}`}
+                          src={resolveFotoUrl(selectedHistoryItem.foto_bukti_url)}
                           alt="Foto Sampah"
                           style={{
                             width: "100%",

@@ -28,7 +28,25 @@ import KelurahanMap from "./KelurahanMap";
 import WargaChat from "./WargaChat";
 import LaporanWargaModal from "./LaporanWargaModal";
 
+
 console.log("API BASE URL:", API_BASE_URL);
+// Mengatasi URL foto Supabase dan URL foto lokal/relatif
+const resolveFotoUrl = (fotoUrl) => {
+  if (!fotoUrl) return "";
+
+  const url = String(fotoUrl).trim();
+
+  // URL Supabase lengkap: gunakan langsung
+  if (/^https?:\/\//i.test(url)) return url;
+
+  // Memperbaiki URL lama yang kehilangan titik dua: https//
+  if (/^https?\/\//i.test(url)) {
+    return url.replace(/^(https?)\/\//i, "$1://");
+  }
+
+  // URL relatif: arahkan ke backend
+  return `${API_BASE_URL.replace(/\/+$/, "")}/${url.replace(/^\/+/, "")}`;
+};
 
 // Real Scannable QR Code Component
 function RealQRCode({ text, size = 210, color = "#166534", onGenerated }) {
@@ -3241,7 +3259,7 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
                         <button
                           onClick={() => {
                             setSelectedScanFoto(
-                              `${API_BASE_URL}${item.foto_bukti_url}`,
+                               resolveFotoUrl(item.foto_bukti_url),
                             );
                             setShowScanFotoModal(true);
                           }}
@@ -3582,7 +3600,7 @@ export default function WargaPanel({ onLogout, wargaId, currentUser }) {
                       {currentSetoran.foto_bukti_url && (
                         <div style={{ marginTop: "14px" }}>
                           <a
-                            href={`${API_BASE_URL}${currentSetoran.foto_bukti_url}`}
+                            href={resolveFotoUrl(currentSetoran.foto_bukti_url)}
                             target="_blank"
                             rel="noreferrer"
                             style={{
