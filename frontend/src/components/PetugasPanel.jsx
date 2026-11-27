@@ -4,8 +4,6 @@ import DriverRouteMap from "./DriverRouteMap";
 import { api, authService, API_BASE_URL } from "../api/client";
 import { Html5Qrcode } from "html5-qrcode";
 
-import { Html5Qrcode } from "html5-qrcode";
-
 // Mengatasi URL foto Supabase dan URL foto lokal/relatif
 const resolveFotoUrl = (fotoUrl) => {
   if (!fotoUrl) return "";
