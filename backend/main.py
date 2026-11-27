@@ -60,13 +60,29 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Setup
 app = FastAPI(title="SampahPintar API")
+# CORS Configuration
+cors_origins_env = os.getenv("CORS_ALLOW_ORIGINS", "")
+
+allow_origins = [
+    "https://si-e-governance-tps-surabaya.pages.dev",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+]
+
+# Tambahkan origin tambahan dari environment variable jika tersedia
+if cors_origins_env:
+    allow_origins.extend(
+        origin.strip()
+        for origin in cors_origins_env.split(",")
+        if origin.strip()
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://si-e-governance-tps-surabaya.pages.dev",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=list(set(allow_origins)),
+    allow_origin_regex=r"^https://.*\.trycloudflare\.com$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
