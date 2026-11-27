@@ -10,14 +10,17 @@ import { Html5Qrcode } from "html5-qrcode";
 const resolveFotoUrl = (fotoUrl) => {
   if (!fotoUrl) return "";
 
-  const url = String(fotoUrl).trim();
+  let url = String(fotoUrl).trim();
 
-  if (/^https?:\/\//i.test(url)) return url;
+  // Perbaiki URL https// yang salah
+  url = url.replace(/^(https?)\/\//i, "$1://");
 
-  if (/^https?\/\//i.test(url)) {
-    return url.replace(/^(https?)\/\//i, "$1://");
+  // URL Supabase langsung digunakan
+  if (/^https?:\/\//i.test(url)) {
+    return url;
   }
 
+  // Path relatif menggunakan alamat backend
   return `${API_BASE_URL.replace(/\/+$/, "")}/${url.replace(/^\/+/, "")}`;
 };
 

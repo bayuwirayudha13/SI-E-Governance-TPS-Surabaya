@@ -34,17 +34,17 @@ console.log("API BASE URL:", API_BASE_URL);
 const resolveFotoUrl = (fotoUrl) => {
   if (!fotoUrl) return "";
 
-  const url = String(fotoUrl).trim();
+  let url = String(fotoUrl).trim();
 
-  // URL Supabase lengkap: gunakan langsung
-  if (/^https?:\/\//i.test(url)) return url;
+  // Perbaiki URL https// yang salah
+  url = url.replace(/^(https?)\/\//i, "$1://");
 
-  // Memperbaiki URL lama yang kehilangan titik dua: https//
-  if (/^https?\/\//i.test(url)) {
-    return url.replace(/^(https?)\/\//i, "$1://");
+  // URL Supabase langsung digunakan
+  if (/^https?:\/\//i.test(url)) {
+    return url;
   }
 
-  // URL relatif: arahkan ke backend
+  // Path relatif menggunakan alamat backend
   return `${API_BASE_URL.replace(/\/+$/, "")}/${url.replace(/^\/+/, "")}`;
 };
 
